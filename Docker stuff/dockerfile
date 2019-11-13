@@ -1,0 +1,7 @@
+FROM ubuntu
+MAINTAINER Aether
+RUN apt update
+RUN apt install python3-pip -y
+RUN pip3 install -U pip setuptools wheel
+RUN pip3 install -U numpy six certifi
+RUN pip3 install spiceypy

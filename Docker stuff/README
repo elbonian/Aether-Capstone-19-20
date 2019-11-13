@@ -1,0 +1,40 @@
+#Readme written by Alex Fisher
+
+#Before I start on that, make sure to install Docker CE on your VM following the instructions on this page:
+	https://docs.docker.com/install/linux/docker-ce/ubuntu/
+
+#Once you have docker installed on your VM:
+
+#Make sure you navigate to a directory containing the dockerfile
+
+1. (sudo) docker build -t (docker_image_name):(version_number) .
+#Use sudo for most of these, or just execute sudo -s beforehand. 
+#(docker_image_name) Will be determined either individually or by the group
+#(version_number) Will also be determined individually or by the group
+#
+#ex. "sudo docker build -t spiceyimage:1.0 ."
+
+#Make sure the steps run smoothly, you should see a message saying
+#"Successfully built ..."
+#"Successfully tagged ..."
+
+#You should now be able to see the image in "docker images"
+
+2. docker run -(options) --name (name) (--rm) (docker_image_name):(version_number)
+#Execute this to run docker image to create the container
+#options
+	#(-it) This will run the container in interactive mode, allowing you to traverse the container's file system and shell
+	#(-d) This will run the container in detached mode, good for servers and such
+	#(-p (containerport):(hostport)) This option will create port forwarding between the containerport and the host port. Useful for servers
+#(name) This will be completely up to you, you can call it locally whatever you want, this will be the name of your local container
+#(--rm) This addition is optional, include it if you want the container to be deleted after it is exited.
+#(docker_image_name) This is the same docker_image_name we created in step 1
+#(version_number) Ditto
+#
+#ex. "docker run -it -p 80:80 --name spiceycontainer --rm spiceyimage:1.0"
+
+#Type "exit" to exit the container shell
+
+
+# For more tutorials on docker look over:
+#https://rominirani.com/docker-tutorial-series-a7e6ff90a023
