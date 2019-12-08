@@ -1,0 +1,22 @@
+#Readme2 written by Alex Fisher
+
+The new Docker container will automatically run the Rest server and host it on port 5000. The new syntax is either of these:
+
+docker run -it --rm -p 5000:5000 (image_name):(version_number)
+
+#Use this one if you want to view the server requests in the container
+
+or 
+
+docker run -d -p 5000:5000 --name (name) (image_name):(version_number)
+
+#You don't need to come up with a name, if you ignore that option it will create a container name for you
+#This option will run the container in detached mode, keeping the server up without needing to supervise it yourself. It also allows you to run the client.py in the same terminal window
+#If you use this option, you must also run these 2 commands to remove the container when it's stopped
+
+docker stop (name)
+docker rm (name)
+
+Also, make sure to download the de435.bsp to your local directory in the docker stuff folder, and make sure not to commit that file. It is too large to be committed
+
+https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de435.bsp

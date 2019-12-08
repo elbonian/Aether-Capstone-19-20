@@ -1,14 +1,22 @@
+# escape =`
 FROM ubuntu
 MAINTAINER Aether
 RUN apt update
 RUN apt install python3-pip -y
-RUN pip3 install -U pip setuptools wheel
-RUN pip3 install -U numpy six certifi
-RUN pip3 install spiceypy
-RUN pip3 install Django==2.2.7
-RUN pip3 install djangorestframework
-RUN pip3 install markdown
-RUN pip3 install django-filter
-RUN pip3 install flask
-RUN pip3 install jsonpickle
-RUN pip3 install numpy
+RUN python3 -m pip install -U pip setuptools wheel
+RUN python3 -m pip install -U numpy six certifi
+RUN python3 -m pip install spiceypy
+RUN python3 -m pip install Django==2.2.7
+RUN python3 -m pip install djangorestframework
+RUN python3 -m pip install markdown
+RUN python3 -m pip install django-filter
+RUN python3 -m pip install flask
+RUN python3 -m pip install jsonpickle
+RUN python3 -m pip install numpy
+WORKDIR /home
+COPY de435.bsp RestServer/
+COPY genericMetaK.txt RestServer/
+COPY latest_leapseconds.tls RestServer/
+COPY planet-traj-rest-server.py RestServer/
+WORKDIR /home/RestServer
+ENTRYPOINT ["python3" , "planet-traj-rest-server.py"]
