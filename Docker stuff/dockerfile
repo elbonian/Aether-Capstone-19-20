@@ -5,3 +5,10 @@ RUN apt install python3-pip -y
 RUN pip3 install -U pip setuptools wheel
 RUN pip3 install -U numpy six certifi
 RUN pip3 install spiceypy
+RUN pip3 install Django==2.2.7
+RUN pip3 install djangorestframework
+RUN pip3 install markdown
+RUN pip3 install django-filter
+RUN pip3 install flask
+RUN pip3 install jsonpickle
+RUN pip3 install numpy
