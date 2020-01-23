@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" style= "width: 100%; height: 100%; background-color:black;">
+    <head>
+        <!-- Use correct character set. -->
+        <meta charset="utf-8">
+        <!-- Tell IE to use the latest, best version. -->
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+        <!-- Make the app on mobile take up the full browser screen and disable user scaling. -->
+        <meta name="viewport"
+            content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+        <title>Solar System</title>
+		<script src="https://typpo.github.io/spacekit/build/spacekit.js"></script>
+        <script src="/js/three.min.js"></script>
+    </head>
+    <body style= "width: 100%; height: 100%; background-color:black;">
+    	<div id="main-container" style= "width: 100%; height: 100%; background-color:black;">
+         <button id="start-button">Start</button>
+         <button id="stop-button">Stop</button>
+         <h4 style="color: white">Zoom to planet</h4>
+         <select id="zoom-dropdown">
+             <option id='sun'>Sun</option>
+             <option id='mercury'>Mercury</option>
+             <option id='venus'>Venus</option>
+             <option id='earth'>Earth</option>
+             <option id='mars'>Mars</option>
+             <option id='jupiter'>Jupiter</option>
+             <option id='saturn'>Saturn</option>
+             <option id='uranus'>Uranus</option>
+             <option id='neptune'>Neptune</option>
+             <option value="none" selected="selected">None</option>
+         </select>
+         <button id="submit-button">Submit</button>
+         <br>
+         <button id="reset-button">Reset</button>
+        </div>
+		<script src="/js/solarSystem.js"></script>
+    </body>
+</html>
