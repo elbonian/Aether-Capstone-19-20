@@ -5,8 +5,6 @@ const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
 
 viz.createStars();
 
-window.viz=viz
-
 const sun = viz.createSphere('sun', {
 	//labelText: 'Sun', 
 	textureUrl: '/js/textures/2k_sun.jpg',
@@ -95,8 +93,6 @@ const neptune = viz.createSphere('neptune', {
 	radius: 0.039
 });
 
-//viz.zoomToFit(sun);
-
 viz.setCameraDrift(true);
 
 document.addEventListener('mousedown', onDocumentMouseDown, false );
@@ -113,40 +109,38 @@ document.getElementById("submit-button").addEventListener("click", function(){
 	let planetZoomChoice = document.getElementById("zoom-dropdown");
 	let choiceStr = planetZoomChoice.options[planetZoomChoice.selectedIndex].value;
 	console.log(choiceStr);
+	//Camera cam = viz.getViewer();
 	switch(choiceStr){
 		case "Sun":
 			console.log(choiceStr);
-			viz.zoomToFit(sun);
+			viz.getViewer().followObject(sun, [-0.75, -0.75, 0.5]);
 			break;
 		case "Mercury":
-			console.log(choiceStr);
-			console.log(mercury);
-			viz.zoomToFit(mercury);
+			viz.getViewer().followObject(mercury, [-0.75, -0.75, 0.5]);
 			break;
 		case "Venus":
-			viz.zoomToFit(venus);
+			viz.getViewer().followObject(venus, [-0.75, -0.75, 0.5]);
 			break;
 		case "Earth":
-			viz.zoomToFit(earth);
+			viz.getViewer().followObject(earth, [-0.75, -0.75, 0.5]);
 			break;
 		case "Mars":
-			viz.zoomToFit(mars);
+			viz.getViewer().followObject(mars, [-0.75, -0.75, 0.5]);
 			break;
 		case "Jupiter":
-			viz.zoomToFit(jupiter);
+			viz.getViewer().followObject(jupiter, [-0.75, -0.75, 0.5]);
 			break;
 		case "Saturn":
-			viz.zoomToFit(saturn);
+			viz.getViewer().followObject(saturn, [-0.75, -0.75, 0.5]);
 			break;
 		case "Neptune":
-			viz.zoomToFit(neptune);
+			viz.getViewer().followObject(neptune, [-0.75, -0.75, 0.5]);
 			break;
 		case "Uranus":
-			viz.zoomToFit(uranus);
-			break;
-		default:
-			viz.zoomToFit(sun);
+			viz.getViewer().followObject(uranus, [-0.25, -0.25, 0.5]);
 	}
+	viz.getViewer().get3jsCamera().zoom = 10;
+	viz.getViewer().get3jsCamera().updateProjectionMatrix();
 });
 
 function onDocumentMouseDown(event) {
