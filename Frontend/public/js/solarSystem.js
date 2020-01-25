@@ -5,6 +5,8 @@ const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
 
 viz.createStars();
 
+window.viz=viz
+
 const sun = viz.createSphere('sun', {
 	//labelText: 'Sun', 
 	textureUrl: '/js/textures/2k_sun.jpg',
@@ -115,22 +117,35 @@ document.getElementById("submit-button").addEventListener("click", function(){
 		case "Sun":
 			console.log(choiceStr);
 			viz.zoomToFit(sun);
+			break;
 		case "Mercury":
+			console.log(choiceStr);
+			console.log(mercury);
 			viz.zoomToFit(mercury);
+			break;
 		case "Venus":
 			viz.zoomToFit(venus);
+			break;
 		case "Earth":
 			viz.zoomToFit(earth);
+			break;
 		case "Mars":
 			viz.zoomToFit(mars);
+			break;
 		case "Jupiter":
 			viz.zoomToFit(jupiter);
+			break;
 		case "Saturn":
 			viz.zoomToFit(saturn);
+			break;
 		case "Neptune":
 			viz.zoomToFit(neptune);
+			break;
 		case "Uranus":
 			viz.zoomToFit(uranus);
+			break;
+		default:
+			viz.zoomToFit(sun);
 	}
 });
 
@@ -139,3 +154,7 @@ function onDocumentMouseDown(event) {
 	var viewer = viz.getViewer();
 	viewer.update();
 }
+
+document.querySelectorAll('.vis-controls__set-date').forEach(
+	function(elt){elt.onclick=function(){viz.setDate(
+		new Date(prompt('Enter a date in the format YYYY-mm-dd.','2000-01-01')));};});
