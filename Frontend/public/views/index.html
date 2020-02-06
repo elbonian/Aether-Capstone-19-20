@@ -20,20 +20,29 @@
             <button id="stop-button">Stop</button>
             <h4 style="color: white">Zoom to planet</h4>
             <select id="zoom-dropdown">
-            <option id='sun'>Sun</option>
-            <option id='mercury'>Mercury</option>
-            <option id='venus'>Venus</option>
-            <option id='earth'>Earth</option>
-            <option id='mars'>Mars</option>
-            <option id='jupiter'>Jupiter</option>
-            <option id='saturn'>Saturn</option>
-            <option id='uranus'>Uranus</option>
-            <option id='neptune'>Neptune</option>
-            <option value="none" selected="selected">None</option>
+                <option id='sun'>Sun</option>
+                <option id='mercury'>Mercury</option>
+                <option id='venus'>Venus</option>
+                <option id='earth'>Earth</option>
+                <option id='mars'>Mars</option>
+                <option id='jupiter'>Jupiter</option>
+                <option id='saturn'>Saturn</option>
+                <option id='uranus'>Uranus</option>
+                <option id='neptune'>Neptune</option>
+                <option value="none" selected="selected">None</option>
             </select>
             <button id="submit-button">Submit</button>
             <br>
             <button id="reset-button">Reset</button>
+        </div>
+        <div class="multiselect">
+            <div class="selectBox" onclick="showCheckboxes()">
+                <select>
+                    <option>Visible Bodies</option>
+                </select>
+                <div class="overSelect"></div>
+            </div>
+            <div id="checkboxes"></div>
         </div>
         <div id="main-container"></div>
         
