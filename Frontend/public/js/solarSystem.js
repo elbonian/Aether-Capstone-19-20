@@ -4,6 +4,8 @@ const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
 });
 
 var expanded = false;
+
+//This is a list of visualized elements in the simulation. They are grouped by name as the key and the object. Simply add an object to this list ("name" : object) to contibute to the simulation.
 var visualizer_list = {
 	"Sun" : viz.createSphere('sun', {textureUrl: '/js/textures/2k_sun.jpg', position: [0,0,0],radius: 0.05}), 
 	"Mercury" : viz.createSphere('mercury', {labelText: 'Mercury', textureUrl: '/js/textures/2k_mercury.jpg', theme: {/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.MERCURY, radius: 0.03}), 
@@ -20,6 +22,7 @@ viz.setCameraDrift(true);
 
 viz.createStars();
 
+//This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
 var checkboxes = document.getElementById("checkboxes");
 for(let i of Object.keys(visualizer_list)){
 	appendCheckboxElement(checkboxes , i);
@@ -53,6 +56,9 @@ document.getElementById("submit-button").addEventListener("click", function(){
 	viz.getViewer().get3jsCamera().updateProjectionMatrix();
 });
 
+//This function is used to append a checkbox element to a checkbox menu
+//Element parent_element This is the checkbox menu that we want to add the new checkbox element to
+//String child_element_name This is the name of the checkbox element that we want to create
 function appendCheckboxElement(parent_element , child_element_name){
 	var id = child_element_name.concat("-checkbox");
 	var element = document.createElement("input");
@@ -66,6 +72,7 @@ function appendCheckboxElement(parent_element , child_element_name){
 	element.checked = true;
 }
 
+//This function Toggles the checkbox menu when the menu is clicked
 function showCheckboxes() {
 	var checkboxes = document.getElementById("checkboxes");
 	if (!expanded) {
