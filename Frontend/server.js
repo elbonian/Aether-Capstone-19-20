@@ -17,5 +17,5 @@ var server = app.listen(8080, function() {
 
 app.get('/', function(req, res){
 	console.log(path.join(__dirname, 'public/views/index.html'));
-	 res.sendFile(path.join(__dirname, 'public/views/index.html'));
+	 res.sendFile(path.join(__dirname, 'public/views/welcome.html'));
 })
