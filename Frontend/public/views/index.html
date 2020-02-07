@@ -15,7 +15,12 @@
     </head>
     <body>
         <div id="menu">
+            <h4 style="color: white">Time Controls</h4>
+            <div class="slidecontainer">
+                <input type="range" min="-20" max="200" value=".00001157407407407407407407407407407407407" class="slider" id="time-rate">
+            </div>
             <button class="vis-controls__set-date">Set Date</button>
+            <button id="real-time">Real Time</button>
             <button id="start-button">Start</button>
             <button id="stop-button">Stop</button>
             <h4 style="color: white">Zoom to planet</h4>
@@ -35,6 +40,7 @@
             <br>
             <button id="reset-button">Reset</button>
 
+            <h4 id="toggle-vis" style="color: white">Toggle Visibility</h4>
             <div class="multiselect">
                 <div class="selectBox" onclick="showCheckboxes()">
                     <select>
