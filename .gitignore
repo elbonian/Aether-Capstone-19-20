@@ -1,0 +1,5 @@
+
+backend/.idea/
+backend/SPICE/tools/
+backend/SPICE/kernels/**/*.bsp
+backend/SPICE/kernels/**/*.tls

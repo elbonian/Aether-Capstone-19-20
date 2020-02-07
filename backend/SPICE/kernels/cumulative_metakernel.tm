@@ -1,0 +1,12 @@
+\begindata
+KERNELS_TO_LOAD=(
+'SPICE/kernels/Generic/latest_leapseconds.tls',
+'SPICE/kernels/Generic/de435.bsp',
+'SPICE/kernels/Sun/codes_300ast_20100725.bsp',
+'SPICE/kernels/Mars/mar097.bsp',
+'SPICE/kernels/Jupiter/jup310.bsp',
+'SPICE/kernels/Saturn/sat427.bsp',
+'SPICE/kernels/Uranus/ura111.bsp',
+'SPICE/kernels/Neptune/nep081.bsp',
+'SPICE/kernels/Pluto/plu055.bsp')
+\begintext
