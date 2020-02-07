@@ -8,17 +8,17 @@ var expanded = false;
 //This is a list of visualized elements in the simulation. They are grouped by name as the key and the object. Simply add an object to this list ("name" : object) to contibute to the simulation.
 var visualizer_list = {
 	"Sun" : viz.createSphere('sun', {textureUrl: '/js/textures/2k_sun.jpg', position: [0,0,0],radius: 0.05}), 
-	"Mercury" : viz.createSphere('mercury', {labelText: 'Mercury', textureUrl: '/js/textures/2k_mercury.jpg', theme: {/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.MERCURY, radius: 0.03}), 
-	"Venus" : viz.createSphere('venus', {labelText: "Venus" , textureUrl: '/js/textures/2k_venus_surface.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.VENUS, radius: 0.035}), 
-	"Earth" : viz.createSphere('earth', {labelText: "Earth", textureUrl: '/js/textures/2k_earth_daymap.jpg', theme: {/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.EARTH, radius: 0.035}), 
-	"Mars" : viz.createSphere('mars', {labelText: "Mars", textureUrl: '/js/textures/2k_mars.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.MARS, radius: 0.03}), 
-	"Jupiter" : viz.createSphere('jupiter', {labelText: "Jupiter", textureUrl: '/js/textures/jupiter2_4k.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.JUPITER, radius: 0.045}), 
-	"Saturn" : viz.createSphere('saturn', {labelText: "Saturn", textureUrl: '/js/textures/2k_saturn.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.SATURN, radius: 0.041}), 
-	"Neptune" : viz.createSphere('neptune', {labelText: 'Neptune', textureUrl: '/js/textures/2k_neptune.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.NEPTUNE, radius: 0.039}), 
-	"Uranus" : viz.createSphere('uranus', {labelText: "Uranus", textureUrl: '/js/textures/2k_uranus.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.URANUS, radius: 0.039})
+	"Mercury" : viz.createSphere('mercury', {labelText: 'Mercury', textureUrl: '/js/textures/2k_mercury.jpg', theme: {/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.MERCURY, radius: 0.03, particleSize: -1}), 
+	"Venus" : viz.createSphere('venus', {labelText: "Venus" , textureUrl: '/js/textures/2k_venus_surface.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.VENUS, radius: 0.035, particleSize: -1}), 
+	"Earth" : viz.createSphere('earth', {labelText: "Earth", textureUrl: '/js/textures/2k_earth_daymap.jpg', theme: {/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.EARTH, radius: 0.035, particleSize: -1}), 
+	"Mars" : viz.createSphere('mars', {labelText: "Mars", textureUrl: '/js/textures/2k_mars.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.MARS, radius: 0.03, particleSize: -1}), 
+	"Jupiter" : viz.createSphere('jupiter', {labelText: "Jupiter", textureUrl: '/js/textures/jupiter2_4k.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.JUPITER, radius: 0.045, particleSize: -1}), 
+	"Saturn" : viz.createSphere('saturn', {labelText: "Saturn", textureUrl: '/js/textures/2k_saturn.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.SATURN, radius: 0.041, particleSize: -1}), 
+	"Neptune" : viz.createSphere('neptune', {labelText: 'Neptune', textureUrl: '/js/textures/2k_neptune.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.NEPTUNE, radius: 0.039, particleSize: -1}), 
+	"Uranus" : viz.createSphere('uranus', {labelText: "Uranus", textureUrl: '/js/textures/2k_uranus.jpg', theme:{/*color: 0x913cee,*/}, ephem: Spacekit.EphemPresets.URANUS, radius: 0.039, particleSize: -1})
 };
 
-viz.setCameraDrift(true);
+viz.setCameraDrift(false);
 
 viz.createStars();
 
@@ -30,8 +30,10 @@ for(let i of Object.keys(visualizer_list)){
 	document.getElementById(checkbox_element).addEventListener("click" , function(){
 		let checked = document.getElementById(checkbox_element).checked;
 		if(!checked){
+			visualizer_list[i].setLabelVisibility(false);
 			viz.removeObject(visualizer_list[i]);
 		} else {
+			visualizer_list[i].setLabelVisibility(true);
 			viz.addObject(visualizer_list[i]);
 		}
 	});
