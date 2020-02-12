@@ -7,10 +7,11 @@ import jsonpickle
 import re
 # import numpy as np
 import spiceypy as spice
+from flask_cors import CORS
 
 # Initialize the Flask application
 app = Flask(__name__)
-
+CORS(app)
 
 def returnResponse(response, status):
     response_pickled = jsonpickle.encode(response)
