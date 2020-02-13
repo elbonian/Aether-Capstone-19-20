@@ -11,7 +11,8 @@ let sun = viz.createSphere('sun', {
 	//labelText: 'Sun', 
 	textureUrl: '/js/textures/2k_sun.jpg',
 	position: [0,0,0],
-	radius: 0.05
+	radius: 0.05,
+	particleSize: -1
 });
 
 let mercury = viz.createSphere('mercury', {
@@ -21,7 +22,8 @@ let mercury = viz.createSphere('mercury', {
 		//color: 0x913cee,
 	},
 	ephem: Spacekit.EphemPresets.MERCURY,
-	radius: 0.03
+	radius: 0.03,
+	particleSize: -1
 });
 
 let venus = viz.createSphere('venus', {
@@ -31,7 +33,8 @@ let venus = viz.createSphere('venus', {
 		//color: 0x913cee,
 	},
 	ephem: Spacekit.EphemPresets.VENUS,
-	radius: 0.035
+	radius: 0.035,
+	particleSize: -1
 });
 
 let earth = viz.createSphere('earth', {
@@ -41,7 +44,8 @@ let earth = viz.createSphere('earth', {
 		//color: 0x913cee,
 	},
 	ephem: Spacekit.EphemPresets.EARTH,
-	radius: 0.035
+	radius: 0.035,
+	particleSize: -1
 });
 
 let mars = viz.createSphere('mars', {
@@ -51,7 +55,8 @@ let mars = viz.createSphere('mars', {
 		//color: 0x913cee,
 	},
 	ephem: Spacekit.EphemPresets.MARS,
-	radius: 0.03
+	radius: 0.03,
+	particleSize: -1
 });
 
 let jupiter = viz.createSphere('jupiter', {
@@ -61,7 +66,8 @@ let jupiter = viz.createSphere('jupiter', {
 		//color: 0x913cee,
 	},
 	ephem: Spacekit.EphemPresets.JUPITER,
-	radius: 0.045
+	radius: 0.045,
+	particleSize: -1
 });
 
 let saturn = viz.createSphere('saturn', {
@@ -71,7 +77,8 @@ let saturn = viz.createSphere('saturn', {
 		//color: 0x913cee,
 	},
 	ephem: Spacekit.EphemPresets.SATURN,
-	radius: 0.041
+	radius: 0.041,
+	particleSize: -1
 });
 
 let uranus = viz.createSphere('uranus', {
@@ -81,7 +88,8 @@ let uranus = viz.createSphere('uranus', {
 		//color: 0x913cee,
 	},
 	ephem: Spacekit.EphemPresets.URANUS,
-	radius: 0.039
+	radius: 0.039,
+	particleSize: -1
 });
 
 let neptune = viz.createSphere('neptune', {
@@ -91,7 +99,8 @@ let neptune = viz.createSphere('neptune', {
 		//color: 0x913cee,
 	},
 	ephem: Spacekit.EphemPresets.NEPTUNE,
-	radius: 0.039
+	radius: 0.039,
+	particleSize: -1
 });
 
 //This is a list of visualized elements in the simulation. They are grouped by name as the key and the object. Simply add an object to this list ("name" : object) to contibute to the simulation.
