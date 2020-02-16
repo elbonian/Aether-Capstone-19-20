@@ -14,7 +14,9 @@
         <link rel="stylesheet" type="text/css" href="/views/index.css">
     </head>
     <body>
+        <!-- Main menu div -->
         <div id="menu">
+
             <h4 style="color: white">Time Controls</h4>
             <div class="slidecontainer">
                 <input type="range" min="-20" max="200" value=".00001157407407407407407407407407407407407" class="slider" id="time-rate">
@@ -23,6 +25,7 @@
             <button id="real-time">Real Time</button>
             <button id="start-button">Start</button>
             <button id="stop-button">Stop</button>
+
             <h4 style="color: white">Zoom to planet</h4>
             <select id="zoom-dropdown">
                 <option id='sun'>Sun</option>
@@ -53,6 +56,7 @@
 
         </div>
 
+        <!-- Main 3D simulation -->
         <div id="main-container"></div>
         
         <script src="/js/solarSystem.js"></script>

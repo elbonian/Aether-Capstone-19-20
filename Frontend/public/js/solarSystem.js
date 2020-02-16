@@ -1,120 +1,175 @@
+/////////////////////////////////
+/////////// Globals	/////////////
+/////////////////////////////////
+ 
+// Julian Date of the J2000 epoch
+const j2000 = 2451545.0;
+
+// Seconds in a day
+const secondsPerDay = 86400;
+
+// (Julian) Days per second
+// Repeating decimal, not physically accurate due to precision constraints
+// TODO: figure out a different way to make the time accurate
+const realTimeRate = 1 / secondsPerDay;
+
+// Dictionary of bodies in the visualization
+// e.x. "body name" : body object
+var visualizer_list = {};
+
+// Dictionary of ecliptic cartesian (x,y,z) coordinates in AU
+// e.x. "body name" : [[x1,y1,z1],...,[xn,yn,zn]]
+var adjusted_positions = {};
+
+// Dictionary of Julian Days corresponding to each [x,y,z] coordinate in adjusted_positions
+// e.x. "body name" : [2451545.094,...,2451560..43]
+var adjusted_times = {};
+
+
+
+/////////////////////////////////
+/////// Utility Functions ///////
+/////////////////////////////////
+
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+
+
+/////////////////////////////////
+///// Default Visualization /////
+/////////////////////////////////
+
+
+// Main visualization object
 const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
   basePath: 'https://typpo.github.io/spacekit/src',
-  jdPerSecond: .00001157407407407407407407407407407407407,
+  jdPerSecond: realTimeRate,
   startDate: Date.now(),
+  startPaused: true,
+  unitsPerAu: 1.0,
+  debug: {
+  	showAxes: true,
+  	showGrid: true
+  }
 });
+
+//async function to get data from API
+async function getPositionData(ref_frame, targets, start_date, end_date, steps){
+	//returns a promise containing the response from server
+	let response = await fetch('http://0.0.0.0:5000/api/positions/' + ref_frame + '/' + targets + '/' + start_date + '/' + end_date + '/' + steps);
+	let data = await response.json();
+	return data;
+}
+
+// Mapping of the Sun and the planet's texture paths
+let body_textures = {
+	"sun" : '/js/textures/2k_sun.jpg',
+	"mercury" : '/js/textures/2k_mercury.jpg',
+	"venus" : '/js/textures/2k_venus_surface.jpg',
+	"earth" : '/js/textures/2k_earth_daymap.jpg',
+	"mars" : '/js/textures/2k_mars.jpg',
+	"jupiter" : '/js/textures/jupiter2_4k.jpg',
+	"saturn" : '/js/textures/2k_saturn.jpg',
+	"uranus" : '/js/textures/2k_uranus.jpg',
+	"neptune" : '/js/textures/2k_neptune.jpg'
+};
+
+//Retrieve DEFAULT position data of sun and eight planets with 1000 steps
+getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune', '2010-02-15', '2020-12-16', '1000').then(data => {
+
+	// iterate over each body returned by the API call
+	for(const property in data){
+		// Array of [x,y,z] coords in AU
+		var allAdjustedVals = [];
+		// Array of Julian Dates corresponding to each position
+		var allAdjustedTimes = [];
+		// Current Julian Date
+		var cur_jd = viz.getJd();
+
+		// iterate over the data for the current body
+		var index = -1;
+		var min_dif = 9999999999999;
+		var i = 0;
+		for(pos of data[property].positions){
+			// convert coordinates in km to au
+			adjustedVals = pos.map(Spacekit.kmToAu);
+			// convert coords to ecliptic
+			adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+			allAdjustedVals.push(adjustedVals2);
+
+			// Convert time returned by API call (seconds past J2000 epoch) to Julian Date
+			result_time = (data[property].times[i] /  secondsPerDay) + j2000;
+			allAdjustedTimes.push(result_time);
+
+			// check if Julian Date is closest to the current viz date
+			var dif = Math.abs(result_time - cur_jd);
+			if(dif <= min_dif){
+				min_dif = dif;
+				index = i;
+			}
+			i = i + 1;
+		}
+
+		// TODO: use position arrays to change positions of these bodies and show the trajectory
+		
+		//console.log(property);
+		//console.log(allAdjustedVals[index]);
+		
+		// Create object
+		var bodyName = capitalizeFirstLetter(property)
+		let body = viz.createSphere(property, {
+			labelText: bodyName,
+			textureUrl: body_textures[property],
+			position: allAdjustedVals[index],
+			radius: 0.15,
+			particleSize: -1,
+			rotation: true
+		});
+
+		// console.log(viz.getJd());
+		// console.log(allAdjustedTimes[index]);
+		// console.log(viz.getDate());
+
+		// Update global variables
+		visualizer_list[bodyName] = body;
+		adjusted_positions[bodyName] = allAdjustedVals;
+		adjusted_times[bodyName] = allAdjustedTimes;
+	}
+});
+
+
+
+/////////////////////////////////
+/// Potential pos update code ///
+/////////////////////////////////
+
+// function updatePos(bodyname, position){
+// 	visualizer_list[bodyName].setPosition(position);
+// 	console.log(visualizer_list[bodyName].getPosition());
+// }
+
+// function closestTime(jd, index, times){
+// 	return jd > viz.getJd();
+// }
+
+// var startDate = viz.getJd();
+
+// var cur_index = 0;
+// function tick(){
+
+// 	var dif = adjusted_times[]
+// 	for(body of Object.value(visualizer_list)){
+
+// 	}
+// 	//console.log(default_data.prototypes);
+// }
+
+//viz.onTick = tick;
+
 
 var expanded = false;
-
-
-let sun = viz.createSphere('sun', {
-	//labelText: 'Sun', 
-	textureUrl: '/js/textures/2k_sun.jpg',
-	position: [0,0,0],
-	radius: 0.05,
-	particleSize: -1
-});
-
-let mercury = viz.createSphere('mercury', {
-	labelText: 'Mercury',
-	textureUrl: '/js/textures/2k_mercury.jpg',
-	theme: {
-		//color: 0x913cee,
-	},
-	ephem: Spacekit.EphemPresets.MERCURY,
-	radius: 0.03,
-	particleSize: -1
-});
-
-let venus = viz.createSphere('venus', {
-	labelText: "Venus",
-	textureUrl: '/js/textures/2k_venus_surface.jpg',
-	theme:{
-		//color: 0x913cee,
-	},
-	ephem: Spacekit.EphemPresets.VENUS,
-	radius: 0.035,
-	particleSize: -1
-});
-
-let earth = viz.createSphere('earth', {
-	labelText: "Earth",
-	textureUrl: '/js/textures/2k_earth_daymap.jpg',
-	theme: {
-		//color: 0x913cee,
-	},
-	ephem: Spacekit.EphemPresets.EARTH,
-	radius: 0.035,
-	particleSize: -1
-});
-
-let mars = viz.createSphere('mars', {
-	labelText: "Mars",
-	textureUrl: '/js/textures/2k_mars.jpg',
-	theme:{
-		//color: 0x913cee,
-	},
-	ephem: Spacekit.EphemPresets.MARS,
-	radius: 0.03,
-	particleSize: -1
-});
-
-let jupiter = viz.createSphere('jupiter', {
-	labelText: "Jupiter",
-	textureUrl: '/js/textures/jupiter2_4k.jpg',
-	theme:{
-		//color: 0x913cee,
-	},
-	ephem: Spacekit.EphemPresets.JUPITER,
-	radius: 0.045,
-	particleSize: -1
-});
-
-let saturn = viz.createSphere('saturn', {
-	labelText: "Saturn",
-	textureUrl: '/js/textures/2k_saturn.jpg',
-	theme:{
-		//color: 0x913cee,
-	},
-	ephem: Spacekit.EphemPresets.SATURN,
-	radius: 0.041,
-	particleSize: -1
-});
-
-let uranus = viz.createSphere('uranus', {
-	labelText: "Uranus",
-	textureUrl: '/js/textures/2k_uranus.jpg',
-	theme:{
-		//color: 0x913cee,
-	},
-	ephem: Spacekit.EphemPresets.URANUS,
-	radius: 0.039,
-	particleSize: -1
-});
-
-let neptune = viz.createSphere('neptune', {
-	labelText: 'Neptune',
-	textureUrl: '/js/textures/2k_neptune.jpg',
-	theme:{
-		//color: 0x913cee,
-	},
-	ephem: Spacekit.EphemPresets.NEPTUNE,
-	radius: 0.039,
-	particleSize: -1
-});
-
-//This is a list of visualized elements in the simulation. They are grouped by name as the key and the object. Simply add an object to this list ("name" : object) to contibute to the simulation.
-let visualizer_list = {
-	"Sun" : sun, 
-	"Mercury" : mercury, 
-	"Venus" : venus, 
-	"Earth" : earth, 
-	"Mars" : mars, 
-	"Jupiter" : jupiter, 
-	"Saturn" : saturn, 
-	"Neptune" : neptune, 
-	"Uranus" : uranus
-};
 
 viz.setCameraDrift(false);
 
@@ -151,7 +206,7 @@ slider.oninput = function() {
 
 document.getElementById("real-time").addEventListener("click", function() {
 	viz.setDate(Date.now());
-	viz.setJdPerSecond(.00001157407407407407407407407407407407407);
+	viz.setJdPerSecond(realTimeRate);
 });
 
 document.getElementById("start-button").addEventListener("click", function() {
@@ -211,22 +266,6 @@ document.querySelectorAll('.vis-controls__set-date').forEach(
        function(elt){elt.onclick=function(){viz.setDate(
                new Date(prompt('Enter a date in the format YYYY-mm-dd.','2000-01-01')));};});
 
-//async function to get data from API
-async function getPositionData(ref_frame, targets, start_date, end_date, steps){
-	//returns a promise containing the response from server
-	let response = await fetch('http://0.0.0.0:5000/api/positions/' + ref_frame + '/' + targets + '/' + start_date + '/' + end_date + '/' + steps);
-	let data = await response.json();
-	return data;
-}
 
-//Retrieve position data of sun and eight planets with 10000 steps
-getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune', '2019-10-10', '2020-10-10', '10000').then(data => {
-	console.log(data);
-	for(const property in data){
-		console.log(property);
-		//log position arrays
-		console.log(data[property].positions);
-		// TODO: use position arrays to change positions of these bodies and show the trajectory
-	}
-});
+
 
