@@ -25,6 +25,7 @@ var adjusted_positions = {};
 // e.x. "body name" : [2451545.094,...,2451560..43]
 var adjusted_times = {};
 
+var listPopulated = false;
 
 
 /////////////////////////////////
@@ -76,6 +77,8 @@ let body_textures = {
 	"neptune" : '/js/textures/2k_neptune.jpg'
 };
 
+var body;
+
 //Retrieve DEFAULT position data of sun and eight planets with 1000 steps
 getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune', '2010-02-15', '2020-12-16', '1000').then(data => {
 
@@ -119,7 +122,7 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		
 		// Create object
 		var bodyName = capitalizeFirstLetter(property)
-		let body = viz.createSphere(property, {
+		body = viz.createSphere(property, {
 			labelText: bodyName,
 			textureUrl: body_textures[property],
 			position: allAdjustedVals[index],
@@ -138,8 +141,6 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		adjusted_times[bodyName] = allAdjustedTimes;
 	}
 });
-
-
 
 /////////////////////////////////
 /// Potential pos update code ///
@@ -176,26 +177,6 @@ viz.setCameraDrift(false);
 viz.createStars();
 
 //This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
-var checkboxes = document.getElementById("checkboxes");
-for(let i of Object.keys(visualizer_list)){
-	appendCheckboxElement(checkboxes , i);
-	let checkbox_element = i.concat("-checkbox");
-	document.getElementById(checkbox_element).addEventListener("click" , function(){
-		let checked = document.getElementById(checkbox_element).checked;
-		let label = visualizer_list[i]._label;
-		if(!checked){
-			if(label != null){
-				visualizer_list[i].setLabelVisibility(false);
-			}
-			viz.removeObject(visualizer_list[i]);
-		} else {
-			if(label != null){
-				visualizer_list[i].setLabelVisibility(true);
-			}
-			viz.addObject(visualizer_list[i]);
-		}
-	});
-}
 
 document.addEventListener('mousedown', onDocumentMouseDown, false );
 
@@ -247,6 +228,28 @@ function appendCheckboxElement(parent_element , child_element_name){
 //This function Toggles the checkbox menu when the menu is clicked
 function showCheckboxes() {
 	var checkboxes = document.getElementById("checkboxes");
+	if(!listPopulated){
+		for(let i of Object.keys(visualizer_list)){
+			console.log(i);
+			appendCheckboxElement(checkboxes , i);
+			let checkbox_element = i.concat("-checkbox");
+			document.getElementById(checkbox_element).addEventListener("click" , function(){
+				let checked = document.getElementById(checkbox_element).checked;
+				let label = visualizer_list[i]._label;
+				if(!checked){
+					if(label != null){
+						visualizer_list[i].setLabelVisibility(false);
+					}
+					viz.removeObject(visualizer_list[i]);
+				} else {
+					if(label != null){
+						visualizer_list[i].setLabelVisibility(true);
+					}
+					viz.addObject(visualizer_list[i]);
+				}
+			});
+		}
+	}
 	if (!expanded) {
 		checkboxes.style.display = "block";
 		expanded = true;
@@ -265,7 +268,3 @@ function onDocumentMouseDown(event) {
 document.querySelectorAll('.vis-controls__set-date').forEach(
        function(elt){elt.onclick=function(){viz.setDate(
                new Date(prompt('Enter a date in the format YYYY-mm-dd.','2000-01-01')));};});
-
-
-
-

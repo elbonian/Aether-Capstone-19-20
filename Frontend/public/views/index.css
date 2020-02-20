@@ -4,6 +4,12 @@ body{
 	background-color: black;
 }
 
+ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
 #main-container{
   position: absolute;
   left: 0;
@@ -51,6 +57,7 @@ body{
 #checkboxes label {
   display: block;
   background-color: white;
+  padding-right: 100px;
 }
 
 #checkboxes label:hover {
@@ -68,4 +75,23 @@ body{
   border-radius: 5px;  
   background: white;
   outline: none;
+}
+
+ul li {
+	position : relative;
+}
+
+li ul {
+	display : none;
+}
+
+li:hover > ul {
+	display : block;
+	position : absolute;
+	color : blue;
+}
+
+ul ul {
+	left : 100%;
+	top : 0;
 }
