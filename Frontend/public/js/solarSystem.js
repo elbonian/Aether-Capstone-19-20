@@ -77,8 +77,6 @@ let body_textures = {
 	"neptune" : '/js/textures/2k_neptune.jpg'
 };
 
-var body;
-
 //Retrieve DEFAULT position data of sun and eight planets with 1000 steps
 getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune', '2010-02-15', '2020-12-16', '1000').then(data => {
 
@@ -121,8 +119,8 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		//console.log(allAdjustedVals[index]);
 		
 		// Create object
-		var bodyName = capitalizeFirstLetter(property)
-		body = viz.createSphere(property, {
+		let bodyName = capitalizeFirstLetter(property)
+		let body = viz.createSphere(property, {
 			labelText: bodyName,
 			textureUrl: body_textures[property],
 			position: allAdjustedVals[index],
@@ -139,6 +137,24 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		visualizer_list[bodyName] = body;
 		adjusted_positions[bodyName] = allAdjustedVals;
 		adjusted_times[bodyName] = allAdjustedTimes;
+		var checkboxes = document.getElementById("checkboxes");
+		appendCheckboxElement(checkboxes , bodyName);
+		let checkbox_element = bodyName.concat("-checkbox");
+		document.getElementById(checkbox_element).addEventListener("click" , function(){
+			let checked = document.getElementById(checkbox_element).checked;
+			let label = visualizer_list[bodyName]._label;
+			if(!checked){
+				if(label != null){
+					visualizer_list[bodyName].setLabelVisibility(false);
+				}
+				viz.removeObject(visualizer_list[bodyName]);
+			} else {
+				if(label != null){
+					visualizer_list[bodyName].setLabelVisibility(true);
+				}
+				viz.addObject(visualizer_list[bodyName]);
+			}
+		});
 	}
 });
 
@@ -228,28 +244,6 @@ function appendCheckboxElement(parent_element , child_element_name){
 //This function Toggles the checkbox menu when the menu is clicked
 function showCheckboxes() {
 	var checkboxes = document.getElementById("checkboxes");
-	if(!listPopulated){
-		for(let i of Object.keys(visualizer_list)){
-			console.log(i);
-			appendCheckboxElement(checkboxes , i);
-			let checkbox_element = i.concat("-checkbox");
-			document.getElementById(checkbox_element).addEventListener("click" , function(){
-				let checked = document.getElementById(checkbox_element).checked;
-				let label = visualizer_list[i]._label;
-				if(!checked){
-					if(label != null){
-						visualizer_list[i].setLabelVisibility(false);
-					}
-					viz.removeObject(visualizer_list[i]);
-				} else {
-					if(label != null){
-						visualizer_list[i].setLabelVisibility(true);
-					}
-					viz.addObject(visualizer_list[i]);
-				}
-			});
-		}
-	}
 	if (!expanded) {
 		checkboxes.style.display = "block";
 		expanded = true;
