@@ -4,12 +4,6 @@ body{
 	background-color: black;
 }
 
-ul {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
-
 #main-container{
   position: absolute;
   left: 0;
@@ -57,7 +51,6 @@ ul {
 #checkboxes label {
   display: block;
   background-color: white;
-  padding-right: 100px;
 }
 
 #checkboxes label:hover {
@@ -77,21 +70,38 @@ ul {
   outline: none;
 }
 
+ul {
+  list-style: none;
+  position: relative;
+  left: 0;
+  padding: 0;
+  margin: 0;
+  width: 100%
+}
+
 ul li {
-	position : relative;
+  width: 100%;
+  float: left;
+  position: relative;
 }
 
-li ul {
-	display : none;
+ul li input {
+  left 0;
+  top 0;
 }
 
-li:hover > ul {
-	display : block;
-	position : absolute;
-	color : blue;
+ul li label {
+  position: relative;
+  white-space: nowrap;
 }
 
 ul ul {
-	left : 100%;
-	top : 0;
+  display: none;
+  position: absolute;
+  left: 100%;
+  top:0;
+}
+
+li:hover > ul{
+  display: block;
 }

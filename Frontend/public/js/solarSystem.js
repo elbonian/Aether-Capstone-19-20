@@ -137,9 +137,8 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		visualizer_list[bodyName] = body;
 		adjusted_positions[bodyName] = allAdjustedVals;
 		adjusted_times[bodyName] = allAdjustedTimes;
-		var checkboxes = document.getElementById("checkboxes");
-		appendCheckboxElement(checkboxes , bodyName);
 		let checkbox_element = bodyName.concat("-checkbox");
+		document.getElementById(checkbox_element).checked = true;
 		document.getElementById(checkbox_element).addEventListener("click" , function(){
 			let checked = document.getElementById(checkbox_element).checked;
 			let label = visualizer_list[bodyName]._label;
