@@ -1,5 +1,7 @@
-
+.idea/
 backend/.idea/
-backend/SPICE/tools/
+backend/SPICE/tools/*
 backend/SPICE/kernels/**/*.bsp
 backend/SPICE/kernels/**/*.tls
+backend/__pycache__/
+!backend/SPICE/tools/README_tools.md

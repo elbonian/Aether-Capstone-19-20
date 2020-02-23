@@ -20,6 +20,16 @@ def get_solar_target_positions(ip, ref_frame, target_list, startDate, endDate, s
 	return response, json.loads(response.text)
 
 
+def get_dropdown_bodies(ip):
+
+	addr = 'http://{}:5000/api/body-list/'.format(ip)
+
+	# make the request and get the response
+	response = requests.get(addr)
+
+	# decode response
+	return response, json.loads(response.text)
+
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(
@@ -37,8 +47,13 @@ if __name__ == '__main__':
 	target_list = ['mercury', 'venus', 'earth', 'mars', 'europa', 'charon', 'titan', 'moon']
 
 	# steps_list = ['5']
-	steps_list = ['5', '10', '15', '20', '25', '30', '35', '40']
+	steps_list = ['1', '1', '1', '1', '1', '1', '1', '1']
 
 	args = parser.parse_args()
 
 	pprint("Response: {}".format(get_solar_target_positions(args.ip, ref_frame, target_list, args.start_date_time, args.end_date_time, steps_list)))
+	print('-------------------------------------------------')
+	ddown_resp = get_dropdown_bodies(args.ip)
+	print("Response:", ddown_resp[0])
+	pprint(ddown_resp[1])
+

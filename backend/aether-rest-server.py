@@ -8,6 +8,7 @@ import re
 # import numpy as np
 import spiceypy as spice
 from flask_cors import CORS
+from db_connect import Database
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -131,6 +132,67 @@ def get_object_positions(ref_frame, targets, startDate, endDate, steps):
     spice.kclear()
 
     return returnResponse(response_data, 200)
+
+
+# TODO: cookies?
+@app.route('/api/body-list/', methods=['GET'])
+def get_available_bodies():
+
+    top_level_dropdown_elems = ('mercury', 'venus', 'earth', 'mars', 'asteroids', 'jupiter', 'saturn', 'uranus',
+                                'neptune', 'pluto')
+
+    db = Database('aether_backend_data.db')
+
+    results = {
+        'SUN': {}
+    }
+
+    for elem in top_level_dropdown_elems:
+
+        # convert to upper case since DB values are all upper case # todo consider changing set so this isn't needed
+        elem = elem.upper()
+
+        if elem != 'ASTEROIDS':
+
+            # group by name to remove duplicates
+            sql = "SELECT name FROM Body WHERE wrt LIKE '{}%' GROUP BY name".format(elem)
+
+            query_res = db.executeQuery(sql, variables=[])
+
+            body_list = [body['name'] for body in query_res]
+
+            results[elem] = {}
+
+            for body in body_list:
+                # make sure we're not searching for sub-bodies in a circle
+                if body != elem:
+                    sql = "SELECT name FROM Body WHERE wrt LIKE '{}%' GROUP BY name".format(body)
+                    query_res = db.executeQuery(sql, variables=[])
+                    sub_body_list = [sub_body['name'] for sub_body in query_res]
+                    results[elem][body] = {}
+                    for sub_body in sub_body_list:
+                        results[elem][body][sub_body] = {}
+        else:
+            sql = "SELECT name FROM Body WHERE path = ? GROUP BY name"
+
+            query_res = db.executeQuery(sql, variables=['SPICE/kernels/Sun/codes_300ast_20100725.bsp'])
+
+            body_list = [body['name'] for body in query_res]
+
+            results[elem] = {}
+
+            for body in body_list:
+                results[elem][body] = {}
+
+    db.closeDatabase()
+
+    return returnResponse(results, 200)
+
+
+@app.route('/api/body-info/', methods=['GET'])
+def get_body_info():
+    # TODO: endpoint shall provide radius, mass, rotation/orientation information
+    pass
 
 
 app.run(host="0.0.0.0", port=5000)
