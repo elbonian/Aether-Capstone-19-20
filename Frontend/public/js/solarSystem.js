@@ -25,7 +25,6 @@ var adjusted_positions = {};
 // e.x. "body name" : [2451545.094,...,2451560..43]
 var adjusted_times = {};
 
-var listPopulated = false;
 
 
 /////////////////////////////////
@@ -50,11 +49,22 @@ const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
   startDate: Date.now(),
   startPaused: true,
   unitsPerAu: 1.0,
+  camera: {
+  	//initialPosition: [-10,-20,5],
+  	enableDrift: false,
+  },
   debug: {
   	showAxes: true,
-  	showGrid: true
+	showGrid: true,
+	showStats: true,  
   }
 });
+
+//viz.getContext().objects.camera.get3jsCamera().far = 400;
+//viz.getContext().objects.camera.get3jsCamera().fov = 50;
+//viz.getContext().objects.camera.get3jsCamera().updateProjectionMatrix();
+
+//viz.renderOnlyInViewport();
 
 //async function to get data from API
 async function getPositionData(ref_frame, targets, start_date, end_date, steps){
@@ -77,8 +87,83 @@ let body_textures = {
 	"neptune" : '/js/textures/2k_neptune.jpg'
 };
 
+function renderPointData(adjusted_positions, adjusted_times){
+	//console.log(adjusted_positions)
+	const points = [];
+	let lines = [];
+	for(const property in adjusted_positions){
+		//visualizer_list[property].update();
+		//console.log(property);
+		
+		for(let time = 0; time < adjusted_times[property].length; time++){
+			//visualizer_list[property].setPosition(adjusted_positions[property][time][0], adjusted_positions[property][time][1], adjusted_positions[property][time][2]);
+			//console.log(adjusted_positions[property][time]);
+			const vector = new THREE.Vector3(adjusted_positions[property][time][0], adjusted_positions[property][time][1], adjusted_positions[property][time][2]);
+			points.push(vector);
+			if(time != 0 && time != adjusted_times[property].length-1){
+				points.push(vector);
+			}
+			
+			//visualizer_list[property].update(adjusted_times[property][time]);
+		}
+		const pts = new THREE.Geometry();
+		pts.vertices = points;
+		console.log(pts)
+		/*
+		points.vertices.forEach(vertex => {
+		geometry.vertices.push(vertex);
+		geometry.vertices.push(new THREE.Vector3(vertex.x, vertex.y, 0));
+		});
+	
+		lines.push(new THREE.LineSegments(
+		geometry,
+		new THREE.LineBasicMaterial({
+			color: 0x333333,
+		}),
+		THREE.LineStrip,
+		));
+		*/
+		let material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
+		Object.defineProperty( material, 'needsUpdate', {
+			value: true,
+  			writable: true
+		} );
+		//material.side = THREE.DoubleSide;
+		console.log(material);
+		lines.push(new THREE.LineSegments(
+			pts,
+			material,
+		));
+		//pts.computeBoundingSphere();
+	}
+
+	let scene = viz.getScene();
+	//const pts = new THREE.Geometry();
+	//console.log(viz._renderer.properties);
+	//lines[0].geometry.attributes.position.needsUpdate = false;
+	for(let i = 0; i < lines.length; i++){
+		lines[i].material.needsUpdate = true;
+		//lines[i].frustumCulled = false;
+		//viz.getContext().objects.camera.get3jsCamera().add(lines[i]);
+		//console.log(viz.getContext().objects.camera.get3jsCamera());
+		scene.add(lines[i]);
+		//lines[i].geometry.computeBoundingSphere();
+		console.log(lines[i]);
+	}
+
+	//lines[0].material.needsUpdate = true;
+	//console.log(lines[0].material.needsUpdate);
+	//console.log(lines[0]);
+	//scene.add(lines[0]);
+	console.log(lines);
+	console.log(scene);
+	//for(let time = 0; time < adjusted_times.length; time++){
+		//const vector = new THREE.vector()
+	//}
+}
+
 //Retrieve DEFAULT position data of sun and eight planets with 1000 steps
-getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune', '2010-02-15', '2020-12-16', '1000').then(data => {
+getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune', '2010-02-15', '2020-12-16', '2000').then(data => {
 
 	// iterate over each body returned by the API call
 	for(const property in data){
@@ -119,12 +204,19 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		//console.log(allAdjustedVals[index]);
 		
 		// Create object
-		let bodyName = capitalizeFirstLetter(property)
+		var bodyName = capitalizeFirstLetter(property)
+		var radius;
+		if(bodyName == "Sun"){
+			radius = 0.20;
+		}
+		else{
+			radius = .10;
+		}
 		let body = viz.createSphere(property, {
 			labelText: bodyName,
 			textureUrl: body_textures[property],
 			position: allAdjustedVals[index],
-			radius: 0.15,
+			radius: radius,
 			particleSize: -1,
 			rotation: true
 		});
@@ -132,30 +224,34 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		// console.log(viz.getJd());
 		// console.log(allAdjustedTimes[index]);
 		// console.log(viz.getDate());
-
+		console.log(bodyName);
 		// Update global variables
 		visualizer_list[bodyName] = body;
 		adjusted_positions[bodyName] = allAdjustedVals;
 		adjusted_times[bodyName] = allAdjustedTimes;
-		let checkbox_element = bodyName.concat("-checkbox");
-		document.getElementById(checkbox_element).checked = true;
-		document.getElementById(checkbox_element).addEventListener("click" , function(){
-			let checked = document.getElementById(checkbox_element).checked;
-			let label = visualizer_list[bodyName]._label;
-			if(!checked){
-				if(label != null){
-					visualizer_list[bodyName].setLabelVisibility(false);
-				}
-				viz.removeObject(visualizer_list[bodyName]);
-			} else {
-				if(label != null){
-					visualizer_list[bodyName].setLabelVisibility(true);
-				}
-				viz.addObject(visualizer_list[bodyName]);
-			}
-		});
 	}
+	//const scene - viz.getScene();
+	renderPointData(adjusted_positions, adjusted_times);
+	//console.log(bodyName);
+	//console.log(visualizer_list[bodyName].get3jsObjects());
+	
+	for(const property in visualizer_list){
+		//console.log(property);
+		for(let i = 0; i < adjusted_times[property].length; i++){
+			//console.log(adjusted_times[property][i]);
+			//visualizer_list[bodyName].update(adjusted_times[property][i]);
+		}
+	}
+	viz.createSphere("nothin", {
+		position: [-50000,-500000,-500000],
+		radius: .01,
+		particleSize: 1,
+
+	});
+	
 });
+
+
 
 /////////////////////////////////
 /// Potential pos update code ///
@@ -173,14 +269,14 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 // var startDate = viz.getJd();
 
 // var cur_index = 0;
-// function tick(){
-
-// 	var dif = adjusted_times[]
-// 	for(body of Object.value(visualizer_list)){
-
-// 	}
-// 	//console.log(default_data.prototypes);
-// }
+function tick(){
+	for(object of viz.getScene().children){
+		if(object.hasOwnProperty("geometry")){
+			//console.log(object);
+			object.geometry.computeBoundingSphere();
+		}
+	}
+}
 
 //viz.onTick = tick;
 
@@ -189,9 +285,29 @@ var expanded = false;
 
 viz.setCameraDrift(false);
 
-viz.createStars();
+//viz.createStars();
 
 //This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
+var checkboxes = document.getElementById("checkboxes");
+for(let i of Object.keys(visualizer_list)){
+	appendCheckboxElement(checkboxes , i);
+	let checkbox_element = i.concat("-checkbox");
+	document.getElementById(checkbox_element).addEventListener("click" , function(){
+		let checked = document.getElementById(checkbox_element).checked;
+		let label = visualizer_list[i]._label;
+		if(!checked){
+			if(label != null){
+				visualizer_list[i].setLabelVisibility(false);
+			}
+			viz.removeObject(visualizer_list[i]);
+		} else {
+			if(label != null){
+				visualizer_list[i].setLabelVisibility(true);
+			}
+			viz.addObject(visualizer_list[i]);
+		}
+	});
+}
 
 document.addEventListener('mousedown', onDocumentMouseDown, false );
 
@@ -221,6 +337,12 @@ document.getElementById("submit-button").addEventListener("click", function(){
 	viz.getViewer().get3jsCamera().zoom = 10;
 	viz.getViewer().get3jsCamera().updateProjectionMatrix();
 });
+
+
+document.getElementById("reset-button").addEventListener("click", function(){
+	window.location.reload();
+});
+
 
 /*
 	This function is used to append a checkbox element to a checkbox menu
@@ -261,3 +383,7 @@ function onDocumentMouseDown(event) {
 document.querySelectorAll('.vis-controls__set-date').forEach(
        function(elt){elt.onclick=function(){viz.setDate(
                new Date(prompt('Enter a date in the format YYYY-mm-dd.','2000-01-01')));};});
+
+
+
+
