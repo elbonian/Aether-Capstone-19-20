@@ -1,3 +1,155 @@
+/*
+	Custom simulation object to allow for creation of AetherObjects
+	Inherits: Simulation
+*/
+
+class AetherSimulation extends Spacekit.Simulation {
+	constructor(simulationElt, options) {
+        super(simulationElt, options);
+	}
+
+	/*
+		Creates new AetherObject
+		@param optional parameters for AetherObject
+		@return AetherObject
+	*/
+	createAetherObject(...args){
+		return new AetherObject(...args, this);
+	}
+}
+
+/*
+	Custom AetherObject that changes some parameters for RotatingObject
+	Inherits: SphereObject
+*/
+class AetherObject extends Spacekit.SphereObject {
+	//constructor adds position and index variables
+    constructor(id, options, contextOrSimulation) {
+		super(id, options, contextOrSimulation, false);
+		this.updateIndex = 0;
+		this.currPos = [0,0,0];
+		this.newPos = [0,0,0];
+		this.positionData = [];
+        this.init();
+      }
+
+	  /*
+		  Initialize function. Mostly the same as RotatingObject with minor changes
+	  */
+      init(){
+        let map;
+        if (this._options.textureUrl) {
+          map = new THREE.TextureLoader().load(this._options.textureUrl);
+        }
+	 
+		//Level of detail segments changed to (can be changed)
+        const detailedObj = new THREE.LOD();
+        const levelsOfDetail = this._options.levelsOfDetail || [
+          { radii: 0, segments: 48 },
+        ];
+        const radius = this.getScaledRadius();
+     
+        for (let i = 0; i < levelsOfDetail.length; i += 1) {
+          const level = levelsOfDetail[i];
+          const sphereGeometry = new THREE.SphereGeometry(
+            radius,
+            level.segments,
+            level.segments,
+          );
+     
+          let material;
+          if (this._simulation.isUsingLightSources()) {
+            const uniforms = {
+              sphereTexture: { value: null },
+              lightPos: { value: new THREE.Vector3() },
+            };
+            // TODO(ian): Handle if no map
+            uniforms.sphereTexture.value = map;
+            uniforms.lightPos.value.copy(this._simulation.getLightPosition());
+            material = new THREE.ShaderMaterial({
+              uniforms,
+              vertexShader: SPHERE_SHADER_VERTEX,
+              fragmentShader: SPHERE_SHADER_FRAGMENT,
+              transparent: true,
+            });
+          } else {
+			//mesh material changed to transparent and opacity to 0 to not see weird meshes
+            material = new THREE.MeshBasicMaterial({
+                transparent: true, 
+                opacity: 0,
+            });
+          }
+     
+          const mesh = new THREE.Mesh(sphereGeometry, material);
+          mesh.receiveShadow = true;
+          mesh.castShadow = true;
+     
+		  // Change the coordinate system to have Z-axis pointed up.
+		  // TODO: change mesh rotation
+          mesh.rotation.x = Math.PI / 2;
+     
+          // Show this number of segments at distance >= radii * level.radii.
+          detailedObj.addLevel(mesh, radius * level.radii);
+        }
+     
+        // Add to the parent base object.
+        this._obj.add(detailedObj);
+     
+        if (this._options.atmosphere && this._options.atmosphere.enable) {
+          this._obj.add(this.renderFullAtmosphere());
+        }
+     
+        if (this._options.axialTilt) {
+          this._obj.rotation.y += rad(this._options.axialTilt);
+        }
+     
+        this._renderMethod = 'SPHERE';
+     
+        if (this._simulation) {
+          // Add it all to visualization.
+          this._simulation.addObject(this, false /* noUpdate */);
+        }
+     
+        super.init();
+	  }
+
+	  /*
+		  Sets class position variable
+		  @param adjusted_positions Position data from API
+	  */
+	  setPositionData(adjusted_positions){
+		  this.positionData = adjusted_positions;
+		  this.currPos = this.positionData[0];
+	  }
+	  
+	  /*
+		  Returns current position for a body
+		  @return this.currPos current position of body
+	  */
+	  getCurrPos(){
+		  return this.currPos;
+	  }
+
+	  /*
+		  Sets next position of where body will be and updates index
+	  */
+	  setCurrPos(){
+		  this.updateIndex++;
+		  this.currPos = this.positionData[this.updateIndex];
+	  }
+
+	  /*
+		  Updates the position of the body according to postionData
+		  TODO: Make bodies move according to correct time
+		  TODO: Bodies stop moving at the end of position array and app freazes
+	  */
+      update(jd){
+		const newpos = this.getCurrPos();
+		this._obj.position.set(newpos[0], newpos[1], newpos[2]);
+		this.setCurrPos();
+      }
+}
+
 /////////////////////////////////
 /////////// Globals	/////////////
 /////////////////////////////////
@@ -26,7 +178,6 @@ var adjusted_positions = {};
 var adjusted_times = {};
 
 
-
 /////////////////////////////////
 /////// Utility Functions ///////
 /////////////////////////////////
@@ -43,7 +194,7 @@ function capitalizeFirstLetter(string) {
 
 
 // Main visualization object
-const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
+const viz = new AetherSimulation(document.getElementById('main-container'), {
   basePath: 'https://typpo.github.io/spacekit/src',
   jdPerSecond: realTimeRate,
   startDate: Date.now(),
@@ -60,6 +211,9 @@ const viz = new Spacekit.Simulation(document.getElementById('main-container'), {
   }
 });
 
+
+let camera = viz.getContext().objects.camera.get3jsCamera();
+console.log(camera);
 //viz.getContext().objects.camera.get3jsCamera().far = 400;
 //viz.getContext().objects.camera.get3jsCamera().fov = 50;
 //viz.getContext().objects.camera.get3jsCamera().updateProjectionMatrix();
@@ -212,14 +366,20 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		else{
 			radius = .10;
 		}
-		let body = viz.createSphere(property, {
+		let body = viz.createAetherObject(property, {
 			labelText: bodyName,
 			textureUrl: body_textures[property],
 			position: allAdjustedVals[index],
 			radius: radius,
 			particleSize: -1,
-			rotation: true
+			rotation: true,
+			hideOrbit: true,
+			levelsOfDetail: [{
+				threshold: 0,
+				segments: 40,
+			}]
 		});
+		console.log(body);
 
 		// console.log(viz.getJd());
 		// console.log(allAdjustedTimes[index]);
@@ -228,6 +388,7 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		// Update global variables
 		visualizer_list[bodyName] = body;
 		adjusted_positions[bodyName] = allAdjustedVals;
+		body.setPositionData(allAdjustedVals);
 		adjusted_times[bodyName] = allAdjustedTimes;
 	}
 	//const scene - viz.getScene();
