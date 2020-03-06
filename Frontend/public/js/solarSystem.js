@@ -16,10 +16,23 @@ class AetherSimulation extends Spacekit.Simulation {
 	createAetherObject(...args){
 		return new AetherObject(...args, this);
 	}
+
+	renderObject() {
+        if (this._renderMethod !== 'SPHERE') {
+   
+          // Create a stationary sprite.
+          this._object3js = this.createSprite();
+          if (this._simulation) {
+            // Add it all to visualization.
+            this._simulation.addObject(this, true /* noUpdate */);
+          }
+          this._renderMethod = 'SPRITE';
+        }
+      }
 }
 
 /*
-	Custom AetherObject that changes some parameters for RotatingObject
+	Custom AetherObject that changes some parameters for SphereObject
 	Inherits: SphereObject
 */
 class AetherObject extends Spacekit.SphereObject {
@@ -30,11 +43,15 @@ class AetherObject extends Spacekit.SphereObject {
 		this.currPos = [0,0,0];
 		this.newPos = [0,0,0];
 		this.positionData = [];
+		this.lines = [];
+		this.points = [];
+		this.geometry = null;
+		this.material = null;
         this.init();
       }
 
 	  /*
-		  Initialize function. Mostly the same as RotatingObject with minor changes
+		  Initialize function. Mostly the same as SphereObject with minor changes
 	  */
       init(){
         let map;
@@ -79,7 +96,10 @@ class AetherObject extends Spacekit.SphereObject {
                 opacity: 0,
             });
           }
-     
+		  //Object.defineProperty( material, 'needsUpdate', {
+			//value: true,
+  			//writable: true
+			//} );
           const mesh = new THREE.Mesh(sphereGeometry, material);
           mesh.receiveShadow = true;
           mesh.castShadow = true;
@@ -109,7 +129,7 @@ class AetherObject extends Spacekit.SphereObject {
           // Add it all to visualization.
           this._simulation.addObject(this, false /* noUpdate */);
         }
-     
+		
         super.init();
 	  }
 
@@ -119,6 +139,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
 	  setPositionData(adjusted_positions){
 		  this.positionData = adjusted_positions;
+		  console.log(adjusted_positions);
 		  this.currPos = this.positionData[0];
 	  }
 	  
@@ -127,6 +148,7 @@ class AetherObject extends Spacekit.SphereObject {
 		  @return this.currPos current position of body
 	  */
 	  getCurrPos(){
+		  console.log(this.currPos);
 		  return this.currPos;
 	  }
 
@@ -138,6 +160,27 @@ class AetherObject extends Spacekit.SphereObject {
 		  this.currPos = this.positionData[this.updateIndex];
 	  }
 
+	  drawLineSegment(){
+			this.geometry = new THREE.Geometry();
+			this.material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
+			//this.geometry.vertices.needsUpdate = true;
+			Object.defineProperty( this.material, 'needsUpdate', {
+				value: true,
+				writable: true
+			} );
+			const pos = this.getCurrPos();
+			const vector = new THREE.Vector3(pos[0], pos[1], pos[2]);
+			this.points.push(vector);
+			this.geometry.vertices = this.points;
+			let line = new THREE.Line(
+				this.geometry,
+				this.material,
+			);
+			this.lines.push(line);
+			let scene = viz.getScene();
+			scene.add(line);
+	  }
+
 	  /*
 		  Updates the position of the body according to postionData
 		  TODO: Make bodies move according to correct time
@@ -145,7 +188,9 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
       update(jd){
 		const newpos = this.getCurrPos();
+		console.log(newpos);
 		this._obj.position.set(newpos[0], newpos[1], newpos[2]);
+		this.drawLineSegment();
 		this.setCurrPos();
       }
 }
@@ -241,6 +286,7 @@ let body_textures = {
 	"neptune" : '/js/textures/2k_neptune.jpg'
 };
 
+
 function renderPointData(adjusted_positions, adjusted_times){
 	//console.log(adjusted_positions)
 	const points = [];
@@ -249,7 +295,7 @@ function renderPointData(adjusted_positions, adjusted_times){
 		//visualizer_list[property].update();
 		//console.log(property);
 		
-		for(let time = 0; time < adjusted_times[property].length; time++){
+		for(let time = 0; time < adjusted_positions[property].length; time++){
 			//visualizer_list[property].setPosition(adjusted_positions[property][time][0], adjusted_positions[property][time][1], adjusted_positions[property][time][2]);
 			//console.log(adjusted_positions[property][time]);
 			const vector = new THREE.Vector3(adjusted_positions[property][time][0], adjusted_positions[property][time][1], adjusted_positions[property][time][2]);
@@ -263,20 +309,20 @@ function renderPointData(adjusted_positions, adjusted_times){
 		const pts = new THREE.Geometry();
 		pts.vertices = points;
 		console.log(pts)
-		/*
-		points.vertices.forEach(vertex => {
-		geometry.vertices.push(vertex);
-		geometry.vertices.push(new THREE.Vector3(vertex.x, vertex.y, 0));
-		});
+		
+		//points.vertices.forEach(vertex => {
+		//geometry.vertices.push(vertex);
+		//geometry.vertices.push(new THREE.Vector3(vertex.x, vertex.y, 0));
+		//});
 	
-		lines.push(new THREE.LineSegments(
-		geometry,
-		new THREE.LineBasicMaterial({
-			color: 0x333333,
-		}),
-		THREE.LineStrip,
-		));
-		*/
+		//lines.push(new THREE.LineSegments(
+		//geometry,
+		//new THREE.LineBasicMaterial({
+		//	color: 0x333333,
+		//}),
+		//THREE.LineStrip,
+		//));
+		
 		let material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
 		Object.defineProperty( material, 'needsUpdate', {
 			value: true,
@@ -379,6 +425,7 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 				segments: 40,
 			}]
 		});
+		body.setPositionData(allAdjustedVals);
 		console.log(body);
 
 		// console.log(viz.getJd());
@@ -388,11 +435,11 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		// Update global variables
 		visualizer_list[bodyName] = body;
 		adjusted_positions[bodyName] = allAdjustedVals;
-		body.setPositionData(allAdjustedVals);
+		//body.setPositionData(allAdjustedVals);
 		adjusted_times[bodyName] = allAdjustedTimes;
 	}
 	//const scene - viz.getScene();
-	renderPointData(adjusted_positions, adjusted_times);
+	//renderPointData(adjusted_positions, adjusted_times);
 	//console.log(bodyName);
 	//console.log(visualizer_list[bodyName].get3jsObjects());
 	
@@ -403,13 +450,14 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 			//visualizer_list[bodyName].update(adjusted_times[property][i]);
 		}
 	}
+	/*
 	viz.createSphere("nothin", {
 		position: [-50000,-500000,-500000],
 		radius: .01,
 		particleSize: 1,
 
 	});
-	
+	*/
 });
 
 
@@ -544,7 +592,4 @@ function onDocumentMouseDown(event) {
 document.querySelectorAll('.vis-controls__set-date').forEach(
        function(elt){elt.onclick=function(){viz.setDate(
                new Date(prompt('Enter a date in the format YYYY-mm-dd.','2000-01-01')));};});
-
-
-
-
+		   
