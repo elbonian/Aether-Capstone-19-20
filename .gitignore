@@ -1,5 +1,6 @@
 .idea/
 backend/.idea/
+backend/*.db
 backend/SPICE/tools/*
 backend/SPICE/kernels/**/*.bsp
 backend/SPICE/kernels/**/*.tls

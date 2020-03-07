@@ -2,13 +2,16 @@
 # Spring 2020
 # Maintainer: Aether
 
-from flask import Flask, Response
+from flask import Flask, Response, request
+from werkzeug.utils import secure_filename
 import jsonpickle
 import re
 # import numpy as np
 import spiceypy as spice
 from flask_cors import CORS
 from db_connect import Database
+from SPKParser import SPKParser
+from os import stat
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -193,6 +196,59 @@ def get_available_bodies():
 def get_body_info():
     # TODO: endpoint shall provide radius, mass, rotation/orientation information
     pass
+
+
+@app.route('/api/spk-upload', methods=['POST'])
+def spk_upload():
+
+    spk_extension = '.bsp'
+
+    # check if the post request has the file part
+    if 'file' not in request.files:
+
+        return returnResponse({'error' : 'No file part in the request.'}, 400)
+
+    file = request.files['file']
+
+    if file.filename == '':
+
+        return returnResponse({'error': 'No file selected for uploading'}, 400)
+
+    filename = secure_filename(file.filename)
+
+    if not filename.endswith(spk_extension):
+
+        return returnResponse({'error': 'Only .bsp files are allowed.'})
+
+    else:
+
+        file_path = 'SPICE/kernels/Uploaded/' + filename
+
+        file.save(file_path)
+
+        spk_parser = SPKParser()
+
+        # TODO: wrap this in a try-except and have the parser class raise an exception if the file is bad
+        uploaded_spk_info = spk_parser.parse(file_path)
+
+        # keys: bodies -> [(body name, wrt, naif id)], start_date, end_date
+
+        spk_size_bytes = stat(file_path).st_size
+
+        db = Database('aether_backend_data.db')
+
+        sql = "INSERT INTO Kernel (path, start_date, end_date, size) VALUES (?, ?, ?, ?)"
+
+        db.executeNonQuery(sql, variables=[file_path, uploaded_spk_info['start_date'], uploaded_spk_info['end_date'],
+                                           spk_size_bytes])
+
+        for body_tuple in uploaded_spk_info['bodies']:
+
+            sql = "INSERT INTO Body (path, name, wrt, naif_id) VALUES (?, ?, ?, ?)"
+
+            db.executeNonQuery(sql, variables=[file_path, body_tuple[0], body_tuple[1], body_tuple[2]])
+
+        db.closeDatabase()
 
 
 app.run(host="0.0.0.0", port=5000)
