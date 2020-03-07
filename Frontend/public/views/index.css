@@ -85,11 +85,6 @@ ul li {
   position: relative;
 }
 
-ul li input {
-  left 0;
-  top 0;
-}
-
 ul li label {
   position: relative;
   white-space: nowrap;
@@ -100,6 +95,8 @@ ul ul {
   position: absolute;
   left: 100%;
   top:0;
+  max-height: 500%;
+  overflow: auto;
 }
 
 li:hover > ul{

@@ -139,7 +139,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
 	  setPositionData(adjusted_positions){
 		  this.positionData = adjusted_positions;
-		  console.log(adjusted_positions);
+		  //console.log(adjusted_positions);
 		  this.currPos = this.positionData[0];
 	  }
 	  
@@ -148,7 +148,7 @@ class AetherObject extends Spacekit.SphereObject {
 		  @return this.currPos current position of body
 	  */
 	  getCurrPos(){
-		  console.log(this.currPos);
+		  //console.log(this.currPos);
 		  return this.currPos;
 	  }
 
@@ -188,7 +188,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
       update(jd){
 		const newpos = this.getCurrPos();
-		console.log(newpos);
+		//console.log(newpos);
 		this._obj.position.set(newpos[0], newpos[1], newpos[2]);
 		this.drawLineSegment();
 		this.setCurrPos();
@@ -258,7 +258,7 @@ const viz = new AetherSimulation(document.getElementById('main-container'), {
 
 
 let camera = viz.getContext().objects.camera.get3jsCamera();
-console.log(camera);
+//console.log(camera);
 //viz.getContext().objects.camera.get3jsCamera().far = 400;
 //viz.getContext().objects.camera.get3jsCamera().fov = 50;
 //viz.getContext().objects.camera.get3jsCamera().updateProjectionMatrix();
@@ -269,6 +269,12 @@ console.log(camera);
 async function getPositionData(ref_frame, targets, start_date, end_date, steps){
 	//returns a promise containing the response from server
 	let response = await fetch('http://0.0.0.0:5000/api/positions/' + ref_frame + '/' + targets + '/' + start_date + '/' + end_date + '/' + steps);
+	let data = await response.json();
+	return data;
+}
+
+async function getAvailableBodies(){
+	let response = await fetch('http://0.0.0.0:5000/api/body-list/');
 	let data = await response.json();
 	return data;
 }
@@ -286,6 +292,45 @@ let body_textures = {
 	"neptune" : '/js/textures/2k_neptune.jpg'
 };
 
+getAvailableBodies().then(data =>{
+	//console.log(document.getElementById("Moon-checkbox").parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.nodeName);
+	var ul_element = document.createElement("UL");
+	var checkboxes = document.getElementById("checkboxes");
+	for(let body in data){
+		ul_element.appendChild(createSubElements(body , data[body]));
+	}
+	checkboxes.appendChild(ul_element);
+});
+
+function createSubElements(name , sublist){
+	var li_element = document.createElement("LI");
+	var label_element = document.createElement("LABEL");
+	var name2 = name[0].toUpperCase().concat(name.slice(1,name.length).toLowerCase());
+	var checkbox_name = name2.concat("-checkbox");
+	label_element.setAttribute("for" , checkbox_name);
+	var input_element = document.createElement("INPUT");
+	input_element.setAttribute("type" , "checkbox");
+	input_element.setAttribute("id" , checkbox_name);
+	var text_node = document.createTextNode(name2);
+	label_element.appendChild(input_element);
+	label_element.appendChild(text_node);
+	li_element.appendChild(label_element);
+	if(isEmpty(sublist)) return li_element
+	var ul_element = document.createElement("UL");
+	for(let body in sublist){
+		ul_element.appendChild(createSubElements(body, sublist[body]));
+	}
+	li_element.appendChild(ul_element);
+	return li_element;
+}
+
+function isEmpty(obj) {
+    for(var key in obj) {
+        if(obj.hasOwnProperty(key))
+            return false;
+    }
+    return true;
+}
 
 function renderPointData(adjusted_positions, adjusted_times){
 	//console.log(adjusted_positions)
@@ -308,7 +353,7 @@ function renderPointData(adjusted_positions, adjusted_times){
 		}
 		const pts = new THREE.Geometry();
 		pts.vertices = points;
-		console.log(pts)
+		//console.log(pts);
 		
 		//points.vertices.forEach(vertex => {
 		//geometry.vertices.push(vertex);
@@ -329,7 +374,7 @@ function renderPointData(adjusted_positions, adjusted_times){
   			writable: true
 		} );
 		//material.side = THREE.DoubleSide;
-		console.log(material);
+		//console.log(material);
 		lines.push(new THREE.LineSegments(
 			pts,
 			material,
@@ -348,15 +393,15 @@ function renderPointData(adjusted_positions, adjusted_times){
 		//console.log(viz.getContext().objects.camera.get3jsCamera());
 		scene.add(lines[i]);
 		//lines[i].geometry.computeBoundingSphere();
-		console.log(lines[i]);
+		//console.log(lines[i]);
 	}
 
 	//lines[0].material.needsUpdate = true;
 	//console.log(lines[0].material.needsUpdate);
 	//console.log(lines[0]);
 	//scene.add(lines[0]);
-	console.log(lines);
-	console.log(scene);
+	//console.log(lines);
+	//console.log(scene);
 	//for(let time = 0; time < adjusted_times.length; time++){
 		//const vector = new THREE.vector()
 	//}
@@ -426,12 +471,12 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 			}]
 		});
 		body.setPositionData(allAdjustedVals);
-		console.log(body);
+		//console.log(body);
 
 		// console.log(viz.getJd());
 		// console.log(allAdjustedTimes[index]);
 		// console.log(viz.getDate());
-		console.log(bodyName);
+		//console.log(bodyName);
 		// Update global variables
 		visualizer_list[bodyName] = body;
 		adjusted_positions[bodyName] = allAdjustedVals;
@@ -584,7 +629,7 @@ function showCheckboxes() {
 }
 
 function onDocumentMouseDown(event) {
-	console.log(event);
+	//console.log(event);
 	var viewer = viz.getViewer();
 	viewer.update();
 }
