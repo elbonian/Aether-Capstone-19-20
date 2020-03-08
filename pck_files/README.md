@@ -7,6 +7,7 @@ Fall 2019
 ### Dependencies
 
 Make sure to use Python3 when running jupyter notebook
+
 **Server**
   - spiceypy
 
