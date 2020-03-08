@@ -1,4 +1,4 @@
-# Basci Info From PCK Files
+# Info From PCK Files
 
 CU Capstone - NASA/JPL
 
@@ -11,6 +11,7 @@ Make sure to use Python3 when running the app
   - spiceypy
 
 PCK Kernels: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc
+
              https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/gm_de431.tpc
 
 ### How to Run
