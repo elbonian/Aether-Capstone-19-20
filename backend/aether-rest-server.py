@@ -23,6 +23,105 @@ def returnResponse(response, status):
     return Response(response=response_pickled, status=status, mimetype="application/json")
 
 
+@app.route('/api/positions2/<string:ref_frame>/<string:targets>/<string:curVizJd>/<string:curVizJdDelta>/<string:tailLenJd>/<int:validSeconds>', methods=['GET'])
+def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd, validSeconds):
+
+    valid_targets = ('solar system barycenter', 'sun', 'mercury barycenter', 'mercury', 'venus barycenter', 'venus',
+                     'earth barycenter', 'mars barycenter', 'jupiter barycenter', 'saturn barycenter',
+                     'uranus barycenter', 'neptune barycenter', 'pluto barycenter', 'earth', 'moon', 'mars', 'phobos',
+                     'deimos', 'jupiter', 'io', 'europa', 'ganymede', 'callisto', 'amalthea', 'thebe', 'adrastea',
+                     'metis', 'saturn', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'iapetus',
+                     'phoebe', 'helene', 'telesto', 'calypso', 'methone', 'polydeuces', 'uranus', 'ariel', 'umbriel',
+                     'titania', 'oberon', 'miranda', 'neptune', 'triton', 'nereid', 'proteus', 'pluto', 'charon', 'nix',
+                     'hydra', 'kerberos', 'styx')
+
+    # convert string of targets into a list -- ensure lower case for consistency
+    targets_list = [target.lower() for target in targets.split('+')]
+
+    ref_frame = ref_frame.lower()
+
+    # check to make sure the reference frame and targets are valid
+    if ref_frame not in valid_targets:
+        return returnResponse({'error': '{} is not a valid reference frame.'.format(ref_frame)}, 400)
+
+    for target in targets_list:
+        if target not in valid_targets:
+            return returnResponse({'error': '{} is not a known target.'.format(target)}, 400)
+
+    # TODO: consider modifying api params to only accept floats instead of strings
+    try:
+        curVizJd = float(curVizJd)
+        curVizJdDelta = float(curVizJdDelta)
+        tailLenJd = float(tailLenJd)
+    except ValueError:
+        return returnResponse({'error': 'curVizJd, curVizJdDelta, tailLenJd must all be floats.'}, 400)
+
+    # assume 60 fps as an upper bound -- this ensures that the data is valid for at least validSeconds
+    # validSeconds specifies the amount of real time the returned data will be valid for in the frontend
+    jd_end = curVizJd + (curVizJdDelta * 60 * validSeconds)
+
+    jd_start = curVizJd - tailLenJd
+
+    # ensure jd_end is a multiple of the current JD delta
+    if tailLenJd % curVizJdDelta > 0.00000001:  # TODO: is this value small enough to account for round off error
+        return returnResponse({'error': 'tailLenJd must be evenly divisible by curVizJdDelta.'}, 400)
+
+    # Convert back to string and add 'jd ' to the front for SPICE
+    startDate = 'jd ' + str(jd_start)
+    # endDate = 'jd ' + str(jd_end)
+
+    # TODO: put this outside the function so that it does not execute on every api call
+    # load the kernels
+    spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
+
+    # ----- REMEMBER: ET (ephemeris time) is simply seconds past J2000 epoch. J2000 epoch is JD 2451545.0 -----
+
+    # calculate ET times from date/time strings
+    try:
+        etStart = spice.str2et(startDate)
+        etDelta = curVizJdDelta * 86400  # Since JD is in days and ET is in seconds, simply multiply by seconds in a day
+        # etEnd = spice.str2et(endDate)  # todo: consider removing
+    except Exception as error:
+
+        return returnResponse({'error': error}, 400)
+
+    # TODO: logic for creating more steps (i.e. more than one coord per tick) when curVizJdDelta is exceptionally large
+
+    # calculate the number of necessary steps...
+    total_steps = round((jd_end - jd_start) / curVizJdDelta)
+
+    times = [etStart + (etDelta * x) for x in range(total_steps + 1)]
+
+    # DEBUGGING
+    # if etStart not in times:
+    #     print("Times list does not contain etStart")
+    # if spice.str2et('jd ' + str(curVizJd)) not in times:
+    #     print("Times list does not contain curVizJd")
+    # if etEnd not in times:
+    #     print("Times list does not contain etEnd")
+
+    response_data = dict()
+
+    # gather data for each target
+    for i, target in enumerate(targets_list):
+        # create a list of times based on ET start, ET end and number of steps for current target
+        # times = [x * (etEnd - etStart) / steps_list[i] + etStart for x in range(steps_list[i])]
+
+        # second variable returned is light times, which we may disregard for this purpose
+        target_positions, _ = spice.spkpos(target, times, 'J2000', 'NONE', ref_frame)
+
+        response_data[target] = {
+            'info': 'Positions (x,y,z) and times (JD) of {} w.r.t. {}'.format(target.capitalize(), ref_frame.capitalize()),
+            'positions': [coord.tolist() for coord in target_positions],  # target_positions is a numpy.ndarray
+            'times': [float(spice.et2utc(etTime, "J", 8)[3:]) for etTime in times]  # convert times to JD, slice off "JD " and convert to float
+        }
+
+    # clear the kernels
+    spice.kclear()
+
+    return returnResponse(response_data, 200)
+
+
 @app.route('/api/positions/<string:ref_frame>/<string:targets>/<string:startDate>/<string:endDate>/<string:steps>', methods=['GET'])
 def get_object_positions(ref_frame, targets, startDate, endDate, steps):
 
