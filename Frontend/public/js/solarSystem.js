@@ -6,6 +6,8 @@
 class AetherSimulation extends Spacekit.Simulation {
 	constructor(simulationElt, options) {
         super(simulationElt, options);
+        this.mult = options.mult || 1;
+        this.tail_length = options.tail_length || 1;
 	}
 
 	/*
@@ -29,6 +31,55 @@ class AetherSimulation extends Spacekit.Simulation {
           this._renderMethod = 'SPRITE';
         }
       }
+
+      /**
+   * @private
+   */
+  animate() {
+    if (!this._renderEnabled) {
+      return;
+    }
+ 
+    window.requestAnimationFrame(this.animate);
+ 
+    if (this._stats) {
+      this._stats.begin();
+    }
+ 
+ 	// CHANGED FROM DEFAULT SPACEKIT FUNCTION
+    if (!this._isPaused) {
+      if (this._jdDelta) {
+        this._jd += this._jdDelta;
+      } else {
+      	console.log("jd delta is undefined");
+      }
+ 
+      const timeDelta = (Date.now() - this._lastUpdatedTime) / 1000;
+      this._lastUpdatedTime = Date.now();
+      this._fps = 1 / timeDelta || 1;
+    }
+ 
+    // Update objects in this simulation
+    this.update();
+ 
+    // Update camera drifting, if applicable
+    if (this._enableCameraDrift) {
+      this.doCameraDrift();
+    }
+    this._camera.update();
+ 
+    // Update three.js scene
+    this._renderer.render(this._scene, this._camera.get3jsCamera());
+    //this._composer.render(0.1);
+ 
+    if (this.onTick) {
+      this.onTick();
+    }
+ 
+    if (this._stats) {
+      this._stats.end();
+    }
+  }
 }
 
 /*
@@ -39,14 +90,15 @@ class AetherObject extends Spacekit.SphereObject {
 	//constructor adds position and index variables
     constructor(id, options, contextOrSimulation) {
 		super(id, options, contextOrSimulation, false);
-		this.updateIndex = 0;
-		this.currPos = [0,0,0];
-		this.newPos = [0,0,0];
-		this.positionData = [];
-		this.lines = [];
-		this.points = [];
+		this.sim = contextOrSimulation;
+		this.currIndex = 0;
+		this.tailStartIndex = 0;
+		this.tail_length = 0;
+		this.positionVectors = [];
+		this.jdTimeData = [];
 		this.geometry = null;
 		this.material = null;
+		this.line = null;
         this.init();
       }
 
@@ -96,10 +148,10 @@ class AetherObject extends Spacekit.SphereObject {
                 opacity: 0,
             });
           }
-		  //Object.defineProperty( material, 'needsUpdate', {
-			//value: true,
-  			//writable: true
-			//} );
+		  Object.defineProperty( material, 'needsUpdate', {
+			value: true,
+  			writable: true
+			} );
           const mesh = new THREE.Mesh(sphereGeometry, material);
           mesh.receiveShadow = true;
           mesh.castShadow = true;
@@ -115,6 +167,14 @@ class AetherObject extends Spacekit.SphereObject {
         // Add to the parent base object.
         this._obj.add(detailedObj);
      
+     	// set current index
+        this.currIndex = this._options.currIndex;
+
+        // set position data
+        this.positionVectors = this._options.positionVectors;
+        //this.jdTimeData = this._options.jdTimeData;
+
+
         if (this._options.atmosphere && this._options.atmosphere.enable) {
           this._obj.add(this.renderFullAtmosphere());
         }
@@ -129,18 +189,70 @@ class AetherObject extends Spacekit.SphereObject {
           // Add it all to visualization.
           this._simulation.addObject(this, false /* noUpdate */);
         }
+
+        // set object's initial position
+        this._obj.position.set(this.positionVectors[this.currIndex].x, this.positionVectors[this.currIndex].y, this.positionVectors[this.currIndex].z);
+
+
+        //init trajectory tail
+        this.geometry = new THREE.BufferGeometry();
+		this.material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
+		//this.geometry.vertices.needsUpdate = true;
+		Object.defineProperty( this.material, 'needsUpdate', {
+			value: true,
+			writable: true
+		} );
+
+
+		// 1D array describing the vertices of the line
+		// i.e. [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
+		var positions = new Float32Array( this.positionVectors.length * 3);
+		this.geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3) );																								
+		//this.geometry.vertices = this.positionVectors;
+		//this.geometry.verticesNeedUpdate = true;
+		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex);
+		let line = new THREE.Line(
+			this.geometry,
+			this.material,
+		);
+
+		// reference to positions
+		var positions2 = line.geometry.attributes.position.array;
+		var index = 0;
+		// set 1D array according to positionVectors
+		for(var i = 0; i < this.positionVectors.length; i++){
+			positions2[index ++] = this.positionVectors[i].x;
+			positions2[index ++] = this.positionVectors[i].y;
+			positions2[index ++] = this.positionVectors[i].z;
+		}
+
+		// add line to the scene
+		let scene = this._simulation.getScene();
+		scene.add(line);
+		this.line = line;
 		
+		// set default tail length
+		this.tail_length = this.currIndex - this.tailStartIndex + 1;
+
         super.init();
 	  }
+
+
 
 	  /*
 		  Sets class position variable
 		  @param adjusted_positions Position data from API
 	  */
-	  setPositionData(adjusted_positions){
-		  this.positionData = adjusted_positions;
-		  //console.log(adjusted_positions);
-		  this.currPos = this.positionData[0];
+	  setpositionVectors(adjusted_positions){
+		  this.positionVectors = adjusted_positions;
+		}
+
+	  /*
+		  Sets class time variable
+		  @param adjusted_times List of JDs corresponding to each position
+	  */
+	  setTimeData(adjusted_times){
+	  	this.jdTimeData = adjusted_times;
 	  }
 	  
 	  /*
@@ -148,51 +260,73 @@ class AetherObject extends Spacekit.SphereObject {
 		  @return this.currPos current position of body
 	  */
 	  getCurrPos(){
-		  //console.log(this.currPos);
-		  return this.currPos;
+		  return this.positionVectors[this.currIndex];
 	  }
 
 	  /*
 		  Sets next position of where body will be and updates index
 	  */
-	  setCurrPos(){
-		  this.updateIndex++;
-		  this.currPos = this.positionData[this.updateIndex];
+	  setNextPos(){
+		  this.currIndex += this._simulation.mult;
+		  const currPos = this.positionVectors[this.currIndex];
+		  this._obj.position.set(currPos.x, currPos.y, currPos.z);
 	  }
 
-	  drawLineSegment(){
-			this.geometry = new THREE.Geometry();
-			this.material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
-			//this.geometry.vertices.needsUpdate = true;
-			Object.defineProperty( this.material, 'needsUpdate', {
-				value: true,
-				writable: true
-			} );
-			const pos = this.getCurrPos();
-			const vector = new THREE.Vector3(pos[0], pos[1], pos[2]);
-			this.points.push(vector);
-			this.geometry.vertices = this.points;
-			let line = new THREE.Line(
-				this.geometry,
-				this.material,
-			);
-			this.lines.push(line);
-			let scene = viz.getScene();
-			scene.add(line);
+
+	  /*
+		  Updates the object's tail's starting index
+	  */
+	  setNextTailStart(){
+	  	this.tailStartIndex = this.currIndex - Math.floor(this._simulation.tail_length * this.tail_length) + 1;
+	  	if(!this._simulation._isPaused){
+	  		// if not paused, then add a multiple of the simulation's rate of time
+	  		this.tailStartIndex += 1 * this._simulation.mult;
+	  	}
 	  }
 
 	  /*
-		  Updates the position of the body according to postionData
-		  TODO: Make bodies move according to correct time
-		  TODO: Bodies stop moving at the end of position array and app freazes
+		  Updates the length of the object's tail according to its indexes
+	  */
+	  updateTailLength(){
+	  	this.tail_length = this.currIndex - this.tailStartIndex + 1;
+	  }
+
+
+	  /*
+		  Update the object's line object according to its position indexes
+	  */
+	  drawLineSegment(){ // todo: consider renaming
+
+	  	// get the parent simulation's threejs scene
+		let scene = this._simulation.getScene();
+
+		// ensure object has a line object
+		if(this.line != null){
+			// update the line's draw range to only display from the end of the tail to the object's position
+			this.line.geometry.setDrawRange(this.tailStartIndex, this.currIndex - this.tailStartIndex + 1);
+		}
+	  }
+
+	  /*
+		  Updates the position of the body according to postionVectors
 	  */
       update(jd){
-		const newpos = this.getCurrPos();
-		//console.log(newpos);
-		this._obj.position.set(newpos[0], newpos[1], newpos[2]);
-		this.drawLineSegment();
-		this.setCurrPos();
-      }
+      	// update the object's tail beginning
+      	this.setNextTailStart();
+      	this.drawLineSegment();
+
+		// ensure we don't go out of bounds on the position list
+		if(this.currIndex >= 0 && this.currIndex < this.positionVectors.length-1){
+
+			// only update object position if not paused
+      		if(!this._simulation._isPaused){
+
+      			// update object's location
+      			this.setNextPos()
+			}
+      	}
+    }
+
 }
 
 /////////////////////////////////
@@ -209,6 +343,23 @@ const secondsPerDay = 86400;
 // Repeating decimal, not physically accurate due to precision constraints
 // TODO: figure out a different way to make the time accurate
 const realTimeRate = 1 / secondsPerDay;
+
+// Max julian-date-per-second for the simulation
+// One year per simulation second
+const maxJdPerSecond = 365;
+
+// Minimum julian-date-per-second for the simulation
+// 1 minute per simulation second
+const minJdPerSecond = 1 / 1440;
+
+// Day per second
+const dayPerSecond = 1;
+
+// Week per second
+const weekPerSecond = 7;
+
+const monthPerSecond = 30;
+
 
 // Dictionary of bodies in the visualization
 // e.x. "body name" : body object
@@ -241,7 +392,9 @@ function capitalizeFirstLetter(string) {
 // Main visualization object
 const viz = new AetherSimulation(document.getElementById('main-container'), {
   basePath: 'https://typpo.github.io/spacekit/src',
-  jdPerSecond: realTimeRate,
+  //jdPerTick : 1/60,
+  jdDelta: 1,
+  //jdPerSecond: 7,
   startDate: Date.now(),
   startPaused: true,
   unitsPerAu: 1.0,
@@ -256,19 +409,26 @@ const viz = new AetherSimulation(document.getElementById('main-container'), {
   }
 });
 
+//function tick(){
+	// console.log(viz._fps);
+	// console.log(viz._jdPerSecond);
+	// console.log(viz.getJdDelta());
+	//console.log(viz.getJdPerSecond());
+	//console.log(viz.tail_length);
+//}
 
-let camera = viz.getContext().objects.camera.get3jsCamera();
-//console.log(camera);
-//viz.getContext().objects.camera.get3jsCamera().far = 400;
-//viz.getContext().objects.camera.get3jsCamera().fov = 50;
-//viz.getContext().objects.camera.get3jsCamera().updateProjectionMatrix();
-
-//viz.renderOnlyInViewport();
+//viz.onTick = tick;
 
 //async function to get data from API
 async function getPositionData(ref_frame, targets, start_date, end_date, steps){
 	//returns a promise containing the response from server
 	let response = await fetch('http://0.0.0.0:5000/api/positions/' + ref_frame + '/' + targets + '/' + start_date + '/' + end_date + '/' + steps);
+	let data = await response.json();
+	return data;
+}
+
+async function getPositionData2(ref_frame, targets, cur_jd, jd_rate, tail_length, valid_time){
+	let response = await fetch('http://0.0.0.0:5000/api/positions2/' + ref_frame + '/' + targets + '/' + cur_jd + '/' + jd_rate + '/' + tail_length + '/' + valid_time);
 	let data = await response.json();
 	return data;
 }
@@ -289,18 +449,20 @@ let body_textures = {
 	"jupiter" : '/js/textures/jupiter2_4k.jpg',
 	"saturn" : '/js/textures/2k_saturn.jpg',
 	"uranus" : '/js/textures/2k_uranus.jpg',
-	"neptune" : '/js/textures/2k_neptune.jpg'
+	"neptune" : '/js/textures/2k_neptune.jpg',
+	"pluto" : '/js/textures/plu0rss1.jpg',
+	"moon" : '/js/textures/2k_moon.jpg'
 };
 
-getAvailableBodies().then(data =>{
-	//console.log(document.getElementById("Moon-checkbox").parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.nodeName);
-	var ul_element = document.createElement("UL");
-	var checkboxes = document.getElementById("checkboxes");
-	for(let body in data){
-		ul_element.appendChild(createSubElements(body , data[body]));
-	}
-	checkboxes.appendChild(ul_element);
-});
+// getAvailableBodies().then(data =>{
+// 	//console.log(document.getElementById("Moon-checkbox").parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.nodeName);
+// 	var ul_element = document.createElement("UL");
+// 	var checkboxes = document.getElementById("checkboxes");
+// 	for(let body in data){
+// 		ul_element.appendChild(createSubElements(body , data[body]));
+// 	}
+// 	checkboxes.appendChild(ul_element);
+// });
 
 function createSubElements(name , sublist){
 	var li_element = document.createElement("LI");
@@ -332,84 +494,40 @@ function isEmpty(obj) {
     return true;
 }
 
-function renderPointData(adjusted_positions, adjusted_times){
-	//console.log(adjusted_positions)
+
+
+
+
+
+function renderPointData(adjusted_positions, adjusted_times){ // todo: consider removing?
 	const points = [];
 	let lines = [];
 	for(const property in adjusted_positions){
-		//visualizer_list[property].update();
-		//console.log(property);
-		
+	
 		for(let time = 0; time < adjusted_positions[property].length; time++){
-			//visualizer_list[property].setPosition(adjusted_positions[property][time][0], adjusted_positions[property][time][1], adjusted_positions[property][time][2]);
-			//console.log(adjusted_positions[property][time]);
 			const vector = new THREE.Vector3(adjusted_positions[property][time][0], adjusted_positions[property][time][1], adjusted_positions[property][time][2]);
 			points.push(vector);
 			if(time != 0 && time != adjusted_times[property].length-1){
 				points.push(vector);
-			}
-			
-			//visualizer_list[property].update(adjusted_times[property][time]);
+			};
 		}
 		const pts = new THREE.Geometry();
 		pts.vertices = points;
-		//console.log(pts);
-		
-		//points.vertices.forEach(vertex => {
-		//geometry.vertices.push(vertex);
-		//geometry.vertices.push(new THREE.Vector3(vertex.x, vertex.y, 0));
-		//});
-	
-		//lines.push(new THREE.LineSegments(
-		//geometry,
-		//new THREE.LineBasicMaterial({
-		//	color: 0x333333,
-		//}),
-		//THREE.LineStrip,
-		//));
 		
 		let material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
 		Object.defineProperty( material, 'needsUpdate', {
 			value: true,
   			writable: true
 		} );
-		//material.side = THREE.DoubleSide;
-		//console.log(material);
 		lines.push(new THREE.LineSegments(
 			pts,
 			material,
 		));
-		//pts.computeBoundingSphere();
 	}
-
-	let scene = viz.getScene();
-	//const pts = new THREE.Geometry();
-	//console.log(viz._renderer.properties);
-	//lines[0].geometry.attributes.position.needsUpdate = false;
-	for(let i = 0; i < lines.length; i++){
-		lines[i].material.needsUpdate = true;
-		//lines[i].frustumCulled = false;
-		//viz.getContext().objects.camera.get3jsCamera().add(lines[i]);
-		//console.log(viz.getContext().objects.camera.get3jsCamera());
-		scene.add(lines[i]);
-		//lines[i].geometry.computeBoundingSphere();
-		//console.log(lines[i]);
-	}
-
-	//lines[0].material.needsUpdate = true;
-	//console.log(lines[0].material.needsUpdate);
-	//console.log(lines[0]);
-	//scene.add(lines[0]);
-	//console.log(lines);
-	//console.log(scene);
-	//for(let time = 0; time < adjusted_times.length; time++){
-		//const vector = new THREE.vector()
-	//}
 }
 
-//Retrieve DEFAULT position data of sun and eight planets with 1000 steps
-getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune', '2010-02-15', '2020-12-16', '2000').then(data => {
 
+getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+moon+mars+jupiter+saturn+uranus+neptune+pluto', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "30").then(data => {
 	// iterate over each body returned by the API call
 	for(const property in data){
 		// Array of [x,y,z] coords in AU
@@ -419,120 +537,67 @@ getPositionData('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter
 		// Current Julian Date
 		var cur_jd = viz.getJd();
 
+		// set tail indexes
+		var cur_idx = data[property].cur_time_idx;
+		const tail_start_idx = 0;
+		var tail_end_idx;
+		if(data[property].times.length % 2 == 0){
+			tail_end_idx = data[property].times.length / 2;
+		}
+		else {
+			tail_end_idx = Math.ceil(data[property].times.length / 2);
+		}
+
 		// iterate over the data for the current body
-		var index = -1;
-		var min_dif = 9999999999999;
 		var i = 0;
 		for(pos of data[property].positions){
 			// convert coordinates in km to au
 			adjustedVals = pos.map(Spacekit.kmToAu);
 			// convert coords to ecliptic
 			adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-			allAdjustedVals.push(adjustedVals2);
-
-			// Convert time returned by API call (seconds past J2000 epoch) to Julian Date
-			result_time = (data[property].times[i] /  secondsPerDay) + j2000;
-			allAdjustedTimes.push(result_time);
-
-			// check if Julian Date is closest to the current viz date
-			var dif = Math.abs(result_time - cur_jd);
-			if(dif <= min_dif){
-				min_dif = dif;
-				index = i;
-			}
-			i = i + 1;
+			let vector = new THREE.Vector3(adjustedVals2[0], adjustedVals2[1], adjustedVals2[2]);
+			
+			// push positions and their corresponding times to arrays
+			allAdjustedVals.push(vector);
+			allAdjustedTimes.push(parseFloat(data[property].times[i]));
+			i++;
 		}
-
-		// TODO: use position arrays to change positions of these bodies and show the trajectory
-		
-		//console.log(property);
-		//console.log(allAdjustedVals[index]);
 		
 		// Create object
 		var bodyName = capitalizeFirstLetter(property)
 		var radius;
 		if(bodyName == "Sun"){
-			radius = 0.20;
+			radius = 0.17;
+		}
+		else if(bodyName == "Moon"){
+			radius = 0.0005;
 		}
 		else{
-			radius = .10;
+			radius = .08;
 		}
 		let body = viz.createAetherObject(property, {
 			labelText: bodyName,
 			textureUrl: body_textures[property],
-			position: allAdjustedVals[index],
+			currIndex: cur_idx,
 			radius: radius,
 			particleSize: -1,
 			rotation: true,
 			hideOrbit: true,
+			positionVectors: allAdjustedVals,
+			//jdTimeData: allAdjustedTimes,
 			levelsOfDetail: [{
 				threshold: 0,
 				segments: 40,
 			}]
 		});
-		body.setPositionData(allAdjustedVals);
-		//console.log(body);
 
-		// console.log(viz.getJd());
-		// console.log(allAdjustedTimes[index]);
-		// console.log(viz.getDate());
-		//console.log(bodyName);
 		// Update global variables
 		visualizer_list[bodyName] = body;
 		adjusted_positions[bodyName] = allAdjustedVals;
-		//body.setPositionData(allAdjustedVals);
 		adjusted_times[bodyName] = allAdjustedTimes;
 	}
-	//const scene - viz.getScene();
-	//renderPointData(adjusted_positions, adjusted_times);
-	//console.log(bodyName);
-	//console.log(visualizer_list[bodyName].get3jsObjects());
-	
-	for(const property in visualizer_list){
-		//console.log(property);
-		for(let i = 0; i < adjusted_times[property].length; i++){
-			//console.log(adjusted_times[property][i]);
-			//visualizer_list[bodyName].update(adjusted_times[property][i]);
-		}
-	}
-	/*
-	viz.createSphere("nothin", {
-		position: [-50000,-500000,-500000],
-		radius: .01,
-		particleSize: 1,
-
-	});
-	*/
+	viz.start();
 });
-
-
-
-/////////////////////////////////
-/// Potential pos update code ///
-/////////////////////////////////
-
-// function updatePos(bodyname, position){
-// 	visualizer_list[bodyName].setPosition(position);
-// 	console.log(visualizer_list[bodyName].getPosition());
-// }
-
-// function closestTime(jd, index, times){
-// 	return jd > viz.getJd();
-// }
-
-// var startDate = viz.getJd();
-
-// var cur_index = 0;
-function tick(){
-	for(object of viz.getScene().children){
-		if(object.hasOwnProperty("geometry")){
-			//console.log(object);
-			object.geometry.computeBoundingSphere();
-		}
-	}
-}
-
-//viz.onTick = tick;
 
 
 var expanded = false;
@@ -565,9 +630,34 @@ for(let i of Object.keys(visualizer_list)){
 
 document.addEventListener('mousedown', onDocumentMouseDown, false );
 
-var slider = document.getElementById("time-rate");
-slider.oninput = function() {
-	viz.setJdPerSecond(this.value);
+var time_slider = document.getElementById("time-rate");
+time_slider.oninput = function() {
+	if(this.value == 1){
+		viz.setJdDelta(-1);
+		viz.mult = -1;
+	}
+	else if(this.value == 2){
+		viz.setJdDelta(1);
+		viz.mult = 1;
+	}
+	else if(this.value == 3){
+		viz.setJdDelta(2);
+		viz.mult = 2;
+	}
+	else if(this.value == 4){
+		viz.setJdDelta(4);
+		viz.mult = 4;
+	}
+	else{
+		viz.setJdDelta(1);
+		viz.mult = 1;
+	}
+	
+}
+
+var tail_slider = document.getElementById("tail-length");
+tail_slider.oninput = function() {
+	viz.tail_length = this.value / 100;
 }
 
 document.getElementById("real-time").addEventListener("click", function() {

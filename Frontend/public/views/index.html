@@ -19,8 +19,13 @@
         <div id="menu">
 
             <h4 style="color: white">Time Controls</h4>
+            <p style="color: gray">Rate of Time</p>
             <div class="slidecontainer">
-                <input type="range" min="-20" max="200" value=".00001157407407407407407407407407407407407" class="slider" id="time-rate">
+                <input type="range" min="1" max="4" value="2" step="1" class="slider" id="time-rate">
+            </div>
+            <p style="color: gray">Tail Length</p>
+            <div class="slidecontainer">
+                <input type="range" min="0" max=100 value=100 step="1" class="slider" id="tail-length">
             </div>
             <button class="vis-controls__set-date">Set Date</button>
             <button id="real-time">Real Time</button>
@@ -33,11 +38,13 @@
                 <option id='mercury'>Mercury</option>
                 <option id='venus'>Venus</option>
                 <option id='earth'>Earth</option>
+                <option id='moon'>Moon</option>
                 <option id='mars'>Mars</option>
                 <option id='jupiter'>Jupiter</option>
                 <option id='saturn'>Saturn</option>
                 <option id='uranus'>Uranus</option>
                 <option id='neptune'>Neptune</option>
+                <option id='pluto'>Pluto</option>
                 <option value="none" selected="selected">None</option>
             </select>
             <button id="submit-button">Submit</button>
