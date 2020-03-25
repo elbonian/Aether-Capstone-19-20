@@ -46,7 +46,7 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
 
     for target in targets_list:
         if target not in valid_targets:
-            return returnResponse({'error': '{} is not a known target.'.format(target)}, 400)
+            return returnResponse({'error': '{} is not a known target.'.format(target)}, 401)
 
     # TODO: consider modifying api params to only accept floats instead of strings
     try:
@@ -54,7 +54,7 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
         curVizJdDelta = float(curVizJdDelta)
         tailLenJd = float(tailLenJd)
     except ValueError:
-        return returnResponse({'error': 'curVizJd, curVizJdDelta, tailLenJd must all be floats.'}, 400)
+        return returnResponse({'error': 'curVizJd, curVizJdDelta, tailLenJd must all be floats.'}, 402)
 
     # assume 60 fps as an upper bound -- this ensures that the data is valid for at least validSeconds
     # validSeconds specifies the amount of real time the returned data will be valid for in the frontend
@@ -64,7 +64,7 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
 
     # ensure jd_end is a multiple of the current JD delta
     if tailLenJd % curVizJdDelta > 0.00000001:  # TODO: is this value small enough to account for round off error
-        return returnResponse({'error': 'tailLenJd must be evenly divisible by curVizJdDelta.'}, 400)
+        return returnResponse({'error': 'tailLenJd must be evenly divisible by curVizJdDelta.'}, 403)
 
     # Convert back to string and add 'jd ' to the front for SPICE
     startDate = 'jd ' + str(jd_start)
@@ -83,13 +83,13 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
         # etEnd = spice.str2et(endDate)  # todo: consider removing
     except Exception as error:
 
-        return returnResponse({'error': error}, 400)
+        return returnResponse({'error': error}, 405)
 
     # TODO: logic for creating more steps (i.e. more than one coord per tick) when curVizJdDelta is exceptionally large
 
     # calculate the number of necessary steps...
     total_steps = round((jd_end - jd_start) / curVizJdDelta)
-
+    cur_idx = round((curVizJd - jd_start) / curVizJdDelta)
     times = [etStart + (etDelta * x) for x in range(total_steps + 1)]
 
     # DEBUGGING
@@ -113,7 +113,8 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
         response_data[target] = {
             'info': 'Positions (x,y,z) and times (JD) of {} w.r.t. {}'.format(target.capitalize(), ref_frame.capitalize()),
             'positions': [coord.tolist() for coord in target_positions],  # target_positions is a numpy.ndarray
-            'times': [float(spice.et2utc(etTime, "J", 8)[3:]) for etTime in times]  # convert times to JD, slice off "JD " and convert to float
+            'times': [float(spice.et2utc(etTime, "J", 8)[3:]) for etTime in times],  # convert times to JD, slice off "JD " and convert to float
+            'cur_time_idx': cur_idx
         }
 
     # clear the kernels
