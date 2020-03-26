@@ -101,7 +101,7 @@ class AetherObject extends Spacekit.SphereObject {
 		this.line = null;
 		this.previousLineId = null;
 		this.ephemUpdate = null; // function reference to the getPositions2 request
-		this.needUpdate = false;
+		this.isUpdating = false;
 		this.name = "newBody";
         this.init();
       }
@@ -315,7 +315,11 @@ class AetherObject extends Spacekit.SphereObject {
 		}
 	  }
 
-
+	  /*
+		Add more position data to the object's position list
+		@param positions List of THREE.Vector3() objects representing new (or old) position coordinates
+		@param prepend Boolean indicating whether the positions need to be prepended or put on the end
+	  */
 	  addPositionData(positions, prepend=false){
 	  	if(prepend){
 	  		this.currIndex += position_vectors.length;
@@ -325,30 +329,35 @@ class AetherObject extends Spacekit.SphereObject {
 	  	else{
 	  		this.positionVectors = this.positionVectors.concat(positions.slice(1, positions.length - 1));
 	  	}
-	  	//console.log(this.positionVectors.length);
 	  }
 
 
+	  /*
+		Add more time data to the object's jd time list
+		@param times List of jd times (string) representing new (or old) jd times
+		@param prepend Boolean indicating whether the times need to be prepended or put on the end
+	  */
 	  addTimeData(times, prepend=false){
-	  	//console.log(this.jdTimeData[this.jdTimeData.length - 1]);
-	  	//console.log(this.jdTimeData);
 	  	if(prepend){
-	  		console.log("hi");
+	  		this.currIndex += position_vectors.length;
+	  		this.tailStartIndex += position_vectors.length
+	  		this.positionVectors = positions.concat(this.positionVectors);
 	  	}
 	  	else{
-	  		this.jdTimeData = this.jdTimeData.concat(times.slice(1, times[times.length - 1]));
+	  		this.jdTimeData = this.jdTimeData.concat(times.slice(1, times.length - 1));
 	  	}
-	  	//console.log(times[0]);
-	  		//console.log(this.jdTimeData);
 	  }
 
-
+	  /*
+		Update object's internal THREE.Line object that displays its trajectory
+		Uses this.positionVectors, this.currentIndex, and this.tailStartIndex to determine line vertices and drawRange
+	  */
 	  updateLineData(){
 	  	var position_array = new Float32Array( this.positionVectors.length * 3);
+	  	// create 1D array of form [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
 		this.geometry.addAttribute( 'position', new THREE.BufferAttribute( position_array, 3) );																								
-		//this.geometry.vertices = this.positionVectors;
-		//this.geometry.verticesNeedUpdate = true;
-		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex);
+		// set drawrange to start at tailStartIndex and draw this.currIndex many vertices
+		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex); // todo: might break when time rate is negative
 		let line = new THREE.Line(
 			this.geometry,
 			this.material,
@@ -357,6 +366,7 @@ class AetherObject extends Spacekit.SphereObject {
 		// reference to positions
 		var positions2 = line.geometry.attributes.position.array;
 		var index = 0;
+
 		// set 1D array according to positionVectors
 		for(var i = 0; i < this.positionVectors.length; i++){
 			positions2[index ++] = this.positionVectors[i].x;
@@ -366,7 +376,8 @@ class AetherObject extends Spacekit.SphereObject {
 
 		// add line to the scene
 		let scene = this._simulation.getScene();
-		scene.remove(this.previousLineId);
+		// remove old line
+		//scene.remove(scene.getObjectById(this.previousLineId));
 		scene.add(line);
 		this.line = line;
 		this.previousLineId = line.id;
@@ -381,13 +392,10 @@ class AetherObject extends Spacekit.SphereObject {
       	this.setNextTailStart();
       	this.drawLineSegment();
       	// check if object is 2/3 of the way through its available data
-      	if(this.currIndex >= (this.positionVectors.length * (2/3)) && !this.needUpdate){
-      		this.needUpdate = true;
-      		//console.log(this.positionVectors.length);
-      		//var next_time_for_call = this.jdTimeData[this.jdTimeData.length - 1] + 1 * ((this.jdTimeData.length - 1) / 2); // next time is equal to half
+      	if(this.currIndex >= (this.positionVectors.length * (2/3)) && !this.isUpdating){
+      		this.isUpdating = true;
       		this.ephemUpdate("solar system barycenter", this.name, (this.jdTimeData[this.jdTimeData.length - 1]).toString(), 1, "0", "10").then(data => {
-      			//console.log(this.name);
-      			//console.log(data);
+     
       			// adjust results to be in km and in ecliptic plane
       			var position_vectors = data[this.name].positions.map(function(pos){
 			  		var adjusted_val = pos.map(Spacekit.kmToAu);//[Spacekit.kmToAu(pos[0]), Spacekit.kmToAu(pos[1]), Spacekit.kmToAu(pos[2])];
@@ -400,7 +408,7 @@ class AetherObject extends Spacekit.SphereObject {
       			this.addPositionData(position_vectors);
       			this.addTimeData(data[this.name].times);
       			this.updateLineData();
-      			this.needUpdate = false;
+      			this.isUpdating = false; //  signal that object is done updating
       		});
       		
       	}
@@ -410,8 +418,6 @@ class AetherObject extends Spacekit.SphereObject {
 
 			// only update object position if not paused
       		if(!this._simulation._isPaused){
-      			//console.log(this.positionVectors[this.currIndex]);
-      			//console.log(this.currIndex);
       			// update object's location
       			this.setNextPos()
 			}
