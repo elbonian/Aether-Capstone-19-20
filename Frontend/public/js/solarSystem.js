@@ -99,6 +99,10 @@ class AetherObject extends Spacekit.SphereObject {
 		this.geometry = null;
 		this.material = null;
 		this.line = null;
+		this.previousLineId = null;
+		this.ephemUpdate = null; // function reference to the getPositions2 request
+		this.needUpdate = false;
+		this.name = "newBody";
         this.init();
       }
 
@@ -230,9 +234,13 @@ class AetherObject extends Spacekit.SphereObject {
 		let scene = this._simulation.getScene();
 		scene.add(line);
 		this.line = line;
-		
+		this.previousLineId = line.id;
 		// set default tail length
 		this.tail_length = this.currIndex - this.tailStartIndex + 1;
+
+		this.jdTimeData = this._options.jdTimeData;
+		this.name = this._options.name;
+		this.ephemUpdate = this._options.ephemUpdate;
 
         super.init();
 	  }
@@ -307,6 +315,64 @@ class AetherObject extends Spacekit.SphereObject {
 		}
 	  }
 
+
+	  addPositionData(positions, prepend=false){
+	  	if(prepend){
+	  		this.currIndex += position_vectors.length;
+	  		this.tailStartIndex += position_vectors.length
+	  		this.positionVectors = positions.concat(this.positionVectors);
+	  	}
+	  	else{
+	  		this.positionVectors = this.positionVectors.concat(positions.slice(1, positions.length - 1));
+	  	}
+	  	//console.log(this.positionVectors.length);
+	  }
+
+
+	  addTimeData(times, prepend=false){
+	  	//console.log(this.jdTimeData[this.jdTimeData.length - 1]);
+	  	//console.log(this.jdTimeData);
+	  	if(prepend){
+	  		console.log("hi");
+	  	}
+	  	else{
+	  		this.jdTimeData = this.jdTimeData.concat(times.slice(1, times[times.length - 1]));
+	  	}
+	  	//console.log(times[0]);
+	  		//console.log(this.jdTimeData);
+	  }
+
+
+	  updateLineData(){
+	  	var position_array = new Float32Array( this.positionVectors.length * 3);
+		this.geometry.addAttribute( 'position', new THREE.BufferAttribute( position_array, 3) );																								
+		//this.geometry.vertices = this.positionVectors;
+		//this.geometry.verticesNeedUpdate = true;
+		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex);
+		let line = new THREE.Line(
+			this.geometry,
+			this.material,
+		);
+
+		// reference to positions
+		var positions2 = line.geometry.attributes.position.array;
+		var index = 0;
+		// set 1D array according to positionVectors
+		for(var i = 0; i < this.positionVectors.length; i++){
+			positions2[index ++] = this.positionVectors[i].x;
+			positions2[index ++] = this.positionVectors[i].y;
+			positions2[index ++] = this.positionVectors[i].z;
+		}
+
+		// add line to the scene
+		let scene = this._simulation.getScene();
+		scene.remove(this.previousLineId);
+		scene.add(line);
+		this.line = line;
+		this.previousLineId = line.id;
+	  }
+
+
 	  /*
 		  Updates the position of the body according to postionVectors
 	  */
@@ -314,13 +380,38 @@ class AetherObject extends Spacekit.SphereObject {
       	// update the object's tail beginning
       	this.setNextTailStart();
       	this.drawLineSegment();
+      	// check if object is 2/3 of the way through its available data
+      	if(this.currIndex >= (this.positionVectors.length * (2/3)) && !this.needUpdate){
+      		this.needUpdate = true;
+      		//console.log(this.positionVectors.length);
+      		//var next_time_for_call = this.jdTimeData[this.jdTimeData.length - 1] + 1 * ((this.jdTimeData.length - 1) / 2); // next time is equal to half
+      		this.ephemUpdate("solar system barycenter", this.name, (this.jdTimeData[this.jdTimeData.length - 1]).toString(), 1, "0", "10").then(data => {
+      			//console.log(this.name);
+      			//console.log(data);
+      			// adjust results to be in km and in ecliptic plane
+      			var position_vectors = data[this.name].positions.map(function(pos){
+			  		var adjusted_val = pos.map(Spacekit.kmToAu);//[Spacekit.kmToAu(pos[0]), Spacekit.kmToAu(pos[1]), Spacekit.kmToAu(pos[2])];
+			  		//console.log(adjusted_val);
+			  		var adjusted_val2 = Spacekit.equatorialToEcliptic_Cartesian(adjusted_val[0], adjusted_val[1], adjusted_val[2], Spacekit.getObliquity());
+			  		
+			  		return new THREE.Vector3(adjusted_val2[0], adjusted_val2[1], adjusted_val2[2]);
+			  	});
+			  	//console.log(position_vectors);
+      			this.addPositionData(position_vectors);
+      			this.addTimeData(data[this.name].times);
+      			this.updateLineData();
+      			this.needUpdate = false;
+      		});
+      		
+      	}
 
 		// ensure we don't go out of bounds on the position list
 		if(this.currIndex >= 0 && this.currIndex < this.positionVectors.length-1){
 
 			// only update object position if not paused
       		if(!this._simulation._isPaused){
-
+      			//console.log(this.positionVectors[this.currIndex]);
+      			//console.log(this.currIndex);
       			// update object's location
       			this.setNextPos()
 			}
@@ -527,7 +618,7 @@ function renderPointData(adjusted_positions, adjusted_times){ // todo: consider 
 }
 
 
-getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+moon+mars+jupiter+saturn+uranus+neptune+pluto', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "30").then(data => {
+getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+moon+mars+jupiter+saturn+uranus+neptune+pluto', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
 	// iterate over each body returned by the API call
 	for(const property in data){
 		// Array of [x,y,z] coords in AU
@@ -577,6 +668,7 @@ getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+moon+mars+j
 		}
 		let body = viz.createAetherObject(property, {
 			labelText: bodyName,
+			name: property,
 			textureUrl: body_textures[property],
 			currIndex: cur_idx,
 			radius: radius,
@@ -584,13 +676,16 @@ getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+moon+mars+j
 			rotation: true,
 			hideOrbit: true,
 			positionVectors: allAdjustedVals,
-			//jdTimeData: allAdjustedTimes,
+			ephemUpdate: getPositionData2,
+			jdTimeData: allAdjustedTimes,
 			levelsOfDetail: [{
 				threshold: 0,
 				segments: 40,
 			}]
 		});
 
+		//console.log(body.ephemUpdate);
+		//console.log(body.positionVectors.length);
 		// Update global variables
 		visualizer_list[bodyName] = body;
 		adjusted_positions[bodyName] = allAdjustedVals;
