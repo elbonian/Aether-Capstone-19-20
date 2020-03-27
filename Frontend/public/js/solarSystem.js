@@ -103,6 +103,8 @@ class AetherObject extends Spacekit.SphereObject {
 		this.ephemUpdate = null; // function reference to the getPositions2 request
 		this.isUpdating = false;
 		this.name = "newBody";
+		this.update_threshold = 0;
+		this.update_threshold2 = 0;
         this.init();
       }
 
@@ -242,6 +244,9 @@ class AetherObject extends Spacekit.SphereObject {
 		this.name = this._options.name;
 		this.ephemUpdate = this._options.ephemUpdate;
 
+		this.update_threshold = Math.ceil(this.positionVectors.length * (2/3));
+		this.update_threshold2 = this.positionVectors.length - this.update_threshold;
+
         super.init();
 	  }
 
@@ -348,6 +353,13 @@ class AetherObject extends Spacekit.SphereObject {
 	  	}
 	  }
 
+
+
+	  // TODO:
+	  //	1. Establish an upper limit on how much data an object can have at any one time
+	  //	2. Modify updateLineData() to update values in this.line.geometry.position.array 
+	  //	   instead of creating a new line every time
+
 	  /*
 		Update object's internal THREE.Line object that displays its trajectory
 		Uses this.positionVectors, this.currentIndex, and this.tailStartIndex to determine line vertices and drawRange
@@ -355,7 +367,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  updateLineData(){
 	  	var position_array = new Float32Array( this.positionVectors.length * 3);
 	  	// create 1D array of form [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
-		this.geometry.addAttribute( 'position', new THREE.BufferAttribute( position_array, 3) );																								
+		this.geometry.setAttribute( 'position', new THREE.BufferAttribute( position_array, 3) );																								
 		// set drawrange to start at tailStartIndex and draw this.currIndex many vertices
 		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex); // todo: might break when time rate is negative
 		let line = new THREE.Line(
@@ -383,35 +395,65 @@ class AetherObject extends Spacekit.SphereObject {
 		this.previousLineId = line.id;
 	  }
 
-
 	  /*
-		  Updates the position of the body according to postionVectors
+	  	Perform an API Get request for new positions and times. Default params return 10 simulation seconds worth of position data with no tail. Updates object's positionVectors, jdTimeData, and line.
+	  	@param {string} [wrt="solar system barycenter"] - (With Respect To) The object from which the positions are computed in reference to
+	  	@param {string} [obj_name=this.name] - This object's name
+	  	@param {string} [start_date_jd=(this.jdTimeData[this.jdTimeData.length - 1]).toString()] - The position start date
+	  	@param {float} [jd_delta=1] - The change in time between each position returned
+	  	@param {string} [tail_length_jd="0"] - The length of the position tail in JD
+	  	@param {string} [valid_time_seconds="10"] - The length of time in seconds the object will be able to animate from the data returned
 	  */
-      update(jd){
-      	// update the object's tail beginning
-      	this.setNextTailStart();
-      	this.drawLineSegment();
-      	// check if object is 2/3 of the way through its available data
-      	if(this.currIndex >= (this.positionVectors.length * (2/3)) && !this.isUpdating){
-      		this.isUpdating = true;
-      		this.ephemUpdate("solar system barycenter", this.name, (this.jdTimeData[this.jdTimeData.length - 1]).toString(), 1, "0", "10").then(data => {
+	  positionGetRequest(wrt = "solar system barycenter", obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = 1, tail_length_jd = "0", valid_time_seconds = "10"){
+	  	this.ephemUpdate(wrt, obj_name, start_date_jd, jd_delta, tail_length_jd, valid_time_seconds).then(data => {
      
       			// adjust results to be in km and in ecliptic plane
       			var position_vectors = data[this.name].positions.map(function(pos){
 			  		var adjusted_val = pos.map(Spacekit.kmToAu);//[Spacekit.kmToAu(pos[0]), Spacekit.kmToAu(pos[1]), Spacekit.kmToAu(pos[2])];
-			  		//console.log(adjusted_val);
 			  		var adjusted_val2 = Spacekit.equatorialToEcliptic_Cartesian(adjusted_val[0], adjusted_val[1], adjusted_val[2], Spacekit.getObliquity());
 			  		
 			  		return new THREE.Vector3(adjusted_val2[0], adjusted_val2[1], adjusted_val2[2]);
 			  	});
-			  	//console.log(position_vectors);
+
+			  	// update position list, time list, and line
       			this.addPositionData(position_vectors);
-      			this.addTimeData(data[this.name].times);
+      			this.addTimeData(data[obj_name].times);
       			this.updateLineData();
       			this.isUpdating = false; //  signal that object is done updating
-      		});
+  		});
+	  }
+
+
+	  /*
+		  Updates the position of the body according to postionVectors
+	  */
+      update(jd){ //
+
+      	// update the object's tail beginning, regardless of whether sim is paused
+      	this.setNextTailStart();
+      	this.drawLineSegment();   	
+      	
+      	if(!this.isUpdating){ // ensure object is not currently updating
+      		// check if object is 2/3 of the way through its available data
+	      	const positive_rate_of_time = this._simulation.mult > 0;
+	      	// TODO: optimize when and how get requests are made
+	      	//		1. take into account the simulation rate-of-time in valid
+	      	//		2. do testing to see the avg. rest call response time. new call should return at least 2-3 seconds before obj runs out of data
+	      	//		3. tune the parameters of the rest call to be optimally performant
+	      	//		4. choose something better than 2/3 the positionVectors.length
+	      	//      5. balance frequency and size of rest call
+	      	const need_new_data = (this.currIndex >= this.positionVectors.length * (2/3)) && positive_rate_of_time; // simulation rate of time is positive and object is near the end of its pos list
+	      	const need_old_data = (this.currIndex <= this.positionVectors.length * (1/3)) && !positive_rate_of_time // simulation rate of time is negative and object is near beginning of pos list	
       		
+      		if( (need_new_data || need_old_data) ){ // object needs to update its position and time data      			
+
+	      		this.isUpdating = true;
+	      		//const startJD = ;
+	      		this.positionGetRequest(); // 
+	      		
+      		}
       	}
+      	
 
 		// ensure we don't go out of bounds on the position list
 		if(this.currIndex >= 0 && this.currIndex < this.positionVectors.length-1){
