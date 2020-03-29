@@ -17,6 +17,9 @@ from os import stat
 app = Flask(__name__)
 CORS(app)
 
+spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
+
+
 def returnResponse(response, status):
     response_pickled = jsonpickle.encode(response)
 
@@ -72,7 +75,7 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
 
     # TODO: put this outside the function so that it does not execute on every api call
     # load the kernels
-    spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
+    #spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
 
     # ----- REMEMBER: ET (ephemeris time) is simply seconds past J2000 epoch. J2000 epoch is JD 2451545.0 -----
 
@@ -118,7 +121,7 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
         }
 
     # clear the kernels
-    spice.kclear()
+    #spice.kclear()
 
     return returnResponse(response_data, 200)
 
