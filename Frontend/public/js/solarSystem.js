@@ -411,8 +411,8 @@ class AetherObject extends Spacekit.SphereObject {
       			var position_vectors = data[this.name].positions.map(function(pos){
 			  		var adjusted_val = pos.map(Spacekit.kmToAu);//[Spacekit.kmToAu(pos[0]), Spacekit.kmToAu(pos[1]), Spacekit.kmToAu(pos[2])];
 			  		var adjusted_val2 = Spacekit.equatorialToEcliptic_Cartesian(adjusted_val[0], adjusted_val[1], adjusted_val[2], Spacekit.getObliquity());
-			  		
-			  		return new THREE.Vector3(adjusted_val2[0], adjusted_val2[1], adjusted_val2[2]);
+			  		// var adjusted_val3 = [adjusted_val2[0] * this._simulation._options.unitsPerAu, adjusted_val2[1] * this._simulation._options.unitsPerAu, adjusted_val2[2] * this._simulation._options.unitsPerAu];
+			  		return new THREE.Vector3(adjusted_val2[0] * 100, adjusted_val2[1] * 100, adjusted_val2[2] * 100);
 			  	});
 
 			  	// update position list, time list, and line
@@ -513,6 +513,9 @@ const weekPerSecond = 7;
 const monthPerSecond = 30;
 
 
+const unitsPerAu = 100.0;
+
+
 // Dictionary of bodies in the visualization
 // e.x. "body name" : body object
 var visualizer_list = {};
@@ -549,9 +552,9 @@ const viz = new AetherSimulation(document.getElementById('main-container'), {
   //jdPerSecond: 7,
   startDate: Date.now(),
   startPaused: true,
-  unitsPerAu: 1.0,
+  unitsPerAu: unitsPerAu,
   camera: {
-  	//initialPosition: [-10,-20,5],
+  	initialPosition: [250,500,500],
   	enableDrift: false,
   },
   debug: {
@@ -690,7 +693,7 @@ function renderPointData(adjusted_positions, adjusted_times){ // todo: consider 
 }
 
 
-getPositionData2('solar system barycenter', 'sun+mercury', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
+getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
 	// iterate over each body returned by the API call
 	for(const property in data){
 		// Array of [x,y,z] coords in AU
@@ -711,6 +714,7 @@ getPositionData2('solar system barycenter', 'sun+mercury', viz.getJd().toString(
 			tail_end_idx = Math.ceil(data[property].times.length / 2);
 		}
 
+
 		// iterate over the data for the current body
 		var i = 0;
 		for(pos of data[property].positions){
@@ -718,7 +722,7 @@ getPositionData2('solar system barycenter', 'sun+mercury', viz.getJd().toString(
 			adjustedVals = pos.map(Spacekit.kmToAu);
 			// convert coords to ecliptic
 			adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-			let vector = new THREE.Vector3(adjustedVals2[0], adjustedVals2[1], adjustedVals2[2]);
+			let vector = new THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
 			
 			// push positions and their corresponding times to arrays
 			allAdjustedVals.push(vector);
