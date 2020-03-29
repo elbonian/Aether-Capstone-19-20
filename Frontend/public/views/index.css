@@ -70,6 +70,17 @@ body{
   outline: none;
 }
 
+.sim-time {
+  position: absolute;
+  top: 0px;
+  left: 39%;
+  font-family: Helvetica, Arial, sans-serif;
+  color: white;
+  text-align: center;
+  z-index: 2;
+}
+
+
 ul {
   list-style: none;
   position: relative;

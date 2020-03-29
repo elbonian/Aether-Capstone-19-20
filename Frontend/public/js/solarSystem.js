@@ -281,7 +281,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
 	  setNextPos(){
 		  this.currIndex += this._simulation.mult;
-		  const currPos = this.positionVectors[this.currIndex];
+		  const currPos = this.positionVectors[Math.floor(this.currIndex)];
 		  this._obj.position.set(currPos.x, currPos.y, currPos.z);
 	  }
 
@@ -327,12 +327,13 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
 	  addPositionData(positions, prepend=false){
 	  	if(prepend){
-	  		this.currIndex += position_vectors.length;
-	  		this.tailStartIndex += position_vectors.length
-	  		this.positionVectors = positions.concat(this.positionVectors);
+	  		this.currIndex += positions.length;
+	  		this.tailStartIndex += positions.length
+	  		this.positionVectors = positions.concat(this.positionVectors.slice(1, this.positionVectors.length));
 	  	}
 	  	else{
-	  		this.positionVectors = this.positionVectors.concat(positions.slice(1, positions.length - 1));
+	  		//console.log("+ " + positions.length)
+	  		this.positionVectors = this.positionVectors.concat(positions.slice(1, positions.length));
 	  	}
 	  }
 
@@ -344,12 +345,10 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
 	  addTimeData(times, prepend=false){
 	  	if(prepend){
-	  		this.currIndex += position_vectors.length;
-	  		this.tailStartIndex += position_vectors.length
-	  		this.positionVectors = positions.concat(this.positionVectors);
+	  		this.jdTimeData = times.concat(this.jdTimeData.slice(1, this.jdTimeData.length));
 	  	}
 	  	else{
-	  		this.jdTimeData = this.jdTimeData.concat(times.slice(1, times.length - 1));
+	  		this.jdTimeData = this.jdTimeData.concat(times.slice(1, times.length));
 	  	}
 	  }
 
@@ -403,8 +402,9 @@ class AetherObject extends Spacekit.SphereObject {
 	  	@param {float} [jd_delta=1] - The change in time between each position returned
 	  	@param {string} [tail_length_jd="0"] - The length of the position tail in JD
 	  	@param {string} [valid_time_seconds="10"] - The length of time in seconds the object will be able to animate from the data returned
+	  	@param {boolean} [old_data=false] - flag indicating whether the data returned is old or not
 	  */
-	  positionGetRequest(wrt = "solar system barycenter", obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = 1, tail_length_jd = "0", valid_time_seconds = "10"){
+	  positionGetRequest(wrt = "solar system barycenter", obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = 1, tail_length_jd = "0", valid_time_seconds = "10", old_data = false){
 	  	this.ephemUpdate(wrt, obj_name, start_date_jd, jd_delta, tail_length_jd, valid_time_seconds).then(data => {
      
       			// adjust results to be in km and in ecliptic plane
@@ -416,10 +416,12 @@ class AetherObject extends Spacekit.SphereObject {
 			  	});
 
 			  	// update position list, time list, and line
-      			this.addPositionData(position_vectors);
-      			this.addTimeData(data[obj_name].times);
+      			this.addPositionData(position_vectors, old_data);
+      			this.addTimeData(data[obj_name].times, old_data);
+      			// console.log(this.jdTimeData);
+      			// console.log(this.positionVectors);
       			this.updateLineData();
-      			this.isUpdating = false; //  signal that object is done updating
+      			this.isUpdating = false; // signal that object is done updating
   		});
 	  }
 
@@ -427,12 +429,8 @@ class AetherObject extends Spacekit.SphereObject {
 	  /*
 		  Updates the position of the body according to postionVectors
 	  */
-      update(jd){ //
+      update(jd){
 
-      	// update the object's tail beginning, regardless of whether sim is paused
-      	this.setNextTailStart();
-      	this.drawLineSegment();   	
-      	
       	if(!this.isUpdating){ // ensure object is not currently updating
       		// check if object is 2/3 of the way through its available data
 	      	const positive_rate_of_time = this._simulation.mult > 0;
@@ -443,25 +441,40 @@ class AetherObject extends Spacekit.SphereObject {
 	      	//		4. choose something better than 2/3 the positionVectors.length
 	      	//      5. balance frequency and size of rest call
 	      	const need_new_data = (this.currIndex >= this.positionVectors.length * (2/3)) && positive_rate_of_time; // simulation rate of time is positive and object is near the end of its pos list
-	      	const need_old_data = (this.currIndex <= this.positionVectors.length * (1/3)) && !positive_rate_of_time // simulation rate of time is negative and object is near beginning of pos list	
+	      	const need_old_data = (this.tailStartIndex <= this.positionVectors.length * (1/3)) && !positive_rate_of_time // simulation rate of time is negative and object is near beginning of pos list	
       		
-      		if( (need_new_data || need_old_data) ){ // object needs to update its position and time data      			
-
-	      		this.isUpdating = true;
-	      		//const startJD = ;
-	      		this.positionGetRequest(); // 
-	      		
+      		if(need_new_data){
+      			// console.log("newdata");
+      			this.isUpdating = true;
+	      		this.positionGetRequest(); // Default get request, 10 simulation seconds worth of future data
+      		}
+      		else if(need_old_data){
+      			this.isUpdating = true;
+      			this.positionGetRequest( "solar system barycenter", this.name, this.jdTimeData[0].toString(), 1, (1*60*10).toString(), "0", true);
       		}
       	}
       	
 
 		// ensure we don't go out of bounds on the position list
-		if(this.currIndex >= 0 && this.currIndex < this.positionVectors.length-1){
+		if(this.currIndex >= 1 && this.currIndex < this.positionVectors.length-1){
 
+
+			if(this._simulation._isPaused){// update the object's tail beginning, regardless of whether sim is paused
+	      		this.setNextTailStart();
+	      		this.drawLineSegment();
+	      	}  	
+	      	
 			// only update object position if not paused
       		if(!this._simulation._isPaused){
+      			
       			// update object's location
       			this.setNextPos()
+      			// update the object's tail beginning after updating the object's position
+		      	this.setNextTailStart();
+		      	this.drawLineSegment();   	
+		      	// console.log("Sim JD: " + jd);
+      			// console.log("Obj JD: " + this.jdTimeData[this.currIndex]);
+		      	
 			}
       	}
     }
@@ -548,15 +561,26 @@ const viz = new AetherSimulation(document.getElementById('main-container'), {
   }
 });
 
-//function tick(){
+document.getElementById('sim_time').innerHTML = viz.getDate();
+const sim_time = document.getElementById('sim_time');
+
+const sim_rate = document.getElementById("sim_rate");
+function tick(){
 	// console.log(viz._fps);
 	// console.log(viz._jdPerSecond);
 	// console.log(viz.getJdDelta());
-	//console.log(viz.getJdPerSecond());
-	//console.log(viz.tail_length);
-//}
+	// console.log(viz.getJdPerSecond());
+	// console.log(viz.tail_length);
+	//sim_time.innerHTML = viz.getDate().toLocaleDateString();
+	const date = viz.getDate().toString();
+	//console.log(viz.getDate());
+	sim_time.innerHTML = date.slice(4, date.length);
 
-//viz.onTick = tick;
+	const rate = "JD/Sec: " + viz.getJdDelta()*60;
+	sim_rate.innerHTML = rate;
+}
+
+viz.onTick = tick;
 
 //async function to get data from API
 async function getPositionData(ref_frame, targets, start_date, end_date, steps){
@@ -666,7 +690,7 @@ function renderPointData(adjusted_positions, adjusted_times){ // todo: consider 
 }
 
 
-getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+moon+mars+jupiter+saturn+uranus+neptune+pluto', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
+getPositionData2('solar system barycenter', 'sun+mercury', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
 	// iterate over each body returned by the API call
 	for(const property in data){
 		// Array of [x,y,z] coords in AU
@@ -771,6 +795,8 @@ for(let i of Object.keys(visualizer_list)){
 	});
 }
 
+
+
 document.addEventListener('mousedown', onDocumentMouseDown, false );
 
 var time_slider = document.getElementById("time-rate");
@@ -780,14 +806,18 @@ time_slider.oninput = function() {
 		viz.mult = -1;
 	}
 	else if(this.value == 2){
+		viz.setJdDelta(1/60);
+		viz.mult = 1/60;
+	}
+	else if(this.value == 3){
 		viz.setJdDelta(1);
 		viz.mult = 1;
 	}
-	else if(this.value == 3){
+	else if(this.value == 4){
 		viz.setJdDelta(2);
 		viz.mult = 2;
 	}
-	else if(this.value == 4){
+	else if(this.value == 5){
 		viz.setJdDelta(4);
 		viz.mult = 4;
 	}
@@ -868,6 +898,9 @@ function onDocumentMouseDown(event) {
 }
 
 document.querySelectorAll('.vis-controls__set-date').forEach(
-       function(elt){elt.onclick=function(){viz.setDate(
-               new Date(prompt('Enter a date in the format YYYY-mm-dd.','2000-01-01')));};});
+	function(elt){elt.onclick=function(){
+		viz.setDate( new Date(prompt('Enter a date in the format YYYY-mm-dd.','2000-01-01')));
+
+	};
+});
 		   
