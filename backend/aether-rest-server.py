@@ -36,7 +36,7 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
                      'metis', 'saturn', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'iapetus',
                      'phoebe', 'helene', 'telesto', 'calypso', 'methone', 'polydeuces', 'uranus', 'ariel', 'umbriel',
                      'titania', 'oberon', 'miranda', 'neptune', 'triton', 'nereid', 'proteus', 'pluto', 'charon', 'nix',
-                     'hydra', 'kerberos', 'styx')
+                     'hydra', 'kerberos', 'styx', '-31', '-32')
 
     # convert string of targets into a list -- ensure lower case for consistency
     targets_list = [target.lower() for target in targets.split('+')]
@@ -298,7 +298,14 @@ def get_available_bodies():
 @app.route('/api/body-info/', methods=['GET'])
 def get_body_info():
     # TODO: endpoint shall provide radius, mass, rotation/orientation information
-    pass
+    spice.furnsh('./SPICE/kernels/PCK/pck00010.tpc')
+    targets = ['sun','mercury','venus','earth','moon','mars','jupiter','saturn','uranus','neptune','pluto']
+    res = {}
+    for target in targets:
+        res[target] = spice.bodvrd(target, "RADII", 3)[1].tolist()
+    
+    print(type(res[target][0]))
+    return returnResponse(res, '200')
 
 
 @app.route('/api/spk-upload', methods=['POST'])
@@ -354,4 +361,4 @@ def spk_upload():
         db.closeDatabase()
 
 
-app.run(host="0.0.0.0", port=5000)
+app.run(host="0.0.0.0", threaded=False, port=5000)

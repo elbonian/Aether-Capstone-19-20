@@ -8,5 +8,6 @@ KERNELS_TO_LOAD=(
 'SPICE/kernels/Saturn/sat427.bsp',
 'SPICE/kernels/Uranus/ura111.bsp',
 'SPICE/kernels/Neptune/nep081.bsp',
-'SPICE/kernels/Pluto/plu055.bsp')
+'SPICE/kernels/Pluto/plu055.bsp',
+'SPICE/kernels/voyager_1.ST+1991_a54418u.merged.bsp')
 \begintext
