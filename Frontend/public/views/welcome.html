@@ -1,30 +1,63 @@
-<!-- Aether welcome page 
-	
-	TODO: Make page display correctly when browser is not in fullscreen
-
--->
-
 <!DOCTYPE html>
 <html>
-<head>
-	<!-- link css and js -->
-	<link rel="stylesheet" type="text/css" href="/views/welcome.css">
-	<script type="text/javascript" src="../js/welcome_fade.js"></script>
-</head>
-	<body style="background-color: #000000;">
-		<div class="welcome" id="fade">
-			<!-- fade in effect -->
-			<script>
-				fadeInEntrance(fade,15);
-			</script>
-	    	<div class="bg">
-	    		<!-- launch button -->
-	    		<a href="/views/index.html" class="launchButton" style="color: #000000; margin-top: 30%; margin-left: 47%;">Launch</a>
-	    		<!-- application title -->
-	    		<img src="/views/assets/Aether.png" style="position: absolute; top: -200px; left: 0px; width: 800px; height: auto; display: block; margin-left: 30%;">
-	    	</div>
-		    
-		    
-		</div>
-	</body>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Welcome</title>
+        <link rel="stylesheet" type="text/css" href="/views/welcome.css">
+    </head>
+    <body>
+
+
+        <div class="welcome-section content-hidden">
+            <div class="content-wrap">
+                <ul class="fly-in-text">
+                    <li>N</li>
+                    <li>A</li>
+                    <li>S</li>
+                    <li>A</li>
+                    <li>/</li>
+                    <li>J</li>
+                    <li>P</li>
+                    <li>L</li>
+
+                </ul>
+
+                <a href="/views/index.html" class="launch-button">Launch</a>
+            </div>
+            <div class="earth">
+              <div></div>
+            </div>
+            <div class="sky-container">
+              <div class="star"></div>
+              <div class="star"></div>
+              <div class="star"></div>
+              <div class="star"></div>
+              <div class="star"></div>
+            </div>
+            
+
+
+            <div class="border"></div>
+        </div>
+
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+        <script type="text/javascript">
+            $(function() {
+
+                var welcomeSection = $('.welcome-section'),
+                enterButton = welcomeSection.find('.launch-button');
+
+                setTimeout(function() {
+                    welcomeSection.removeClass('content-hidden');
+                }, 500);
+
+                enterButton.on('click', function(e) {
+                    welcomeSection.addClass('content-hidden').fadeOut();
+                });
+            });
+        </script>
+
+    </body>
 </html>
