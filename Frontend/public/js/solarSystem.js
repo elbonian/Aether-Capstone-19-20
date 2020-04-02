@@ -903,4 +903,20 @@ document.querySelectorAll('.vis-controls__set-date').forEach(
 
 	};
 });
-		   
+
+let form = document.getElementById('myForm');
+form.addEventListener('submit', function(event){
+	event.preventDefault();
+	const formData = new FormData(this);
+	fetch('http://0.0.0.0:5000/api/spk-upload', {
+		method: 'POST',
+		body: formData
+	})
+	.then(response => response.json())
+	.then(data => {
+		console.log(data)
+  	})
+	.catch(error => {
+    	console.error(error)
+  	});
+})
