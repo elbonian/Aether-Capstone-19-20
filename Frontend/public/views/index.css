@@ -14,12 +14,124 @@ body{
   z-index: 0;
 }
 
+
+#comparison1{
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  padding: 0;
+  z-index: 1;
+}
+
+#comparison2{
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  padding: 0;
+  z-index: 1;
+}
+
 #menu{
 	top: 0;
   width: 200px;
 	position: relative;
 	background-color: transparent;
-  z-index: 1;
+  z-index: 2;
+}
+
+ {box-sizing: border-box;}
+
+
+/* Button used to open the contact form - fixed at the bottom of the page */
+.compare-button {
+  background-color: #555;
+  color: white;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border: none;
+  cursor: pointer;
+  opacity: 0.8;
+  position: fixed;
+  left: 110px;
+  width: 100px;
+}
+
+/* Button used to open the contact form - fixed at the bottom of the page */
+.create-button {
+  background-color: #555;
+  color: white;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border: none;
+  cursor: pointer;
+  opacity: 0.8;
+  position: fixed;
+  width: 100px;
+}
+
+/* The popup form - hidden by default */
+.form-popup {
+  font-family: Helvetica, Arial, sans-serif;
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 0px;
+  margin-right: -50%;
+  border: 3px solid #f1f1f1;
+  z-index: 9;
+}
+
+/* Add styles to the form container */
+.form-container {
+  /*max-width: 300px;*/
+  padding: 10px;
+  background-color: white;
+}
+
+/* Full-width input fields */
+.form-container input[type=text], .form-container input[type=password] {
+  width: 90%;
+  padding: 15px;
+  border: none;
+  background: #f1f1f1;
+}
+
+/* When the inputs get focus, do something */
+.form-container input[type=text]:focus, .form-container input[type=password]:focus {
+  background-color: #ddd;
+  outline: none;
+}
+
+/* Set a style for the submit/login button */
+.form-container .btn {
+  background-color: gray;
+  color: white;
+  padding: 16px 20px;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom:10px;
+  opacity: 0.8;
+}
+
+
+/* Add some hover effects to buttons */
+.form-container .btn:hover, .open-button:hover {
+  opacity: 1;
+} 
+
+
+.column {
+  flex: 50%;
+}
+
+#newSimForm {
+  font-family: Helvetica, Arial, sans-serif;
+  color: white;
 }
 
 .multiselect {

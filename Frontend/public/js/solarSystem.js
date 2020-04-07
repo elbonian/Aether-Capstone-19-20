@@ -8,6 +8,7 @@ class AetherSimulation extends Spacekit.Simulation {
         super(simulationElt, options);
         this.mult = options.mult || 1;
         this.tail_length = options.tail_length || 1;
+        this.wrt = options.wrt || "solar system baryncenter";
 	}
 
 	/*
@@ -105,6 +106,7 @@ class AetherObject extends Spacekit.SphereObject {
 		this.name = "newBody";
 		this.update_threshold = 0;
 		this.update_threshold2 = 0;
+		this.wrt = null;
         this.init();
       }
 
@@ -404,7 +406,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  	@param {string} [valid_time_seconds="10"] - The length of time in seconds the object will be able to animate from the data returned
 	  	@param {boolean} [old_data=false] - flag indicating whether the data returned is old or not
 	  */
-	  positionGetRequest(wrt = "solar system barycenter", obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = 1, tail_length_jd = "0", valid_time_seconds = "10", old_data = false){
+	  positionGetRequest(wrt = this._simulation.wrt, obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = 1, tail_length_jd = "0", valid_time_seconds = "10", old_data = false){
 	  	this.ephemUpdate(wrt, obj_name, start_date_jd, jd_delta, tail_length_jd, valid_time_seconds).then(data => {
      
       			// adjust results to be in km and in ecliptic plane
@@ -450,7 +452,7 @@ class AetherObject extends Spacekit.SphereObject {
       		}
       		else if(need_old_data){
       			this.isUpdating = true;
-      			this.positionGetRequest( "solar system barycenter", this.name, this.jdTimeData[0].toString(), 1, (1*60*10).toString(), "0", true);
+      			this.positionGetRequest( this._simulation.wrt, this.name, this.jdTimeData[0].toString(), 1, (1*60*10).toString(), "0", true);
       		}
       	}
       	
@@ -529,6 +531,10 @@ var adjusted_positions = {};
 var adjusted_times = {};
 
 
+var simulation_stack = []; // stack of simulations
+var viz; // pointer to active simulation
+var viz1;
+
 /////////////////////////////////
 /////// Utility Functions ///////
 /////////////////////////////////
@@ -539,38 +545,38 @@ function capitalizeFirstLetter(string) {
 
 
 
-/////////////////////////////////
-///// Default Visualization /////
-/////////////////////////////////
+// /////////////////////////////////
+// ///// Default Visualization /////
+// /////////////////////////////////
 
 
-console.log(Date.now() - 100000);
-console.log(Date.now());
+// console.log(Date.now() - 100000);
+// console.log(Date.now());
 
-// Main visualization object
-const viz = new AetherSimulation(document.getElementById('main-container'), {
-  basePath: 'https://typpo.github.io/spacekit/src',
-  //jdPerTick : 1/60,
-  jdDelta: 1,
-  //jdPerSecond: 7,
-  startDate: 300000000000,
-  startPaused: true,
-  unitsPerAu: unitsPerAu,
-  camera: {
-  	initialPosition: [2500,5000,5000],
-  	enableDrift: false,
-  },
-  debug: {
-  	showAxes: true,
-	showGrid: true,
-	showStats: true,  
-  }
-});
+// // Main visualization object
+// const viz = new AetherSimulation(document.getElementById('main-container'), {
+//   basePath: 'https://typpo.github.io/spacekit/src',
+//   //jdPerTick : 1/60,
+//   jdDelta: 1,
+//   //jdPerSecond: 7,
+//   startDate: Date.now(),
+//   startPaused: true,
+//   unitsPerAu: unitsPerAu,
+//   camera: {
+//   	initialPosition: [2500,5000,5000],
+//   	enableDrift: false,
+//   },
+//   debug: {
+//   	showAxes: true,
+// 	showGrid: true,
+// 	showStats: true,  
+//   }
+// });
 
-document.getElementById('sim_time').innerHTML = viz.getDate();
-const sim_time = document.getElementById('sim_time');
+// document.getElementById('sim_time').innerHTML = viz.getDate();
+// const sim_time = document.getElementById('sim_time');
 
-const sim_rate = document.getElementById("sim_rate");
+// const sim_rate = document.getElementById("sim_rate");
 function tick(){
 	// console.log(viz._fps);
 	// console.log(viz._jdPerSecond);
@@ -578,15 +584,20 @@ function tick(){
 	// console.log(viz.getJdPerSecond());
 	// console.log(viz.tail_length);
 	//sim_time.innerHTML = viz.getDate().toLocaleDateString();
-	const date = viz.getDate().toString();
+	const date = this.getDate().toString();
 	//console.log(viz.getDate());
 	sim_time.innerHTML = date.slice(4, date.length);
 
-	const rate = "JD/Sec: " + viz.getJdDelta()*60;
-	sim_rate.innerHTML = rate;
+	if(this._isPaused){
+		sim_rate.innerHTML = "JD/Sec: " + 0;
+	}
+	else{
+		const rate = "JD/Sec: " + this.getJdDelta()*60;
+		sim_rate.innerHTML = rate;
+	}
 }
 
-viz.onTick = tick;
+
 
 //async function to get data from API
 async function getPositionData(ref_frame, targets, start_date, end_date, steps){
@@ -703,185 +714,186 @@ function renderPointData(adjusted_positions, adjusted_times){ // todo: consider 
 
 var radii = {};
 
-getRadii().then(data => {
-	for(const property in data){
-		radii[property] = data[property].map(Spacekit.kmToAu)[0];
-		//console.log(radii[property]);
-	}
-});
+// getRadii().then(data => {
+// 	for(const property in data){
+// 		radii[property] = data[property].map(Spacekit.kmToAu)[0];
+// 		//console.log(radii[property]);
+// 	}
+// });
+
+// const marin_10_id = -100000 - 6919;
+
+// getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
+// 	// iterate over each body returned by the API call
+// 	for(const property in data){
+// 		// Array of [x,y,z] coords in AU
+// 		var allAdjustedVals = [];
+// 		// Array of Julian Dates corresponding to each position
+// 		var allAdjustedTimes = [];
+// 		// Current Julian Date
+// 		var cur_jd = viz.getJd();
+
+// 		// set tail indexes
+// 		var cur_idx = data[property].cur_time_idx;
+// 		const tail_start_idx = 0;
+// 		var tail_end_idx;
+// 		if(data[property].times.length % 2 == 0){
+// 			tail_end_idx = data[property].times.length / 2;
+// 		}
+// 		else {
+// 			tail_end_idx = Math.ceil(data[property].times.length / 2);
+// 		}
 
 
-getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+-31', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
-	// iterate over each body returned by the API call
-	for(const property in data){
-		// Array of [x,y,z] coords in AU
-		var allAdjustedVals = [];
-		// Array of Julian Dates corresponding to each position
-		var allAdjustedTimes = [];
-		// Current Julian Date
-		var cur_jd = viz.getJd();
-
-		// set tail indexes
-		var cur_idx = data[property].cur_time_idx;
-		const tail_start_idx = 0;
-		var tail_end_idx;
-		if(data[property].times.length % 2 == 0){
-			tail_end_idx = data[property].times.length / 2;
-		}
-		else {
-			tail_end_idx = Math.ceil(data[property].times.length / 2);
-		}
-
-
-		// iterate over the data for the current body
-		var i = 0;
-		for(pos of data[property].positions){
-			// convert coordinates in km to au
-			adjustedVals = pos.map(Spacekit.kmToAu);
-			// convert coords to ecliptic
-			adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-			let vector = new THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+// 		// iterate over the data for the current body
+// 		var i = 0;
+// 		for(pos of data[property].positions){
+// 			// convert coordinates in km to au
+// 			adjustedVals = pos.map(Spacekit.kmToAu);
+// 			// convert coords to ecliptic
+// 			adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+// 			let vector = new THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
 			
-			// push positions and their corresponding times to arrays
-			allAdjustedVals.push(vector);
-			allAdjustedTimes.push(parseFloat(data[property].times[i]));
-			i++;
-		}
+// 			// push positions and their corresponding times to arrays
+// 			allAdjustedVals.push(vector);
+// 			allAdjustedTimes.push(parseFloat(data[property].times[i]));
+// 			i++;
+// 		}
 		
-		// Create object
-		var bodyName = capitalizeFirstLetter(property)
-		var radius;
-		if(bodyName == "Sun"){
-			radius = 0.17;
-		}
-		else if(bodyName == "Moon"){
-			radius = 0.0005;
-		}
-		else{
-			radius = .08;
-		}
-		//let radius = radii[property];
-		let body = viz.createAetherObject(property, {
-			labelText: bodyName,
-			name: property,
-			textureUrl: body_textures[property],
-			currIndex: cur_idx,
-			radius: radius,
-			particleSize: -1,
-			rotation: true,
-			hideOrbit: true,
-			positionVectors: allAdjustedVals,
-			ephemUpdate: getPositionData2,
-			jdTimeData: allAdjustedTimes,
-			levelsOfDetail: [{
-				threshold: 0,
-				segments: 40,
-			}]
-		});
+// 		// Create object
+// 		var bodyName = capitalizeFirstLetter(property)
+// 		var radius;
+// 		if(bodyName == "Sun"){
+// 			radius = 0.17;
+// 		}
+// 		else if(bodyName == "Moon"){
+// 			radius = 0.0005;
+// 		}
+// 		else{
+// 			radius = .08;
+// 		}
+// 		//let radius = radii[property];
+// 		let body = viz.createAetherObject(property, {
+// 			labelText: bodyName,
+// 			name: property,
+// 			textureUrl: body_textures[property],
+// 			currIndex: cur_idx,
+// 			radius: radius,
+// 			particleSize: -1,
+// 			rotation: true,
+// 			hideOrbit: true,
+// 			positionVectors: allAdjustedVals,
+// 			ephemUpdate: getPositionData2,
+// 			jdTimeData: allAdjustedTimes,
+// 			levelsOfDetail: [{
+// 				threshold: 0,
+// 				segments: 40,
+// 			}]
+// 		});
 
-		//console.log(body.ephemUpdate);
-		//console.log(body.positionVectors.length);
-		// Update global variables
-		visualizer_list[bodyName] = body;
-		adjusted_positions[bodyName] = allAdjustedVals;
-		adjusted_times[bodyName] = allAdjustedTimes;
-	}
-	viz.start();
-});
+// 		//console.log(body.ephemUpdate);
+// 		//console.log(body.positionVectors.length);
+// 		// Update global variables
+// 		visualizer_list[bodyName] = body;
+// 		adjusted_positions[bodyName] = allAdjustedVals;
+// 		adjusted_times[bodyName] = allAdjustedTimes;
+// 	}
+// 	viz.start();
+// });
 
 
 var expanded = false;
 
-viz.setCameraDrift(false);
+//viz.setCameraDrift(false);
 
 //viz.createStars();
 
-//This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
-var checkboxes = document.getElementById("checkboxes");
-for(let i of Object.keys(visualizer_list)){
-	appendCheckboxElement(checkboxes , i);
-	let checkbox_element = i.concat("-checkbox");
-	document.getElementById(checkbox_element).addEventListener("click" , function(){
-		let checked = document.getElementById(checkbox_element).checked;
-		let label = visualizer_list[i]._label;
-		if(!checked){
-			if(label != null){
-				visualizer_list[i].setLabelVisibility(false);
-			}
-			viz.removeObject(visualizer_list[i]);
-		} else {
-			if(label != null){
-				visualizer_list[i].setLabelVisibility(true);
-			}
-			viz.addObject(visualizer_list[i]);
-		}
-	});
-}
+// //This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
+// var checkboxes = document.getElementById("checkboxes");
+// for(let i of Object.keys(visualizer_list)){
+// 	appendCheckboxElement(checkboxes , i);
+// 	let checkbox_element = i.concat("-checkbox");
+// 	document.getElementById(checkbox_element).addEventListener("click" , function(){
+// 		let checked = document.getElementById(checkbox_element).checked;
+// 		let label = visualizer_list[i]._label;
+// 		if(!checked){
+// 			if(label != null){
+// 				visualizer_list[i].setLabelVisibility(false);
+// 			}
+// 			viz.removeObject(visualizer_list[i]);
+// 		} else {
+// 			if(label != null){
+// 				visualizer_list[i].setLabelVisibility(true);
+// 			}
+// 			viz.addObject(visualizer_list[i]);
+// 		}
+// 	});
+// }
 
 
 
-document.addEventListener('mousedown', onDocumentMouseDown, false );
+// document.addEventListener('mousedown', onDocumentMouseDown, false );
 
-var time_slider = document.getElementById("time-rate");
-time_slider.oninput = function() {
-	if(this.value == 1){
-		viz.setJdDelta(-1);
-		viz.mult = -1;
-	}
-	else if(this.value == 2){
-		viz.setJdDelta(1/60);
-		viz.mult = 1/60;
-	}
-	else if(this.value == 3){
-		viz.setJdDelta(1);
-		viz.mult = 1;
-	}
-	else if(this.value == 4){
-		viz.setJdDelta(2);
-		viz.mult = 2;
-	}
-	else if(this.value == 5){
-		viz.setJdDelta(4);
-		viz.mult = 4;
-	}
-	else{
-		viz.setJdDelta(1);
-		viz.mult = 1;
-	}
+// var time_slider = document.getElementById("time-rate");
+// time_slider.oninput = function() {
+// 	if(this.value == 1){
+// 		viz.setJdDelta(-1);
+// 		viz.mult = -1;
+// 	}
+// 	else if(this.value == 2){
+// 		viz.setJdDelta(1/60);
+// 		viz.mult = 1/60;
+// 	}
+// 	else if(this.value == 3){
+// 		viz.setJdDelta(1);
+// 		viz.mult = 1;
+// 	}
+// 	else if(this.value == 4){
+// 		viz.setJdDelta(2);
+// 		viz.mult = 2;
+// 	}
+// 	else if(this.value == 5){
+// 		viz.setJdDelta(4);
+// 		viz.mult = 4;
+// 	}
+// 	else{
+// 		viz.setJdDelta(1);
+// 		viz.mult = 1;
+// 	}
 	
-}
+// }
 
-var tail_slider = document.getElementById("tail-length");
-tail_slider.oninput = function() {
-	viz.tail_length = this.value / 100;
-}
+// var tail_slider = document.getElementById("tail-length");
+// tail_slider.oninput = function() {
+// 	viz.tail_length = this.value / 100;
+// }
 
-document.getElementById("real-time").addEventListener("click", function() {
-	viz.setDate(Date.now());
-	viz.setJdPerSecond(realTimeRate);
-});
+// document.getElementById("real-time").addEventListener("click", function() {
+// 	viz.setDate(Date.now());
+// 	viz.setJdPerSecond(realTimeRate);
+// });
 
-document.getElementById("start-button").addEventListener("click", function() {
-	viz.start();
-});
+// document.getElementById("start-button").addEventListener("click", function() {
+// 	viz.start();
+// });
 
-document.getElementById("stop-button").addEventListener("click", function() {
-	viz.stop();
-});
+// document.getElementById("stop-button").addEventListener("click", function() {
+// 	viz.stop();
+// });
 
-document.getElementById("submit-button").addEventListener("click", function(){
-	let planetZoomChoice = document.getElementById("zoom-dropdown");
-	let choiceStr = planetZoomChoice.options[planetZoomChoice.selectedIndex].value;
-	//console.log(choiceStr);
-	viz.getViewer().followObject(visualizer_list[choiceStr] , [-0.75 , -0.75 , -0.75]);
-	viz.getViewer().get3jsCamera().zoom = 10;
-	viz.getViewer().get3jsCamera().updateProjectionMatrix();
-});
+// document.getElementById("submit-button").addEventListener("click", function(){
+// 	let planetZoomChoice = document.getElementById("zoom-dropdown");
+// 	let choiceStr = planetZoomChoice.options[planetZoomChoice.selectedIndex].value;
+// 	//console.log(choiceStr);
+// 	viz.getViewer().followObject(visualizer_list[choiceStr] , [-0.75 , -0.75 , -0.75]);
+// 	viz.getViewer().get3jsCamera().zoom = 10;
+// 	viz.getViewer().get3jsCamera().updateProjectionMatrix();
+// });
 
 
-document.getElementById("reset-button").addEventListener("click", function(){
-	window.location.reload();
-});
+// document.getElementById("reset-button").addEventListener("click", function(){
+// 	window.location.reload();
+// });
 
 
 /*
@@ -914,11 +926,11 @@ function showCheckboxes() {
   	}
 }
 
-function onDocumentMouseDown(event) {
-	//console.log(event);
-	var viewer = viz.getViewer();
-	viewer.update();
-}
+// function onDocumentMouseDown(event) {
+// 	//console.log(event);
+// 	var viewer = viz.getViewer();
+// 	viewer.update();
+// }
 
 document.querySelectorAll('.vis-controls__set-date').forEach(
 	function(elt){elt.onclick=function(){
@@ -926,6 +938,75 @@ document.querySelectorAll('.vis-controls__set-date').forEach(
 
 	};
 });
+
+let sim_form = document.getElementById('newSimForm');
+sim_form.addEventListener('submit', function(e){
+	e.preventDefault();
+	const formData = new FormData(this);
+	viz.stop();
+	viz = null;
+	//console.log(document.getElementById('main-container').children);
+
+	//console.log(document.getElementById('main-container'));
+	//document.getElementById('main-container').textContent='';
+	//document.getElementById('main-container').removeChild(document.getElementById('main-container'));
+	//document.getElementById('main-container').removeChild(document.getElementById('active-sim'));
+	//document.body.removeChild(document.getElementById('main-container'));
+	//document.body.createChild()
+
+	// document.body.removeChild(document.getElementById('main-container'));
+
+
+	var div = document.createElement('div');
+	
+	div.id = 'new-container';
+	document.body.replaceChild(div, document.getElementById('main-container'));
+	div.id = 'main-container';
+	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1, formData.get('jd_start'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu]);
+
+	//var parent = document.getElementById('main-container').parentElement;
+	//parent.
+	//console.log(parent);
+	simulation_stack.push[new_viz];
+	viz = new_viz;
+	console.log(viz);
+	viz.start();
+	//console.log(viz);
+	console.log(document.getElementById('main-container').children);
+	//document.getElementById('main-container').innerHTML = viz;
+});
+let compare_form = document.getElementById('comparison-form');
+compare_form.addEventListener('submit', function(e){
+	e.preventDefault();
+	const formData = new FormData(this);
+	viz.stop();
+	viz = null;
+
+	var comparison_container = document.createElement('div');
+	comparison_container.id = "comparison_container";
+	var div1 = document.createElement('div');
+	div1.id = "comparison1";
+	var div2 = document.createElement('div');
+	div2.id = "comparison2";
+	comparison_container.appendChild(div1);
+	comparison_container.appendChild(div2);
+	document.body.replaceChild(comparison_container, document.getElementById('main-container'));
+
+	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, formData.get('jd_start'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison1");
+	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, formData.get('jd_start2'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison2");
+	new_viz2._camera = new_viz1._camera;
+	//new_viz2.update = new_viz1.update;
+	//new_viz2.animate = new_viz1.animate;
+	viz = new_viz1;
+	viz1 = new_viz2;
+	viz1.onTick = null;
+	viz.start();
+	viz1.start();
+	console.log(viz);
+	console.log(viz1);
+
+});
+
 
 let form = document.getElementById('myForm');
 form.addEventListener('submit', function(event){
@@ -943,3 +1024,276 @@ form.addEventListener('submit', function(event){
     	console.error(error)
   	});
 })
+
+
+
+function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,5000,5000], container='main-container'){
+
+	var new_viz = new AetherSimulation(document.getElementById(container), {
+	  basePath: 'https://typpo.github.io/spacekit/src',
+	  //jdPerTick : 1/60,
+	  jdDelta: jd_delta,
+	  //jdPerSecond: 7,
+	  startDate: jd_start,
+	  startPaused: true,
+	  unitsPerAu: unitsPerAu,
+	  camera: {
+	  	initialPosition: camera_start,
+	  	enableDrift: false,
+	  },
+	  debug: {
+	  	showAxes: true,
+		showGrid: true,
+		showStats: true,  
+	  },
+	  wrt: wrt
+	});
+
+	// Visualization's main
+
+	getRadii().then(data => {
+		for(const property in data){
+			radii[property] = data[property].map(Spacekit.kmToAu)[0];
+			//console.log(radii[property]);
+		}
+	});
+
+	//const marin_10_id = -100000 - 6919;
+
+	getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10).toString(), "10").then(data => {
+		// iterate over each body returned by the API call
+		for(const property in data){
+			// Array of [x,y,z] coords in AU
+			var allAdjustedVals = [];
+			// Array of Julian Dates corresponding to each position
+			var allAdjustedTimes = [];
+			// Current Julian Date
+			var cur_jd = new_viz.getJd();
+
+			// set tail indexes
+			var cur_idx = data[property].cur_time_idx;
+			const tail_start_idx = 0;
+			var tail_end_idx;
+			if(data[property].times.length % 2 == 0){
+				tail_end_idx = data[property].times.length / 2;
+			}
+			else {
+				tail_end_idx = Math.ceil(data[property].times.length / 2);
+			}
+
+
+			// iterate over the data for the current body
+			var i = 0;
+			for(pos of data[property].positions){
+				// convert coordinates in km to au
+				adjustedVals = pos.map(Spacekit.kmToAu);
+				// convert coords to ecliptic
+				adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+				let vector = new THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+				
+				// push positions and their corresponding times to arrays
+				allAdjustedVals.push(vector);
+				allAdjustedTimes.push(parseFloat(data[property].times[i]));
+				i++;
+			}
+			
+			// Create object
+			var bodyName = capitalizeFirstLetter(property)
+			var radius;
+			if(bodyName == "Sun"){
+				radius = 0.17;
+			}
+			else if(bodyName == "Moon"){
+				radius = 0.0005;
+			}
+			else{
+				radius = .08;
+			}
+			//let radius = radii[property];
+			let body = new_viz.createAetherObject(property, {
+				labelText: bodyName,
+				name: property,
+				textureUrl: body_textures[property],
+				currIndex: cur_idx,
+				radius: radius, //(radii[property] * 10),
+				particleSize: -1,
+				rotation: true,
+				hideOrbit: true,
+				positionVectors: allAdjustedVals,
+				ephemUpdate: getPositionData2,
+				jdTimeData: allAdjustedTimes,
+				levelsOfDetail: [{
+					threshold: 0,
+					segments: 40,
+				}]
+			});
+
+			//console.log(body.ephemUpdate);
+			//console.log(body.positionVectors.length);
+			// Update global variables
+			visualizer_list[bodyName] = body;
+			adjusted_positions[bodyName] = allAdjustedVals;
+			adjusted_times[bodyName] = allAdjustedTimes;
+		}
+		//viz.start();
+	});
+	new_viz.onTick = tick;
+	//new_viz.createStars();
+	return new_viz;
+}
+
+
+
+
+
+function runApp(){
+	/////////////////////////////////
+	///// Default Visualization /////
+	/////////////////////////////////
+
+	// Main visualization object
+	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto', 1, Date.now()); // todo: change last parameter to be in JD
+	//simulation_stack.push(viz);
+
+	document.getElementById('sim_time').innerHTML = viz.getDate();
+	const sim_time = document.getElementById('sim_time');
+
+	const sim_rate = document.getElementById("sim_rate");
+
+	//This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
+	var checkboxes = document.getElementById("checkboxes");
+	for(let i of Object.keys(visualizer_list)){
+		appendCheckboxElement(checkboxes , i);
+		let checkbox_element = i.concat("-checkbox");
+		document.getElementById(checkbox_element).addEventListener("click" , function(){
+			let checked = document.getElementById(checkbox_element).checked;
+			let label = visualizer_list[i]._label;
+			if(!checked){
+				if(label != null){
+					visualizer_list[i].setLabelVisibility(false);
+				}
+				viz.removeObject(visualizer_list[i]);
+				if(viz1 != null){
+					viz1.removeObject(visualizer_list[i]);
+				}
+			} else {
+				if(label != null){
+					visualizer_list[i].setLabelVisibility(true);
+				}
+				viz.addObject(visualizer_list[i]);
+				if(viz1 != null){
+					viz1.addObject(visualizer_list[i]);
+				}
+			}
+		});
+	}
+
+
+
+	//document.addEventListener('mousedown', onDocumentMouseDown, false );
+
+	var time_slider = document.getElementById("time-rate");
+	time_slider.oninput = function() {
+		if(this.value == 1){
+			viz.setJdDelta(-1);
+			viz.mult = -1;
+			if(viz1 != null){
+				viz1.setJdDelta(-1);
+				viz1.mult = -1;
+			}
+		}
+		else if(this.value == 2){
+			viz.setJdDelta(1/60);
+			viz.mult = 1/60;
+			if(viz1 != null){
+				viz1.setJdDelta(1/60);
+				viz1.mult = 1/60;
+			}
+		}
+		else if(this.value == 3){
+			viz.setJdDelta(1);
+			viz.mult = 1;
+			if(viz1 != null){
+				viz1.setJdDelta(1);
+				viz1.mult = 1;
+			}
+		}
+		else if(this.value == 4){
+			viz.setJdDelta(2);
+			viz.mult = 2;
+			if(viz1 != null){
+				viz1.setJdDelta(2);
+				viz1.mult = 2;
+			}
+		}
+		else if(this.value == 5){
+			viz.setJdDelta(4);
+			viz.mult = 4;
+			if(viz1 != null){
+				viz1.setJdDelta(4);
+				viz1.mult = 4;
+			}
+		}
+		else{
+			viz.setJdDelta(1);
+			viz.mult = 1;
+			if(viz1 != null){
+				viz1.setJdDelta(1);
+				viz1.mult = 1;
+			}
+		}
+		
+	}
+
+	var tail_slider = document.getElementById("tail-length");
+	tail_slider.oninput = function() {
+		viz.tail_length = this.value / 100;
+		if(viz1 != null){
+			viz1.tail_length = this.value / 100;
+		}
+	}
+
+	document.getElementById("real-time").addEventListener("click", function() {
+		viz.setDate(Date.now());
+		viz.setJdPerSecond(realTimeRate);
+	});
+
+	document.getElementById("start-button").addEventListener("click", function() {
+		viz.start();
+		if(viz1 != null){
+			viz1.start();
+		}
+	});
+
+	document.getElementById("stop-button").addEventListener("click", function() {
+		viz.stop();
+		if(viz1 != null){
+			viz1.stop();
+		}
+	});
+
+	document.getElementById("submit-button").addEventListener("click", function(){
+		let planetZoomChoice = document.getElementById("zoom-dropdown");
+		let choiceStr = planetZoomChoice.options[planetZoomChoice.selectedIndex].value;
+		//console.log(choiceStr);
+		viz.getViewer().followObject(visualizer_list[choiceStr] , [0, 0, 0]);
+		//viz.getViewer().get3jsCamera().lookAt(visualizer_list[choiceStr]);
+
+		//viz.getViewer().get3jsCamera().target.position.copy( visualizer_list["sun"] );
+		viz.getViewer().get3jsCamera().zoom = 10;
+		viz.getViewer().get3jsCamera().updateProjectionMatrix();
+	});
+
+
+	document.getElementById("reset-button").addEventListener("click", function(){
+		window.location.reload();
+	});
+
+
+	viz.start();
+
+}
+
+
+// START THE APP
+runApp();

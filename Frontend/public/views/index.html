@@ -10,6 +10,22 @@
             content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
         <title>Solar System</title>
 		<script src="https://typpo.github.io/spacekit/build/spacekit.js"></script>
+         <script>function openForm() {
+              document.getElementById("form-container1").style.display = "block";
+            }
+
+            function closeForm() {
+              document.getElementById("form-container1").style.display = "none";
+            }
+
+            function openForm2() {
+                document.getElementById("form-container2").style.display = "block";
+            }
+
+            function closeForm2() {
+                document.getElementById("form-container2").style.display = "none";
+            } 
+        </script>
         <script src="/js/three.min.js"></script>
 <!--         <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.2.0/gsap.min.js"></script>
  -->        <link rel="stylesheet" type="text/css" href="/views/index.css">
@@ -24,7 +40,21 @@
             <form class="form" id="myForm" enctype="multipart/form-data">
                 Choose the file: <input type="file" name="file"/><BR>
                     <input type="submit" value="Upload"/>
-            </form> 
+            </form>
+
+           <!--  <form class="form" id="newSimForm">
+                Enter the body from which all positions will be calculated (i.e. solar system barycenter):
+                <input type="text" name="wrt"><br>
+                Enter the names of the targets you would like to view, separated by a '+' (i.e. sun+earth+moon):
+                <input type="text" name="targets"><br>
+                Enter the JD you would like to begin the simulation at (i.e. 2451545.0)
+                <input type="text" name="jd_start">
+                <input type="submit" value="Create">
+            </form> -->
+
+            
+
+
 
             <h4 style="color: white">Time Controls</h4>
             <p style="color: gray">Rate of Time</p>
@@ -69,15 +99,83 @@
                 </div>
                 <div id="checkboxes"></div>
             </div>
+
+            <button class="create-button" onclick="openForm()">Create Sim</button>
+
+            <div class="form-popup" id="form-container1">
+              <form class="form-container" id="newSimForm">
+                <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
+
+                <label for="wrt" style="color: black">With Respect To</label>
+                <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
+
+                <label for="targets" style="color: black">Targets</label>
+                <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
+
+                <label for="jd_start" style="color: black">Starting Julian Date</label>
+                <input type="text" placeholder="i.e. 2451545.0" name="jd_start" required>
+
+                <button type="submit" class="btn" onclick="closeForm()">Create</button>
+                <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+              </form>
+            </div>
+
+            <button class="compare-button" onclick="openForm2()">Compare Sim</button>
+            <div class="form-popup" id="form-container2">
+                <form class="form-container" id="comparison-form">
+                    <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
+
+                    <div class="column">
+                        <h5 style="color: black">Simulation 1</h5>
+                        <label for="wrt" style="color: black">With Respect To</label>
+                        <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
+
+                        <label for="targets" style="color: black">Targets</label>
+                        <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
+
+                        <label for="jd_start" style="color: black">Starting Julian Date</label>
+                        <input type="text" placeholder="i.e. 2451545.0" name="jd_start" required>
+
+                    </div>
+                    <div class="column">
+                        <h5 style="color: black">Simulation 2</h5>
+                        <label for="wrt2" style="color: black">With Respect To</label>
+                        <input type="text" placeholder="i.e. solar system barycenter" name="wrt2" required>
+
+                        <label for="targets2" style="color: black">Targets</label>
+                        <input type="text" placeholder="i.e. sun+earth+moon" name="targets2" required>
+
+                        <label for="jd_start2" style="color: black">Starting Julian Date</label>
+                        <input type="text" placeholder="i.e. 2451545.0" name="jd_start2" required>
+
+                        <button type="submit" class="btn" onclick="closeForm2()">Create</button>
+                        <button type="button" class="btn cancel" onclick="closeForm2()">Close</button>
+                    </div>
+                    
+                </form>
+                
+
+            </div>
+
+
+
         </div>
 
         <!-- Main 3D simulation -->
-        <div id="main-container"></div>
-
+        <div id="main-container">
+            
+        </div>
+        <!-- <div id="active_sim"></div> -->
         <div class='sim-time'>
             <h3 id="sim_time"></h3>
             <h4 id="sim_rate"></h4>
         </div> 
+       <!--  <div id="comparison1">
+            
+        </div>
+        <div id="comparison2">
+            
+        </div> -->
 
         
         <script src="/js/solarSystem.js"></script>
