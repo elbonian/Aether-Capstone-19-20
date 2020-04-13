@@ -20,6 +20,9 @@ class AetherSimulation extends Spacekit.Simulation {
 		return new AetherObject(...args, this);
 	}
 
+	/*
+		Adds a new object to the simulation
+	*/
 	renderObject() {
         if (this._renderMethod !== 'SPHERE') {
    
@@ -33,54 +36,54 @@ class AetherSimulation extends Spacekit.Simulation {
         }
       }
 
-      /**
-   * @private
-   */
-  animate() {
-    if (!this._renderEnabled) {
-      return;
-    }
- 
-    window.requestAnimationFrame(this.animate);
- 
-    if (this._stats) {
-      this._stats.begin();
-    }
- 
- 	// CHANGED FROM DEFAULT SPACEKIT FUNCTION
-    if (!this._isPaused) {
-      if (this._jdDelta) {
-        this._jd += this._jdDelta;
-      } else {
-      	console.log("jd delta is undefined");
-      }
- 
-      const timeDelta = (Date.now() - this._lastUpdatedTime) / 1000;
-      this._lastUpdatedTime = Date.now();
-      this._fps = 1 / timeDelta || 1;
-    }
- 
-    // Update objects in this simulation
-    this.update();
- 
-    // Update camera drifting, if applicable
-    if (this._enableCameraDrift) {
-      this.doCameraDrift();
-    }
-    this._camera.update();
- 
-    // Update three.js scene
-    this._renderer.render(this._scene, this._camera.get3jsCamera());
-    //this._composer.render(0.1);
- 
-    if (this.onTick) {
-      this.onTick();
-    }
- 
-    if (this._stats) {
-      this._stats.end();
-    }
-  }
+	/*
+	@private
+	Animates the simulation
+    */
+	animate() {
+		if (!this._renderEnabled) {
+		return;
+		}
+	
+		window.requestAnimationFrame(this.animate);
+	
+		if (this._stats) {
+		this._stats.begin();
+		}
+	
+		// CHANGED FROM DEFAULT SPACEKIT FUNCTION
+		if (!this._isPaused) {
+		if (this._jdDelta) {
+			this._jd += this._jdDelta;
+		} else {
+			console.log("jd delta is undefined");
+		}
+	
+		const timeDelta = (Date.now() - this._lastUpdatedTime) / 1000;
+		this._lastUpdatedTime = Date.now();
+		this._fps = 1 / timeDelta || 1;
+		}
+	
+		// Update objects in this simulation
+		this.update();
+	
+		// Update camera drifting, if applicable
+		if (this._enableCameraDrift) {
+		this.doCameraDrift();
+		}
+		this._camera.update();
+	
+		// Update three.js scene
+		this._renderer.render(this._scene, this._camera.get3jsCamera());
+	
+		if (this.onTick) {
+		this.onTick();
+		}
+	
+		if (this._stats) {
+		this._stats.end();
+		}
+	}
 }
 
 /*
@@ -140,7 +143,6 @@ class AetherObject extends Spacekit.SphereObject {
               sphereTexture: { value: null },
               lightPos: { value: new THREE.Vector3() },
             };
-            // TODO(ian): Handle if no map
             uniforms.sphereTexture.value = map;
             uniforms.lightPos.value.copy(this._simulation.getLightPosition());
             material = new THREE.ShaderMaterial({
@@ -162,7 +164,7 @@ class AetherObject extends Spacekit.SphereObject {
 			} );
           const mesh = new THREE.Mesh(sphereGeometry, material);
           mesh.receiveShadow = true;
-          mesh.castShadow = true;
+		  mesh.castShadow = true;
      
 		  // Change the coordinate system to have Z-axis pointed up.
 		  // TODO: change mesh rotation
@@ -180,8 +182,6 @@ class AetherObject extends Spacekit.SphereObject {
 
         // set position data
         this.positionVectors = this._options.positionVectors;
-        //this.jdTimeData = this._options.jdTimeData;
-
 
         if (this._options.atmosphere && this._options.atmosphere.enable) {
           this._obj.add(this.renderFullAtmosphere());
@@ -205,6 +205,7 @@ class AetherObject extends Spacekit.SphereObject {
         //init trajectory tail
         this.geometry = new THREE.BufferGeometry();
 		this.material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
+		this.material.depthWrite = false;
 		//this.geometry.vertices.needsUpdate = true;
 		Object.defineProperty( this.material, 'needsUpdate', {
 			value: true,
@@ -251,8 +252,6 @@ class AetherObject extends Spacekit.SphereObject {
 
         super.init();
 	  }
-
-
 
 	  /*
 		  Sets class position variable
@@ -334,7 +333,6 @@ class AetherObject extends Spacekit.SphereObject {
 	  		this.positionVectors = positions.concat(this.positionVectors.slice(1, this.positionVectors.length));
 	  	}
 	  	else{
-	  		//console.log("+ " + positions.length)
 	  		this.positionVectors = this.positionVectors.concat(positions.slice(1, positions.length));
 	  	}
 	  }
@@ -390,7 +388,6 @@ class AetherObject extends Spacekit.SphereObject {
 		// add line to the scene
 		let scene = this._simulation.getScene();
 		// remove old line
-		//scene.remove(scene.getObjectById(this.previousLineId));
 		scene.add(line);
 		this.line = line;
 		this.previousLineId = line.id;
@@ -413,15 +410,12 @@ class AetherObject extends Spacekit.SphereObject {
       			var position_vectors = data[this.name].positions.map(function(pos){
 			  		var adjusted_val = pos.map(Spacekit.kmToAu);//[Spacekit.kmToAu(pos[0]), Spacekit.kmToAu(pos[1]), Spacekit.kmToAu(pos[2])];
 			  		var adjusted_val2 = Spacekit.equatorialToEcliptic_Cartesian(adjusted_val[0], adjusted_val[1], adjusted_val[2], Spacekit.getObliquity());
-			  		// var adjusted_val3 = [adjusted_val2[0] * this._simulation._options.unitsPerAu, adjusted_val2[1] * this._simulation._options.unitsPerAu, adjusted_val2[2] * this._simulation._options.unitsPerAu];
 			  		return new THREE.Vector3(adjusted_val2[0] * 1000, adjusted_val2[1] * 1000, adjusted_val2[2] * 1000);
 			  	});
 
 			  	// update position list, time list, and line
       			this.addPositionData(position_vectors, old_data);
       			this.addTimeData(data[obj_name].times, old_data);
-      			// console.log(this.jdTimeData);
-      			// console.log(this.positionVectors);
       			this.updateLineData();
       			this.isUpdating = false; // signal that object is done updating
   		});
@@ -468,15 +462,11 @@ class AetherObject extends Spacekit.SphereObject {
 	      	
 			// only update object position if not paused
       		if(!this._simulation._isPaused){
-      			
       			// update object's location
       			this.setNextPos()
       			// update the object's tail beginning after updating the object's position
 		      	this.setNextTailStart();
 		      	this.drawLineSegment();   	
-		      	// console.log("Sim JD: " + jd);
-      			// console.log("Obj JD: " + this.jdTimeData[this.currIndex]);
-		      	
 			}
       	}
     }
@@ -543,49 +533,11 @@ function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-
-
-// /////////////////////////////////
-// ///// Default Visualization /////
-// /////////////////////////////////
-
-
-// console.log(Date.now() - 100000);
-// console.log(Date.now());
-
-// // Main visualization object
-// const viz = new AetherSimulation(document.getElementById('main-container'), {
-//   basePath: 'https://typpo.github.io/spacekit/src',
-//   //jdPerTick : 1/60,
-//   jdDelta: 1,
-//   //jdPerSecond: 7,
-//   startDate: Date.now(),
-//   startPaused: true,
-//   unitsPerAu: unitsPerAu,
-//   camera: {
-//   	initialPosition: [2500,5000,5000],
-//   	enableDrift: false,
-//   },
-//   debug: {
-//   	showAxes: true,
-// 	showGrid: true,
-// 	showStats: true,  
-//   }
-// });
-
-// document.getElementById('sim_time').innerHTML = viz.getDate();
-// const sim_time = document.getElementById('sim_time');
-
-// const sim_rate = document.getElementById("sim_rate");
+/*
+	Sets the rate of the simulation
+*/
 function tick(){
-	// console.log(viz._fps);
-	// console.log(viz._jdPerSecond);
-	// console.log(viz.getJdDelta());
-	// console.log(viz.getJdPerSecond());
-	// console.log(viz.tail_length);
-	//sim_time.innerHTML = viz.getDate().toLocaleDateString();
 	const date = this.getDate().toString();
-	//console.log(viz.getDate());
 	sim_time.innerHTML = date.slice(4, date.length);
 
 	if(this._isPaused){
@@ -598,8 +550,14 @@ function tick(){
 }
 
 
-
-//async function to get data from API
+/*
+	async function to get data from API
+	@param {string} ref_frame - Reference from to retrieve the data from
+	@param {string} targets - Target bodies in which to retrieve data
+	@param {string} start_date - Beginning date for data
+	@param {string} end_date - End date for data
+	@param {string} steps - Number of postions to be retrieved in the time frame
+*/
 async function getPositionData(ref_frame, targets, start_date, end_date, steps){
 	//returns a promise containing the response from server
 	let response = await fetch('http://0.0.0.0:5000/api/positions/' + ref_frame + '/' + targets + '/' + start_date + '/' + end_date + '/' + steps);
@@ -607,18 +565,36 @@ async function getPositionData(ref_frame, targets, start_date, end_date, steps){
 	return data;
 }
 
+/*
+	async function to get body data from API
+	@param {string} ref_frame - Reference from to retrieve the data from
+	@param {string} targets - Target bodies in which to retrieve data
+	@param {string} cur_jd - Current Julian date of the simulation
+	@param {float}  jd_rate - Rate of change of jd
+	@param {string} tail_length - The length of the position tail in JD
+	@param {string} valid_time - The length of time in seconds the object will be able to animate from the data returned
+	@return {json} data - JSON of body data
+*/
 async function getPositionData2(ref_frame, targets, cur_jd, jd_rate, tail_length, valid_time){
 	let response = await fetch('http://0.0.0.0:5000/api/positions2/' + ref_frame + '/' + targets + '/' + cur_jd + '/' + jd_rate + '/' + tail_length + '/' + valid_time);
 	let data = await response.json();
 	return data;
 }
 
+/*
+	async function to get which bodies are in the db
+	@return {json} data - JSON of available bodies
+*/
 async function getAvailableBodies(){
 	let response = await fetch('http://0.0.0.0:5000/api/body-list/');
 	let data = await response.json();
 	return data;
 }
 
+/*
+	async function to get info for bodies
+	@return {json} data - JSON of body info such as radius, mass, etc.
+*/
 async function getRadii(){
 	let response = await fetch('http://0.0.0.0:5000/api/body-info/');
 	let data = await response.json();
@@ -640,16 +616,25 @@ let body_textures = {
 	"moon" : '/js/textures/2k_moon.jpg'
 };
 
-// getAvailableBodies().then(data =>{
-// 	//console.log(document.getElementById("Moon-checkbox").parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.nodeName);
-// 	var ul_element = document.createElement("UL");
-// 	var checkboxes = document.getElementById("checkboxes");
-// 	for(let body in data){
-// 		ul_element.appendChild(createSubElements(body , data[body]));
-// 	}
-// 	checkboxes.appendChild(ul_element);
-// });
+/*
+	Calls async function to handle data retrieved
+*/
+getAvailableBodies().then(data =>{
+ 	//console.log(document.getElementById("Moon-checkbox").parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.nodeName);
+ 	var ul_element = document.createElement("UL");
+ 	var checkboxes = document.getElementById("checkboxes");
+ 	for(let body in data){
+ 		ul_element.appendChild(createSubElements(body , data[body]));
+ 	}
+ 	checkboxes.appendChild(ul_element);
+});
 
+/*
+	Creates a child elements in nested checkbox for bodies
+	@param {string} name - Name of the body
+	@param {array} sublist - List of bodies that are 'sub-bodies' of the added body e.g Earth -> Moon
+	@return {documentElement} li_element - New dropdown element
+*/
 function createSubElements(name , sublist){
 	var li_element = document.createElement("LI");
 	var label_element = document.createElement("LABEL");
@@ -672,6 +657,11 @@ function createSubElements(name , sublist){
 	return li_element;
 }
 
+/*
+	Check if object has any properties
+	@param {Object} obj - Javascript object
+	@return {Boolean} true/false - whether the object has a property
+*/
 function isEmpty(obj) {
     for(var key in obj) {
         if(obj.hasOwnProperty(key))
@@ -680,226 +670,14 @@ function isEmpty(obj) {
     return true;
 }
 
-
-
-
-
-
-function renderPointData(adjusted_positions, adjusted_times){ // todo: consider removing?
-	const points = [];
-	let lines = [];
-	for(const property in adjusted_positions){
-	
-		for(let time = 0; time < adjusted_positions[property].length; time++){
-			const vector = new THREE.Vector3(adjusted_positions[property][time][0], adjusted_positions[property][time][1], adjusted_positions[property][time][2]);
-			points.push(vector);
-			if(time != 0 && time != adjusted_times[property].length-1){
-				points.push(vector);
-			};
-		}
-		const pts = new THREE.Geometry();
-		pts.vertices = points;
-		
-		let material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
-		Object.defineProperty( material, 'needsUpdate', {
-			value: true,
-  			writable: true
-		} );
-		lines.push(new THREE.LineSegments(
-			pts,
-			material,
-		));
-	}
-}
-
 var radii = {};
-
-// getRadii().then(data => {
-// 	for(const property in data){
-// 		radii[property] = data[property].map(Spacekit.kmToAu)[0];
-// 		//console.log(radii[property]);
-// 	}
-// });
-
-// const marin_10_id = -100000 - 6919;
-
-// getPositionData2('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto', viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
-// 	// iterate over each body returned by the API call
-// 	for(const property in data){
-// 		// Array of [x,y,z] coords in AU
-// 		var allAdjustedVals = [];
-// 		// Array of Julian Dates corresponding to each position
-// 		var allAdjustedTimes = [];
-// 		// Current Julian Date
-// 		var cur_jd = viz.getJd();
-
-// 		// set tail indexes
-// 		var cur_idx = data[property].cur_time_idx;
-// 		const tail_start_idx = 0;
-// 		var tail_end_idx;
-// 		if(data[property].times.length % 2 == 0){
-// 			tail_end_idx = data[property].times.length / 2;
-// 		}
-// 		else {
-// 			tail_end_idx = Math.ceil(data[property].times.length / 2);
-// 		}
-
-
-// 		// iterate over the data for the current body
-// 		var i = 0;
-// 		for(pos of data[property].positions){
-// 			// convert coordinates in km to au
-// 			adjustedVals = pos.map(Spacekit.kmToAu);
-// 			// convert coords to ecliptic
-// 			adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-// 			let vector = new THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
-			
-// 			// push positions and their corresponding times to arrays
-// 			allAdjustedVals.push(vector);
-// 			allAdjustedTimes.push(parseFloat(data[property].times[i]));
-// 			i++;
-// 		}
-		
-// 		// Create object
-// 		var bodyName = capitalizeFirstLetter(property)
-// 		var radius;
-// 		if(bodyName == "Sun"){
-// 			radius = 0.17;
-// 		}
-// 		else if(bodyName == "Moon"){
-// 			radius = 0.0005;
-// 		}
-// 		else{
-// 			radius = .08;
-// 		}
-// 		//let radius = radii[property];
-// 		let body = viz.createAetherObject(property, {
-// 			labelText: bodyName,
-// 			name: property,
-// 			textureUrl: body_textures[property],
-// 			currIndex: cur_idx,
-// 			radius: radius,
-// 			particleSize: -1,
-// 			rotation: true,
-// 			hideOrbit: true,
-// 			positionVectors: allAdjustedVals,
-// 			ephemUpdate: getPositionData2,
-// 			jdTimeData: allAdjustedTimes,
-// 			levelsOfDetail: [{
-// 				threshold: 0,
-// 				segments: 40,
-// 			}]
-// 		});
-
-// 		//console.log(body.ephemUpdate);
-// 		//console.log(body.positionVectors.length);
-// 		// Update global variables
-// 		visualizer_list[bodyName] = body;
-// 		adjusted_positions[bodyName] = allAdjustedVals;
-// 		adjusted_times[bodyName] = allAdjustedTimes;
-// 	}
-// 	viz.start();
-// });
-
 
 var expanded = false;
 
-//viz.setCameraDrift(false);
-
-//viz.createStars();
-
-// //This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
-// var checkboxes = document.getElementById("checkboxes");
-// for(let i of Object.keys(visualizer_list)){
-// 	appendCheckboxElement(checkboxes , i);
-// 	let checkbox_element = i.concat("-checkbox");
-// 	document.getElementById(checkbox_element).addEventListener("click" , function(){
-// 		let checked = document.getElementById(checkbox_element).checked;
-// 		let label = visualizer_list[i]._label;
-// 		if(!checked){
-// 			if(label != null){
-// 				visualizer_list[i].setLabelVisibility(false);
-// 			}
-// 			viz.removeObject(visualizer_list[i]);
-// 		} else {
-// 			if(label != null){
-// 				visualizer_list[i].setLabelVisibility(true);
-// 			}
-// 			viz.addObject(visualizer_list[i]);
-// 		}
-// 	});
-// }
-
-
-
-// document.addEventListener('mousedown', onDocumentMouseDown, false );
-
-// var time_slider = document.getElementById("time-rate");
-// time_slider.oninput = function() {
-// 	if(this.value == 1){
-// 		viz.setJdDelta(-1);
-// 		viz.mult = -1;
-// 	}
-// 	else if(this.value == 2){
-// 		viz.setJdDelta(1/60);
-// 		viz.mult = 1/60;
-// 	}
-// 	else if(this.value == 3){
-// 		viz.setJdDelta(1);
-// 		viz.mult = 1;
-// 	}
-// 	else if(this.value == 4){
-// 		viz.setJdDelta(2);
-// 		viz.mult = 2;
-// 	}
-// 	else if(this.value == 5){
-// 		viz.setJdDelta(4);
-// 		viz.mult = 4;
-// 	}
-// 	else{
-// 		viz.setJdDelta(1);
-// 		viz.mult = 1;
-// 	}
-	
-// }
-
-// var tail_slider = document.getElementById("tail-length");
-// tail_slider.oninput = function() {
-// 	viz.tail_length = this.value / 100;
-// }
-
-// document.getElementById("real-time").addEventListener("click", function() {
-// 	viz.setDate(Date.now());
-// 	viz.setJdPerSecond(realTimeRate);
-// });
-
-// document.getElementById("start-button").addEventListener("click", function() {
-// 	viz.start();
-// });
-
-// document.getElementById("stop-button").addEventListener("click", function() {
-// 	viz.stop();
-// });
-
-// document.getElementById("submit-button").addEventListener("click", function(){
-// 	let planetZoomChoice = document.getElementById("zoom-dropdown");
-// 	let choiceStr = planetZoomChoice.options[planetZoomChoice.selectedIndex].value;
-// 	//console.log(choiceStr);
-// 	viz.getViewer().followObject(visualizer_list[choiceStr] , [-0.75 , -0.75 , -0.75]);
-// 	viz.getViewer().get3jsCamera().zoom = 10;
-// 	viz.getViewer().get3jsCamera().updateProjectionMatrix();
-// });
-
-
-// document.getElementById("reset-button").addEventListener("click", function(){
-// 	window.location.reload();
-// });
-
-
 /*
 	This function is used to append a checkbox element to a checkbox menu
-	@param parent_element This is the checkbox menu that we want to add the new checkbox element to
-	@param child_element_name This is the name of the checkbox element that we want to create
+	@param parent_element - This is the checkbox menu that we want to add the new checkbox element to
+	@param child_element_name - This is the name of the checkbox element that we want to create
 */
 function appendCheckboxElement(parent_element , child_element_name){
 	var id = child_element_name.concat("-checkbox");
@@ -914,7 +692,9 @@ function appendCheckboxElement(parent_element , child_element_name){
 	element.checked = true;
 }
 
-//This function Toggles the checkbox menu when the menu is clicked
+/*
+	Toggles the checkbox menu when the menu is clicked
+*/
 function showCheckboxes() {
 	var checkboxes = document.getElementById("checkboxes");
 	if (!expanded) {
@@ -926,12 +706,9 @@ function showCheckboxes() {
   	}
 }
 
-// function onDocumentMouseDown(event) {
-// 	//console.log(event);
-// 	var viewer = viz.getViewer();
-// 	viewer.update();
-// }
-
+/*
+	Sets the date of the visualization
+*/
 document.querySelectorAll('.vis-controls__set-date').forEach(
 	function(elt){elt.onclick=function(){
 		viz.setDate( new Date(prompt('Enter a date in the format YYYY-mm-dd.','2000-01-01')));
@@ -939,43 +716,43 @@ document.querySelectorAll('.vis-controls__set-date').forEach(
 	};
 });
 
+// Form for a new simulation
 let sim_form = document.getElementById('newSimForm');
+
+/*
+	Creates a new simulation with the form data when the user selects submit
+*/
 sim_form.addEventListener('submit', function(e){
 	e.preventDefault();
+	// Data user entered in form
 	const formData = new FormData(this);
 	viz.stop();
 	viz = null;
-	//console.log(document.getElementById('main-container').children);
 
-	//console.log(document.getElementById('main-container'));
-	//document.getElementById('main-container').textContent='';
-	//document.getElementById('main-container').removeChild(document.getElementById('main-container'));
-	//document.getElementById('main-container').removeChild(document.getElementById('active-sim'));
-	//document.body.removeChild(document.getElementById('main-container'));
-	//document.body.createChild()
-
-	// document.body.removeChild(document.getElementById('main-container'));
-
-
+	// Create a new div element
 	var div = document.createElement('div');
 	
 	div.id = 'new-container';
 	document.body.replaceChild(div, document.getElementById('main-container'));
 	div.id = 'main-container';
+
+	// Creates the new simulation from data entered
 	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1, formData.get('jd_start'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu]);
 
-	//var parent = document.getElementById('main-container').parentElement;
-	//parent.
-	//console.log(parent);
+	// Push the simulation on the stack
 	simulation_stack.push[new_viz];
 	viz = new_viz;
 	console.log(viz);
 	viz.start();
-	//console.log(viz);
 	console.log(document.getElementById('main-container').children);
-	//document.getElementById('main-container').innerHTML = viz;
 });
+
+// Form for trajectory comparison
 let compare_form = document.getElementById('comparison-form');
+
+/*
+	Creates a split-scrren view comparing the simulations
+*/
 compare_form.addEventListener('submit', function(e){
 	e.preventDefault();
 	const formData = new FormData(this);
@@ -992,26 +769,28 @@ compare_form.addEventListener('submit', function(e){
 	comparison_container.appendChild(div2);
 	document.body.replaceChild(comparison_container, document.getElementById('main-container'));
 
+	// Create two new simulations that will be compared side by side
 	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, formData.get('jd_start'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison1");
 	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, formData.get('jd_start2'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison2");
 	new_viz2._camera = new_viz1._camera;
-	//new_viz2.update = new_viz1.update;
-	//new_viz2.animate = new_viz1.animate;
+	
 	viz = new_viz1;
 	viz1 = new_viz2;
 	viz1.onTick = null;
 	viz.start();
 	viz1.start();
-	console.log(viz);
-	console.log(viz1);
-
 });
 
-
+// Form to submit a new spk kernel
 let form = document.getElementById('myForm');
+
+/*
+	Calls API endpoint to upload a kernel
+*/
 form.addEventListener('submit', function(event){
 	event.preventDefault();
 	const formData = new FormData(this);
+	// Call API endpoint that will submit the new file
 	fetch('http://0.0.0.0:5000/api/spk-upload', {
 		method: 'POST',
 		body: formData
@@ -1026,14 +805,21 @@ form.addEventListener('submit', function(event){
 })
 
 
-
+/*
+	Create an AetherSimulation and add the bodies to the simulation
+	@param {string} wrt - (With Respect To) The object from which the positions are computed in reference to
+	@param {string} targets - Target bodies that will be simulated
+	@param {Number} jd_delta - The rate the jd for simulation to change
+	@param {float} jd_start - Jd for simulation to start
+	@param {array[Number]} camera_start - Position for the camera to start, default=[2500,5000,5000]
+	@param {string} container - div to place the simulation in, default=main-container
+*/
 function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,5000,5000], container='main-container'){
 
+	// Create a new simulation
 	var new_viz = new AetherSimulation(document.getElementById(container), {
 	  basePath: 'https://typpo.github.io/spacekit/src',
-	  //jdPerTick : 1/60,
 	  jdDelta: jd_delta,
-	  //jdPerSecond: 7,
 	  startDate: jd_start,
 	  startPaused: true,
 	  unitsPerAu: unitsPerAu,
@@ -1051,15 +837,14 @@ function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,500
 
 	// Visualization's main
 
+	// Get body info for simulation
 	getRadii().then(data => {
 		for(const property in data){
 			radii[property] = data[property].map(Spacekit.kmToAu)[0];
-			//console.log(radii[property]);
 		}
 	});
 
-	//const marin_10_id = -100000 - 6919;
-
+	// Retrieve the position data with the specified parameters
 	getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10).toString(), "10").then(data => {
 		// iterate over each body returned by the API call
 		for(const property in data){
@@ -1109,7 +894,8 @@ function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,500
 			else{
 				radius = .08;
 			}
-			//let radius = radii[property];
+
+			// Create a new space object
 			let body = new_viz.createAetherObject(property, {
 				labelText: bodyName,
 				name: property,
@@ -1128,24 +914,19 @@ function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,500
 				}]
 			});
 
-			//console.log(body.ephemUpdate);
-			//console.log(body.positionVectors.length);
 			// Update global variables
 			visualizer_list[bodyName] = body;
 			adjusted_positions[bodyName] = allAdjustedVals;
 			adjusted_times[bodyName] = allAdjustedTimes;
 		}
-		//viz.start();
 	});
 	new_viz.onTick = tick;
-	//new_viz.createStars();
 	return new_viz;
 }
 
-
-
-
-
+/*
+	Main function to begin the application
+*/
 function runApp(){
 	/////////////////////////////////
 	///// Default Visualization /////
@@ -1188,10 +969,7 @@ function runApp(){
 		});
 	}
 
-
-
-	//document.addEventListener('mousedown', onDocumentMouseDown, false );
-
+	// A time slider that changes the rate of time for the simulation
 	var time_slider = document.getElementById("time-rate");
 	time_slider.oninput = function() {
 		if(this.value == 1){
@@ -1245,6 +1023,7 @@ function runApp(){
 		
 	}
 
+	// A slider that changes the length of the tail of a body
 	var tail_slider = document.getElementById("tail-length");
 	tail_slider.oninput = function() {
 		viz.tail_length = this.value / 100;
@@ -1253,11 +1032,13 @@ function runApp(){
 		}
 	}
 
+	// A button that will set the simulation to real time
 	document.getElementById("real-time").addEventListener("click", function() {
 		viz.setDate(Date.now());
 		viz.setJdPerSecond(realTimeRate);
 	});
 
+	// A button that starts the simulation
 	document.getElementById("start-button").addEventListener("click", function() {
 		viz.start();
 		if(viz1 != null){
@@ -1265,6 +1046,7 @@ function runApp(){
 		}
 	});
 
+	// A button that stops the simulation
 	document.getElementById("stop-button").addEventListener("click", function() {
 		viz.stop();
 		if(viz1 != null){
@@ -1272,19 +1054,18 @@ function runApp(){
 		}
 	});
 
+	// Dropdown that lets the user zoom to a planet
 	document.getElementById("submit-button").addEventListener("click", function(){
 		let planetZoomChoice = document.getElementById("zoom-dropdown");
 		let choiceStr = planetZoomChoice.options[planetZoomChoice.selectedIndex].value;
-		//console.log(choiceStr);
-		viz.getViewer().followObject(visualizer_list[choiceStr] , [0, 0, 0]);
-		//viz.getViewer().get3jsCamera().lookAt(visualizer_list[choiceStr]);
 
-		//viz.getViewer().get3jsCamera().target.position.copy( visualizer_list["sun"] );
+		viz.getViewer().followObject(visualizer_list[choiceStr] , [0, 0, 0]);
 		viz.getViewer().get3jsCamera().zoom = 10;
 		viz.getViewer().get3jsCamera().updateProjectionMatrix();
 	});
 
 
+	// Resets the simulation to default state
 	document.getElementById("reset-button").addEventListener("click", function(){
 		window.location.reload();
 	});
@@ -1293,7 +1074,6 @@ function runApp(){
 	viz.start();
 
 }
-
 
 // START THE APP
 runApp();
