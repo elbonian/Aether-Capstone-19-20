@@ -315,7 +315,6 @@ def spk_upload():
 
     # check if the post request has the file part
     if 'file' not in request.files:
-
         return returnResponse({'error' : 'No file part in the request.'}, 400)
 
     file = request.files['file']
@@ -340,7 +339,6 @@ def spk_upload():
 
         # TODO: wrap this in a try-except and have the parser class raise an exception if the file is bad
         uploaded_spk_info = spk_parser.parse(file_path)
-
         # keys: bodies -> [(body name, wrt, naif id)], start_date, end_date
 
         spk_size_bytes = stat(file_path).st_size
@@ -349,7 +347,7 @@ def spk_upload():
 
         sql = "INSERT INTO Kernel (path, start_date, end_date, size) VALUES (?, ?, ?, ?)"
 
-        db.executeNonQuery(sql, variables=[file_path, uploaded_spk_info['start_date'], uploaded_spk_info['end_date'],
+        db.executeNonQuery(sql, variables=[file_path, uploaded_spk_info['time_start'], uploaded_spk_info['time_end'],
                                            spk_size_bytes])
 
         for body_tuple in uploaded_spk_info['bodies']:
@@ -359,6 +357,8 @@ def spk_upload():
             db.executeNonQuery(sql, variables=[file_path, body_tuple[0], body_tuple[1], body_tuple[2]])
 
         db.closeDatabase()
+
+        return returnResponse({}, 200)
 
 
 app.run(host="0.0.0.0", threaded=False, port=5000)
