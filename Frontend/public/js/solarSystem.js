@@ -8,7 +8,7 @@ class AetherSimulation extends Spacekit.Simulation {
         super(simulationElt, options);
         this.mult = options.mult || 1;
         this.tail_length = options.tail_length || 1;
-        this.wrt = options.wrt || "solar system baryncenter";
+        this.wrt = options.wrt || "solar system barycenter";
 	}
 
 	/*
@@ -110,6 +110,17 @@ class AetherObject extends Spacekit.SphereObject {
 		this.update_threshold = 0;
 		this.update_threshold2 = 0;
 		this.wrt = null;
+		this.ra = 0;
+		this.dec = 0;
+		this.pm = 0;
+		this.ra_delta = 0;
+		this.dec_delta = 0;
+		this.pm_delta = 0;
+		this.nut_prec_angles = null;
+		this.nut_prec_ra = null;
+		this.nut_prec_dec = null;
+		this.axis_of_rotation_vector = null;
+		this.radius_polar = 0;
         this.init();
       }
 
@@ -119,41 +130,56 @@ class AetherObject extends Spacekit.SphereObject {
       init(){
         let map;
         if (this._options.textureUrl) {
-          map = new THREE.TextureLoader().load(this._options.textureUrl);
+          map = new Spacekit.THREE.TextureLoader().load(this._options.textureUrl);
         }
 	 
 		//Level of detail segments changed to (can be changed)
-        const detailedObj = new THREE.LOD();
+        const detailedObj = new Spacekit.THREE.LOD();
         const levelsOfDetail = this._options.levelsOfDetail || [
           { radii: 0, segments: 48 },
         ];
-        const radius = this.getScaledRadius();
-     
-        for (let i = 0; i < levelsOfDetail.length; i += 1) {
+
+        this.radius = this._options.radius;
+        this.radius_polar = this._options.radius_polar;
+        // HANDLE SPHERE/ELLIPSOID GEOMETRY
+        if(this.radius != -1){
+        	const radius = this.radius_polar * 1000.0;
+        	for (let i = 0; i < levelsOfDetail.length; i += 1) {
           const level = levelsOfDetail[i];
-          const sphereGeometry = new THREE.SphereGeometry(
+          var sphereGeometry = new THREE.SphereGeometry(
             radius,
             level.segments,
             level.segments,
           );
+          if(this.radius != this.radius_polar){
+          	// console.log(this.radius/this.radius_polar);
+          	// console.log(sphereGeometry);
+    		const matrix = new THREE.Matrix4().makeScale( this.radius/this.radius_polar, 1.0, this.radius/this.radius_polar );
+    		sphereGeometry.applyMatrix( matrix ); // Squash length in Z direction
+    		// console.log(sphereGeometry);
+    		var min = new THREE.Vector3( this.radius*0.5, this.radius*0.5, this.radius*0.5 );
+			var max = min.clone().negate();
+			sphereGeometry.boundingSphere = null;
+			sphereGeometry.boundingBox = new Spacekit.THREE.Box3( min, max );
+    	  }
      
           let material;
           if (this._simulation.isUsingLightSources()) {
             const uniforms = {
               sphereTexture: { value: null },
-              lightPos: { value: new THREE.Vector3() },
+              lightPos: { value: new Spacekit.THREE.Vector3() },
             };
             uniforms.sphereTexture.value = map;
             uniforms.lightPos.value.copy(this._simulation.getLightPosition());
-            material = new THREE.ShaderMaterial({
+            material = new Spacekit.THREE.ShaderMaterial({
               uniforms,
-              vertexShader: SPHERE_SHADER_VERTEX,
-              fragmentShader: SPHERE_SHADER_FRAGMENT,
+              vertexShader: Spacekit.SPHERE_SHADER_VERTEX,
+              fragmentShader: Spacekit.SPHERE_SHADER_FRAGMENT,
               transparent: true,
             });
           } else {
 			//mesh material changed to transparent and opacity to 0 to not see weird meshes
-            material = new THREE.MeshBasicMaterial({
+            material = new Spacekit.THREE.MeshBasicMaterial({
                 transparent: true, 
                 opacity: 0,
             });
@@ -162,7 +188,7 @@ class AetherObject extends Spacekit.SphereObject {
 			value: true,
   			writable: true
 			} );
-          const mesh = new THREE.Mesh(sphereGeometry, material);
+          const mesh = new Spacekit.THREE.Mesh(sphereGeometry, material);
           mesh.receiveShadow = true;
 		  mesh.castShadow = true;
      
@@ -173,6 +199,13 @@ class AetherObject extends Spacekit.SphereObject {
           // Show this number of segments at distance >= radii * level.radii.
           detailedObj.addLevel(mesh, radius * level.radii);
         }
+      }
+
+
+
+        //const radius = this.getScaledRadius();
+     	
+        
      
         // Add to the parent base object.
         this._obj.add(detailedObj);
@@ -203,9 +236,9 @@ class AetherObject extends Spacekit.SphereObject {
 
 
         //init trajectory tail
-        this.geometry = new THREE.BufferGeometry();
-		this.material = new THREE.LineBasicMaterial({color: new THREE.Color(0x6495ED)});
-		this.material.depthWrite = false;
+        this.geometry = new Spacekit.THREE.BufferGeometry();
+		this.material = new Spacekit.THREE.LineBasicMaterial({color: new Spacekit.THREE.Color(0x6495ED)});
+		//this.material.depthWrite = false;
 		//this.geometry.vertices.needsUpdate = true;
 		Object.defineProperty( this.material, 'needsUpdate', {
 			value: true,
@@ -216,11 +249,12 @@ class AetherObject extends Spacekit.SphereObject {
 		// 1D array describing the vertices of the line
 		// i.e. [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
 		var positions = new Float32Array( this.positionVectors.length * 3);
-		this.geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3) );																								
+		//this.geometry.addAttribute( 'position', new Spacekit.THREE.BufferAttribute( positions, 3) );																								
+		this.geometry.attributes['position'] = new Spacekit.THREE.BufferAttribute( positions, 3);																				
 		//this.geometry.vertices = this.positionVectors;
 		//this.geometry.verticesNeedUpdate = true;
 		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex);
-		let line = new THREE.Line(
+		let line = new Spacekit.THREE.Line(
 			this.geometry,
 			this.material,
 		);
@@ -250,8 +284,93 @@ class AetherObject extends Spacekit.SphereObject {
 		this.update_threshold = Math.ceil(this.positionVectors.length * (2/3));
 		this.update_threshold2 = this.positionVectors.length - this.update_threshold;
 
+		this.ra = this._options.ra;
+		this.dec = this._options.dec;
+		this.pm = this._options.pm;
+		this.ra_delta = this._options.ra_delta;
+		this.dec_delta = this._options.dec_delta;
+		this.pm_delta = this._options.pm_delta;
+		this.nut_prec_angles = this._options.nut_prec_angles;
+		this.nut_prec_ra = this._options.nut_prec_ra;
+		this.nut_prec_dec = this._options.nut_prec_dec;
+		this.axis_of_rotation_vector = new Spacekit.THREE.Vector3(0,0,1);
+		//this.radius_polar = this._options.radius_polar;
+
+
+		// Before base class init, check if object will be represented as a particle
+		if(this.radius != -1){
+			this.particleSize = 10;
+		}
         super.init();
+
+        // Check if radius is -1
+        if(this.radius == -1){
+        	// make mesh transparent
+        	this.material.transparent = true;
+        	
+        }
+        // Radius data exists
+       //  else{
+       //  	// Check if sphere needs to be scaled to an ellipsoid
+       //  	if(this.radius != this.radius_polar){
+       //  		const matrix = new Spacekit.THREE.Matrix4().makeScale( 1.0, 1.0, 0.5 );
+       //  		this.geometry.applyMatrix( matrix ); // Squash length in Z direction
+       //  		var min = new Spacekit.THREE.Vector3( this.radius*0.5, this.radius*0.5, this.radius*0.5 );
+    			// var max = min.clone().negate();
+
+    			// this.boundingBox = new Spacekit.THREE.Box3( min, max );
+       //  	}
+       //  }
+
+
 	  }
+
+
+	  updateAxisOfRotation(jd){
+	  	const old_axis = this.axis_of_rotation_vector;
+	  	
+	  	const centuries_passed_j2000 = (jd - j2000) / 36525; // If jd > j2000, centuries passed will be positive, else negative
+	  	// if(this.name == "earth"){
+	  	// 	console.log(centuries_passed_j2000);
+	  	// }
+	  	const days_passed_j2000 = (jd - j2000);
+	  	// this.ra += this._simulation.mult * 36525 * this.ra_delta;
+	  	// this.dec += this._simulation.mult * 36525 * this.dec_delta;
+	  	var ra_T = this.ra + (this.ra_delta * centuries_passed_j2000);//Spacekit.rad(this.rotation_functions["pole_ra"](centuries_passed_j2000));
+	  	var dec_T = this.dec + (this.dec_delta * centuries_passed_j2000);//Spacekit.rad(this.rotation_functions["pole_dec"](centuries_passed_j2000));
+	  	
+
+	  	// Incorporate nutation and precession if possible
+	  	if(this.nut_prec_angles && this.nut_prec_ra && this.nut_prec_dec){
+	  		// console.log(this.name);
+	  		for(var i = 0; i < (this.nut_prec_angles.length / 2); i++){
+	  			ra_T += this.nut_prec_ra[i] * Math.sin(this.nut_prec_angles[i*2] + (this.nut_prec_angles[(i*2) + 1] * centuries_passed_j2000));
+	  			dec_T += this.nut_prec_dec[i] * Math.cos(this.nut_prec_angles[i*2] + (this.nut_prec_angles[(i*2) + 1] * centuries_passed_j2000))
+	  		}
+	  	}
+	  	ra_T = Spacekit.rad(ra_T);
+	  	dec_T = Spacekit.rad(dec_T);
+
+	  	const axis_of_rotation_eq = Spacekit.sphericalToCartesian(ra_T, dec_T, 1);//[ Math.cos(ra_T) * Math.cos(dec_T), Math.sin(ra_T) * Math.cos(dec_T), Math.sin(dec_T), Spacekit.getObliquity() ];// Spacekit.equatorialToEcliptic_Cartesian( Math.cos(ra_T) * Math.cos(dec_T), Math.sin(ra_T) * Math.cos(dec_T), Math.sin(ra_T), Spacekit.getObliquity() );
+	  	const axis_of_rotation_ec = Spacekit.equatorialToEcliptic_Cartesian(axis_of_rotation_eq[0], axis_of_rotation_eq[1], axis_of_rotation_eq[2], Spacekit.getObliquity());
+	  	
+	  	//const axis_of_rotation_ec = [0,0,1];
+	  	var axis_of_rotation_vector = new Spacekit.THREE.Vector3(axis_of_rotation_ec[0], axis_of_rotation_ec[1], axis_of_rotation_ec[2]);
+	  	this.axis_of_rotation_vector = axis_of_rotation_vector.normalize();
+	  	var quaternion = new Spacekit.THREE.Quaternion();
+	  	quaternion.setFromUnitVectors(old_axis, this.axis_of_rotation_vector);
+	  	this._obj.applyQuaternion(quaternion);
+	  }
+
+
+	  rotate(jd){
+	  	
+	  	this.updateAxisOfRotation(jd);
+	  	const angle_of_rotation = Spacekit.rad(this.pm_delta);
+	  	this._obj.rotateOnWorldAxis(this.axis_of_rotation_vector, angle_of_rotation * this._simulation.mult);
+	  	
+	  }
+
 
 	  /*
 		  Sets class position variable
@@ -281,7 +400,7 @@ class AetherObject extends Spacekit.SphereObject {
 		  Sets next position of where body will be and updates index
 	  */
 	  setNextPos(){
-		  this.currIndex += this._simulation.mult;
+		  this.currIndex += this._simulation.mult * 1;
 		  const currPos = this.positionVectors[Math.floor(this.currIndex)];
 		  this._obj.position.set(currPos.x, currPos.y, currPos.z);
 	  }
@@ -323,7 +442,7 @@ class AetherObject extends Spacekit.SphereObject {
 
 	  /*
 		Add more position data to the object's position list
-		@param positions List of THREE.Vector3() objects representing new (or old) position coordinates
+		@param positions List of Spacekit.THREE.Vector3() objects representing new (or old) position coordinates
 		@param prepend Boolean indicating whether the positions need to be prepended or put on the end
 	  */
 	  addPositionData(positions, prepend=false){
@@ -360,16 +479,17 @@ class AetherObject extends Spacekit.SphereObject {
 	  //	   instead of creating a new line every time
 
 	  /*
-		Update object's internal THREE.Line object that displays its trajectory
+		Update object's internal Spacekit.THREE.Line object that displays its trajectory
 		Uses this.positionVectors, this.currentIndex, and this.tailStartIndex to determine line vertices and drawRange
 	  */
 	  updateLineData(){
 	  	var position_array = new Float32Array( this.positionVectors.length * 3);
 	  	// create 1D array of form [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
-		this.geometry.setAttribute( 'position', new THREE.BufferAttribute( position_array, 3) );																								
+		this.geometry.attributes['position'] = new Spacekit.THREE.BufferAttribute( position_array, 3);
+		//this.geometry.setAttribute( 'position', new Spacekit.THREE.BufferAttribute( position_array, 3) );																								
 		// set drawrange to start at tailStartIndex and draw this.currIndex many vertices
 		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex); // todo: might break when time rate is negative
-		let line = new THREE.Line(
+		let line = new Spacekit.THREE.Line(
 			this.geometry,
 			this.material,
 		);
@@ -410,7 +530,7 @@ class AetherObject extends Spacekit.SphereObject {
       			var position_vectors = data[this.name].positions.map(function(pos){
 			  		var adjusted_val = pos.map(Spacekit.kmToAu);//[Spacekit.kmToAu(pos[0]), Spacekit.kmToAu(pos[1]), Spacekit.kmToAu(pos[2])];
 			  		var adjusted_val2 = Spacekit.equatorialToEcliptic_Cartesian(adjusted_val[0], adjusted_val[1], adjusted_val[2], Spacekit.getObliquity());
-			  		return new THREE.Vector3(adjusted_val2[0] * 1000, adjusted_val2[1] * 1000, adjusted_val2[2] * 1000);
+			  		return new Spacekit.THREE.Vector3(adjusted_val2[0] * 1000, adjusted_val2[1] * 1000, adjusted_val2[2] * 1000);
 			  	});
 
 			  	// update position list, time list, and line
@@ -462,6 +582,18 @@ class AetherObject extends Spacekit.SphereObject {
 	      	
 			// only update object position if not paused
       		if(!this._simulation._isPaused){
+
+      			// rotate object
+      			if (
+			      this._obj &&
+			      this._objectIsRotatable &&
+			      this._options.rotation &&
+			      this._options.rotation.enable
+			    ) {
+      				this.rotate(jd);
+      			}
+
+
       			// update object's location
       			this.setNextPos()
       			// update the object's tail beginning after updating the object's position
@@ -595,8 +727,14 @@ async function getAvailableBodies(){
 	async function to get info for bodies
 	@return {json} data - JSON of body info such as radius, mass, etc.
 */
-async function getRadii(){
-	let response = await fetch('http://0.0.0.0:5000/api/body-info/');
+async function getRadii(targets){
+	let response = await fetch('http://0.0.0.0:5000/api/body-info/' + targets);
+	let data = await response.json();
+	return data;
+}
+
+async function getRotationData(targets){
+	let response = await fetch('http://0.0.0.0:5000/api/rotations/' + targets );
 	let data = await response.json();
 	return data;
 }
@@ -736,8 +874,11 @@ sim_form.addEventListener('submit', function(e){
 	document.body.replaceChild(div, document.getElementById('main-container'));
 	div.id = 'main-container';
 
+	// convert time entered entered into milliseconds passed UNIX epoch
+	const start_time =  Date.parse(formData.get('jd_start')) ;
+
 	// Creates the new simulation from data entered
-	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1, formData.get('jd_start'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu]);
+	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu]);
 
 	// Push the simulation on the stack
 	simulation_stack.push[new_viz];
@@ -758,6 +899,10 @@ compare_form.addEventListener('submit', function(e){
 	const formData = new FormData(this);
 	viz.stop();
 	viz = null;
+	if(viz1 != null){
+		viz1.stop();
+		viz1.null();
+	}
 
 	var comparison_container = document.createElement('div');
 	comparison_container.id = "comparison_container";
@@ -769,9 +914,12 @@ compare_form.addEventListener('submit', function(e){
 	comparison_container.appendChild(div2);
 	document.body.replaceChild(comparison_container, document.getElementById('main-container'));
 
+	// convert time entered entered into milliseconds passed UNIX epoch
+	const start_time =  Date.parse(formData.get('jd_start')) ;
+
 	// Create two new simulations that will be compared side by side
-	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, formData.get('jd_start'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison1");
-	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, formData.get('jd_start2'), [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison2");
+	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison1");
+	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison2");
 	new_viz2._camera = new_viz1._camera;
 	
 	viz = new_viz1;
@@ -814,34 +962,67 @@ form.addEventListener('submit', function(event){
 	@param {array[Number]} camera_start - Position for the camera to start, default=[2500,5000,5000]
 	@param {string} container - div to place the simulation in, default=main-container
 */
-function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,5000,5000], container='main-container'){
+function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[2500,5000,5000], container='main-container'){
 
 	// Create a new simulation
 	var new_viz = new AetherSimulation(document.getElementById(container), {
 	  basePath: 'https://typpo.github.io/spacekit/src',
 	  jdDelta: jd_delta,
-	  startDate: jd_start,
+	  startDate: unix_epoch_start,
 	  startPaused: true,
 	  unitsPerAu: unitsPerAu,
 	  camera: {
 	  	initialPosition: camera_start,
 	  	enableDrift: false,
 	  },
-	  debug: {
-	  	showAxes: true,
-		showGrid: true,
-		showStats: true,  
-	  },
+	 //  debug: {
+	 //  	showAxes: true,
+		// showGrid: true,
+		// showStats: true,  
+	 //  },
 	  wrt: wrt
 	});
 
 	// Visualization's main
 
 	// Get body info for simulation
-	getRadii().then(data => {
+	getRadii(targets).then(data => {
 		for(const property in data){
-			radii[property] = data[property].map(Spacekit.kmToAu)[0];
+			if(data[property] != "NO RADIUS DATA AVAILABLE"){
+				radii[property] = [-1, -1]; // If the call didn't return a radius, set radius to -1
+			}
+			radii[property] = [data[property].map(Spacekit.kmToAu)[0], data[property].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
 		}
+	});
+
+	// get body rotation data
+	var rotation_data = {};
+
+	getRotationData(targets).then(data => {
+		// TODO: angle processing
+		for(const property in data){
+
+			// If call didn't return rotation data for a body, set its parameters to null
+			if(data[property] == "NO ROTATION DATA AVAILABLE"){
+				rotation_data[property] = {
+					"ra": null,
+					"dec": null,
+					"pm": null,
+					"ra_delta": null,
+					"dec_delta": null,
+					"pm_delta": null,
+					"nut_prec_angles": null,
+					"nut_prec_ra": null,
+					"nut_prec_dec": null,
+				};
+			}
+			else{
+				rotation_data[property] = data[property]; // Keep track of rotation details
+				// console.log(rotation_data[property]);
+				// console.log(property);
+			}
+		}
+		//rotation_data = data;
 	});
 
 	// Retrieve the position data with the specified parameters
@@ -874,7 +1055,7 @@ function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,500
 				adjustedVals = pos.map(Spacekit.kmToAu);
 				// convert coords to ecliptic
 				adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-				let vector = new THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+				let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
 				
 				// push positions and their corresponding times to arrays
 				allAdjustedVals.push(vector);
@@ -887,6 +1068,7 @@ function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,500
 			var radius;
 			if(bodyName == "Sun"){
 				radius = 0.17;
+				//new_viz.createLight(allAdjustedVals[cur_idx]);
 			}
 			else if(bodyName == "Moon"){
 				radius = 0.0005;
@@ -895,13 +1077,20 @@ function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,500
 				radius = .08;
 			}
 
+			// Check rotation data for body
+			var is_rotating = true;
+			if(rotation_data[property.toUpperCase()].ra == null){
+				is_rotating = false; // disable the object's rotation if no rotation data
+			}
+
 			// Create a new space object
 			let body = new_viz.createAetherObject(property, {
 				labelText: bodyName,
 				name: property,
 				textureUrl: body_textures[property],
 				currIndex: cur_idx,
-				radius: radius, //(radii[property] * 10),
+				radius: radius,//radii[property.toUpperCase()][0] * 2,
+				radius_polar: radius-.0001,//radii[property.toUpperCase()][1] * 2,
 				particleSize: -1,
 				rotation: true,
 				hideOrbit: true,
@@ -911,8 +1100,25 @@ function createNewSim(wrt, targets, jd_delta=1, jd_start, camera_start=[2500,500
 				levelsOfDetail: [{
 					threshold: 0,
 					segments: 40,
-				}]
+				}],
+				rotation: {
+					enable: is_rotating,
+				},
+				ra: rotation_data[property.toUpperCase()].ra,
+				dec: rotation_data[property.toUpperCase()].dec,
+				pm: rotation_data[property.toUpperCase()].pm,
+				ra_delta: rotation_data[property.toUpperCase()].ra_delta,
+				dec_delta: rotation_data[property.toUpperCase()].dec_delta,
+				pm_delta: rotation_data[property.toUpperCase()].pm_delta,
+				nut_prec_angles: rotation_data[property.toUpperCase()].nut_prec_angles,
+				nut_prec_ra: rotation_data[property.toUpperCase()].nut_prec_ra,
+				nut_prec_dec: rotation_data[property.toUpperCase()].nut_prec_dec,
 			});
+			// if(bodyName == "Sun"){
+			// 	new_viz.createLight(body.position);
+			// 	//new_viz._lightPosition = body.position;
+			// }
+
 
 			// Update global variables
 			visualizer_list[bodyName] = body;
@@ -1070,7 +1276,9 @@ function runApp(){
 		window.location.reload();
 	});
 
-
+	// for(var i = 0; i < 10000; i++){
+	// 	console.log("waiting...");
+	// }
 	viz.start();
 
 }
