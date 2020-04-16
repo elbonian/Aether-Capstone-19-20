@@ -411,6 +411,8 @@ def spk_upload():
 
         db.closeDatabase()
 
+        spice.furnsh(file_path)
+
         return returnResponse({}, 200)
 
 
