@@ -866,6 +866,10 @@ sim_form.addEventListener('submit', function(e){
 	const formData = new FormData(this);
 	viz.stop();
 	viz = null;
+	if(viz1 != null){
+		viz1.stop();
+		viz1 = null;
+	}
 
 	// Create a new div element
 	var div = document.createElement('div');
@@ -901,7 +905,7 @@ compare_form.addEventListener('submit', function(e){
 	viz = null;
 	if(viz1 != null){
 		viz1.stop();
-		viz1.null();
+		viz1 = null;
 	}
 
 	var comparison_container = document.createElement('div');
@@ -913,7 +917,7 @@ compare_form.addEventListener('submit', function(e){
 	comparison_container.appendChild(div1);
 	comparison_container.appendChild(div2);
 	document.body.replaceChild(comparison_container, document.getElementById('main-container'));
-
+	comparison_container.id = 'main-container';
 	// convert time entered entered into milliseconds passed UNIX epoch
 	const start_time =  Date.parse(formData.get('jd_start')) ;
 
