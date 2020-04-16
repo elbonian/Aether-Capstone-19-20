@@ -11,13 +11,12 @@ import spiceypy as spice
 from flask_cors import CORS
 from db_connect import Database
 from SPKParser import SPKParser
+from MetakernelWriter import MetakernelWriter
 from os import stat
 
 # Initialize the Flask application
 app = Flask(__name__)
 CORS(app)
-
-spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
 
 
 def returnResponse(response, status):
@@ -28,7 +27,6 @@ def returnResponse(response, status):
 
 @app.route('/api/positions2/<string:ref_frame>/<string:targets>/<string:curVizJd>/<string:curVizJdDelta>/<string:tailLenJd>/<int:validSeconds>', methods=['GET'])
 def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd, validSeconds):
-
     valid_targets = ('solar system barycenter', 'sun', 'mercury barycenter', 'mercury', 'venus barycenter', 'venus',
                      'earth barycenter', 'mars barycenter', 'jupiter barycenter', 'saturn barycenter',
                      'uranus barycenter', 'neptune barycenter', 'pluto barycenter', 'earth', 'moon', 'mars', 'phobos',
@@ -75,7 +73,7 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
 
     # TODO: put this outside the function so that it does not execute on every api call
     # load the kernels
-    #spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
+    # spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
 
     # ----- REMEMBER: ET (ephemeris time) is simply seconds past J2000 epoch. J2000 epoch is JD 2451545.0 -----
 
@@ -114,38 +112,19 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
         target_positions, _ = spice.spkpos(target, times, 'J2000', 'NONE', ref_frame)
 
         response_data[target] = {
-            'info': 'Positions (x,y,z) and times (JD) of {} w.r.t. {}'.format(target.capitalize(), ref_frame.capitalize()),
+            'info': 'Positions (x,y,z) and times (JD) of {} w.r.t. {}'.format(target.capitalize(),
+                                                                              ref_frame.capitalize()),
             'positions': [coord.tolist() for coord in target_positions],  # target_positions is a numpy.ndarray
-            'times': [float(spice.et2utc(etTime, "J", 8)[3:]) for etTime in times],  # convert times to JD, slice off "JD " and convert to float
+            'times': [float(spice.et2utc(etTime, "J", 8)[3:]) for etTime in times],
+            # convert times to JD, slice off "JD " and convert to float
             'cur_time_idx': cur_idx
         }
-
-    # clear the kernels
-    #spice.kclear()
 
     return returnResponse(response_data, 200)
 
 
 @app.route('/api/positions/<string:ref_frame>/<string:targets>/<string:startDate>/<string:endDate>/<string:steps>', methods=['GET'])
 def get_object_positions(ref_frame, targets, startDate, endDate, steps):
-
-    # TODO: put this info (and more) into a sqlite database to make it more dynamic
-    # valid_targets = {
-    #     'solar system barycenter': ['sun', 'mercury barycenter', 'mercury', 'venus barycenter', 'venus',
-    #                                 'earth barycenter', 'mars barycenter', 'jupiter barycenter', 'saturn barycenter',
-    #                                 'uranus barycenter', 'neptune barycenter', 'pluto barycenter'],
-    #     'mercury barycenter': [],
-    #     'venus barycenter': [],
-    #     'earth barycenter': ['earth', 'moon'],
-    #     'mars barycenter': ['mars', 'phobos', 'deimos'],
-    #     'jupiter barycenter': ['jupiter', 'io', 'europa', 'ganymede', 'callisto', 'amalthea', 'thebe', 'adrastea',
-    #                            'metis'],
-    #     'saturn barycenter': ['saturn', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'iapetus',
-    #                           'phoebe', 'helene', 'telesto', 'calypso', 'methone', 'polydeuces'],
-    #     'uranus barycenter': ['uranus', 'ariel', 'umbriel', 'titania', 'oberon', 'miranda'],
-    #     'neptune barycenter': ['neptune', 'triton', 'nereid', 'proteus'],
-    #     'pluto barycenter': ['pluto', 'charon', 'nix', 'hydra', 'kerberos', 'styx']
-    # }
 
     valid_targets = ('solar system barycenter', 'sun', 'mercury barycenter', 'mercury', 'venus barycenter', 'venus',
                      'earth barycenter', 'mars barycenter', 'jupiter barycenter', 'saturn barycenter',
@@ -229,13 +208,11 @@ def get_object_positions(ref_frame, targets, startDate, endDate, steps):
         target_positions, _ = spice.spkpos(target, times, 'J2000', 'NONE', ref_frame)
 
         response_data[target] = {
-            'info': 'Positions (x,y,z) and times (J2000) of {} w.r.t. {}'.format(target.capitalize(), ref_frame.capitalize()),
+            'info': 'Positions (x,y,z) and times (J2000) of {} w.r.t. {}'.format(target.capitalize(),
+                                                                                 ref_frame.capitalize()),
             'positions': [coord.tolist() for coord in target_positions],  # times is a numpy.ndarray
             'times': times
         }
-
-    # clear the kernels
-    spice.kclear()
 
     return returnResponse(response_data, 200)
 
@@ -243,7 +220,6 @@ def get_object_positions(ref_frame, targets, startDate, endDate, steps):
 # TODO: cookies?
 @app.route('/api/body-list/', methods=['GET'])
 def get_available_bodies():
-
     top_level_dropdown_elems = ('mercury', 'venus', 'earth', 'mars', 'asteroids', 'jupiter', 'saturn', 'uranus',
                                 'neptune', 'pluto')
 
@@ -295,32 +271,110 @@ def get_available_bodies():
     return returnResponse(results, 200)
 
 
-@app.route('/api/body-info/', methods=['GET'])
-def get_body_info():
-    # TODO: endpoint shall provide radius, mass, rotation/orientation information
-    spice.furnsh('./SPICE/kernels/PCK/pck00010.tpc')
-    targets = ['sun','mercury','venus','earth','moon','mars','jupiter','saturn','uranus','neptune','pluto']
-    res = {}
-    for target in targets:
-        res[target] = spice.bodvrd(target, "RADII", 3)[1].tolist()
-    
-    print(type(res[target][0]))
-    return returnResponse(res, '200')
+# consider changing name to get-body-radius and refactoring
+@app.route('/api/body-info/<string:targets>', methods=['GET'])
+def get_body_info(targets):
+
+    valid_targets = ('SUN','MERCURY','VENUS','MOON','EARTH','IO','EUROPA','GANYMEDE','CALLISTO','AMALTHEA','THEBE',
+                     'ADRASTEA','METIS','JUPITER','PHOBOS','DEIMOS','MARS','TRITON','NEREID','PROTEUS','NEPTUNE','CHARON',
+                     'PLUTO','MIMAS','ENCELADUS','TETHYS','DIONE','RHEA','TITAN','HYPERION','IAPETUS','PHOEBE','HELENE',
+                     'TELESTO','CALYPSO','METHONE','POLYDEUCES','SATURN','ARIEL','UMBRIEL','TITANIA','OBERON','MIRANDA','URANUS')
+
+    targets_list = [target.upper() for target in targets.split('+')]
+
+    response_data = dict()
+
+    for target in targets_list:
+
+        if target not in valid_targets:
+            response_data[target] = "NO RADIUS DATA AVAILABLE"
+
+        else:
+            try:
+                response_data[target] = spice.bodvrd(target, "RADII", 3)[1].tolist()
+            except:
+                response_data[target] = "NO RADIUS DATA AVAILABLE"
+
+    # print(type(response_data[target][0]))
+    return returnResponse(response_data, '200')
+
+
+@app.route('/api/rotations/<string:targets>', methods=['GET'])
+def get_object_rotation(targets):
+
+    valid_targets = ('SUN', 'MERCURY', 'VENUS', 'MOON', 'EARTH', 'IO', 'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA',
+                     'THEBE', 'ADRASTEA', 'METIS', 'JUPITER', 'PHOBOS', 'DEIMOS', 'MARS', 'TRITON', 'PROTEUS', 'NEPTUNE',
+                     'CHARON', 'PLUTO', 'MIMAS', 'ENCELADUS', 'TETHYS', 'DIONE', 'RHEA', 'TITAN', 'IAPETUS', 'PHOEBE',
+                     'HELENE', 'TELESTO', 'CALYPSO', 'SATURN', 'ARIEL', 'UMBRIEL', 'TITANIA', 'OBERON', 'MIRANDA', 'URANUS')
+
+    targets_list = [target.upper() for target in targets.split('+')]
+
+    response_data = dict()
+
+    for target in targets_list:
+
+        if target not in valid_targets:
+            response_data[target] = "NO ROTATION DATA AVAILABLE"
+        else:
+            try:
+                target_RA_all = spice.bodvrd(target, "POLE_RA", 3)[1].tolist()
+                target_DEC_all = spice.bodvrd(target, "POLE_DEC", 3)[1].tolist()
+                target_PM_all = spice.bodvrd(target, "PM", 3)[1].tolist()
+
+                target_RA_j2000 = target_RA_all[0]
+                target_DEC_j2000 = target_DEC_all[0]
+                target_PM_j2000 = target_PM_all[0]
+
+                # Get right ascension and declination polynomial coefficients
+                target_RA_delta = target_RA_all[1]
+                target_DEC_delta = target_DEC_all[1]
+                target_PM_delta = target_PM_all[1]
+
+                response_data[target] = {
+                    "ra": target_RA_j2000,
+                    "ra_delta": target_RA_delta,
+                    "dec": target_DEC_j2000,
+                    "dec_delta": target_DEC_delta,
+                    "pm": target_PM_j2000,
+                    "pm_delta": target_PM_delta
+                }
+            # this except should never be hit, but just in case...
+            except:
+                response_data[target] = "NO ROTATION DATA AVAILABLE"
+                continue
+
+            # get NUT_PREC_RA, NUT_PREC_DEC and NUT_PREC_ANGLES
+            try:
+                target_NUT_PREC_RA = spice.bodvrd(target, "NUT_PREC_RA", 20)
+                target_NUT_PREC_DEC = spice.bodvrd(target, "NUT_PREC_DEC", 20)
+
+                response_data[target]["nut_prec_ra"] = target_NUT_PREC_RA[1].tolist()[:target_NUT_PREC_RA[0]]
+                response_data[target]["nut_prec_dec"] = target_NUT_PREC_DEC[1].tolist()[:target_NUT_PREC_DEC[0]]
+            # the case where there is no nutation-precession info for the body -- go on to the next loop iteration
+            except:
+                continue
+
+            try:
+                target_NUT_PREC_ANGLES = spice.bodvrd(target + " BARYCENTER", "NUT_PREC_ANGLES", 72)
+                response_data[target]["nut_prec_angles"] = target_NUT_PREC_ANGLES[1].tolist()[:target_NUT_PREC_ANGLES[0]]
+            # the case where there are no nutation-precession angles for the body
+            except:
+                continue
+
+    return returnResponse(response_data, 200)
 
 
 @app.route('/api/spk-upload', methods=['POST'])
 def spk_upload():
-
     spk_extension = '.bsp'
 
     # check if the post request has the file part
     if 'file' not in request.files:
-        return returnResponse({'error' : 'No file part in the request.'}, 400)
+        return returnResponse({'error': 'No file part in the request.'}, 400)
 
     file = request.files['file']
 
     if file.filename == '':
-
         return returnResponse({'error': 'No file selected for uploading'}, 400)
 
     filename = secure_filename(file.filename)
@@ -331,7 +385,7 @@ def spk_upload():
 
     else:
 
-        file_path = 'SPICE/kernels/Uploaded/' + filename
+        file_path = 'SPICE/kernels/user_uploaded/' + filename
 
         file.save(file_path)
 
@@ -351,7 +405,6 @@ def spk_upload():
                                            spk_size_bytes])
 
         for body_tuple in uploaded_spk_info['bodies']:
-
             sql = "INSERT INTO Body (path, name, wrt, naif_id) VALUES (?, ?, ?, ?)"
 
             db.executeNonQuery(sql, variables=[file_path, body_tuple[0], body_tuple[1], body_tuple[2]])
@@ -361,4 +414,13 @@ def spk_upload():
         return returnResponse({}, 200)
 
 
-app.run(host="0.0.0.0", threaded=False, port=5000)
+if __name__ == '__main__':
+    # create metakernel file
+    mkw = MetakernelWriter()
+    mkw.write()
+
+    # load the kernels
+    spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
+
+    # start the server
+    app.run(host="0.0.0.0", port=5000, threaded=False)

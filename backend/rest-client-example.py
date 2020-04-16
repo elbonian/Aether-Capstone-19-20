@@ -30,6 +30,29 @@ def get_dropdown_bodies(ip):
 	# decode response
 	return response, json.loads(response.text)
 
+def get_rotation_info(ip, targets):
+
+	all_targets = '+'.join(targets)
+
+	addr = 'http://{}:5000/api/rotations/{}'.format(ip, all_targets)
+
+	# make the request and get the response
+	response = requests.get(addr)
+
+	# decode response
+	return response, json.loads(response.text)
+
+def get_radius(ip, targets):
+
+	all_targets = '+'.join(targets)
+
+	addr = 'http://{}:5000/api/body-info/{}'.format(ip, all_targets)
+
+	# make the request and get the response
+	response = requests.get(addr)
+
+	# decode response
+	return response, json.loads(response.text)
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(
@@ -56,4 +79,18 @@ if __name__ == '__main__':
 	ddown_resp = get_dropdown_bodies(args.ip)
 	print("Response:", ddown_resp[0])
 	pprint(ddown_resp[1])
+
+	valid_targets = ['SUN', 'MERCURY', 'VENUS', 'MOON', 'EARTH', 'IO', 'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA',
+					 'THEBE', 'ADRASTEA', 'METIS', 'JUPITER', 'PHOBOS', 'DEIMOS', 'MARS', 'TRITON', 'NEREID', 'PROTEUS',
+					 'NEPTUNE', 'CHARON', 'NIX', 'HYDRA','KERBEROS', 'STYX', 'PLUTO', 'MIMAS', 'ENCELADUS', 'TETHYS',
+					 'DIONE', 'RHEA', 'TITAN', 'HYPERION', 'IAPETUS', 'PHOEBE', 'HELENE', 'TELESTO', 'CALYPSO', 'METHONE',
+					 'POLYDEUCES', 'SATURN', 'ARIEL', 'UMBRIEL', 'TITANIA', 'OBERON', 'MIRANDA', 'URANUS']
+
+	radii_resp = get_radius(args.ip, valid_targets)
+	print("Response:", radii_resp[0])
+	pprint(radii_resp[1])
+
+	rotation_resp = get_rotation_info(args.ip, valid_targets)
+	print("Response:", rotation_resp[0])
+	pprint(rotation_resp[1])
 

@@ -1,3 +1,7 @@
+# CU Boulder CS Capstone - NASA/JPL Group (Aether)
+# Spring 2020
+# Maintainer: Aether
+
 import os
 import re
 from datetime import datetime
