@@ -26,7 +26,7 @@
                 document.getElementById("form-container2").style.display = "none";
             } 
         </script>
-        <script src="/js/three.min.js"></script>
+        <!-- <script src="/js/three.min.js"></script> -->
 <!--         <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.2.0/gsap.min.js"></script>
  -->        <link rel="stylesheet" type="text/css" href="/views/index.css">
     </head>
@@ -37,8 +37,8 @@
         <!-- Main menu div -->
         <div id="menu">
 
-            <form class="form" id="myForm" enctype="multipart/form-data">
-                Choose the file: <input type="file" name="file"/><BR>
+            <form class="form" id="myForm" style="color: white;" enctype="multipart/form-data">
+                Choose a kernel: <input type="file" style="color: white;" name="file"/><BR>
                     <input type="submit" value="Upload"/>
             </form>
 
@@ -89,6 +89,7 @@
             <br>
             <button id="reset-button">Reset</button>
 
+            
             <h4 id="toggle-vis" style="color: white">Toggle Visibility</h4>
             <div class="multiselect">
                 <div class="selectBox" onclick="showCheckboxes()">
@@ -97,9 +98,8 @@
                     </select>
                     <div class="overSelect"></div>
                 </div>
-                <div id="checkboxes"></div>
             </div>
-
+            <div id="checkboxes"></div>
             <button class="create-button" onclick="openForm()">Create Sim</button>
 
             <div class="form-popup" id="form-container1">
@@ -156,14 +156,17 @@
                 
 
             </div>
-
-
-
         </div>
 
         <!-- Main 3D simulation -->
         <div id="main-container">
-            
+            <div id="error-console">
+                <h4 style="color: red; margin: 0 auto;">Error Log:</h5>
+                <br>
+                <ul id="error-list">
+                
+                </ul>
+            </div>
         </div>
         <!-- <div id="active_sim"></div> -->
         <div class='sim-time'>
