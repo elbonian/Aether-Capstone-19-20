@@ -750,13 +750,16 @@ let body_textures = {
 	"saturn" : '/js/textures/2k_saturn.jpg',
 	"uranus" : '/js/textures/2k_uranus.jpg',
 	"neptune" : '/js/textures/2k_neptune.jpg',
-	"pluto" : '/js/textures/plu0rss1.jpg',
+	"pluto" : '/js/textures/plutomap2k.jpg',
 	"moon" : '/js/textures/2k_moon.jpg'
 };
 
 /*
 	Calls async function to handle data retrieved
 */
+
+//Rework this section to new UI
+/*
 getAvailableBodies().then(data =>{
  	//console.log(document.getElementById("Moon-checkbox").parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.nodeName);
  	var ul_element = document.createElement("UL");
@@ -766,6 +769,7 @@ getAvailableBodies().then(data =>{
  	}
  	checkboxes.appendChild(ul_element);
 });
+*/
 
 /*
 	Creates a child elements in nested checkbox for bodies
@@ -833,6 +837,9 @@ function appendCheckboxElement(parent_element , child_element_name){
 /*
 	Toggles the checkbox menu when the menu is clicked
 */
+
+//Either Unneccessary or need to be updated
+/*
 function showCheckboxes() {
 	var checkboxes = document.getElementById("checkboxes");
 	if (!expanded) {
@@ -843,6 +850,7 @@ function showCheckboxes() {
 		expanded = false;
   	}
 }
+*/
 
 /*
 	Sets the date of the visualization
@@ -939,6 +947,9 @@ let form = document.getElementById('myForm');
 /*
 	Calls API endpoint to upload a kernel
 */
+
+//Fix this to fit new UI
+/*
 form.addEventListener('submit', function(event){
 	event.preventDefault();
 	const formData = new FormData(this);
@@ -955,7 +966,7 @@ form.addEventListener('submit', function(event){
     	console.error(error)
   	});
 })
-
+*/
 
 /*
 	Create an AetherSimulation and add the bodies to the simulation
@@ -1152,6 +1163,9 @@ function runApp(){
 	const sim_rate = document.getElementById("sim_rate");
 
 	//This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
+	
+	//Update this for the new UI
+	/*
 	var checkboxes = document.getElementById("checkboxes");
 	for(let i of Object.keys(visualizer_list)){
 		appendCheckboxElement(checkboxes , i);
@@ -1178,11 +1192,15 @@ function runApp(){
 			}
 		});
 	}
+	*/
+
 
 	// A time slider that changes the rate of time for the simulation
-	var time_slider = document.getElementById("time-rate");
+	var time_slider = document.getElementById("myRange");
 	time_slider.oninput = function() {
-		if(this.value == 1){
+		let speed = Math.floor(this.value / 25) + 1;
+		console.log(speed);
+		if(speed == 1){
 			viz.setJdDelta(-1);
 			viz.mult = -1;
 			if(viz1 != null){
@@ -1190,15 +1208,15 @@ function runApp(){
 				viz1.mult = -1;
 			}
 		}
-		else if(this.value == 2){
-			viz.setJdDelta(1/60);
-			viz.mult = 1/60;
+		else if(speed == 2){
+			viz.setJdDelta(1.0/60);
+			viz.mult = 1.0/60;
 			if(viz1 != null){
-				viz1.setJdDelta(1/60);
-				viz1.mult = 1/60;
+				viz1.setJdDelta(1.0/60);
+				viz1.mult = 1.0/60;
 			}
 		}
-		else if(this.value == 3){
+		else if(speed == 3){
 			viz.setJdDelta(1);
 			viz.mult = 1;
 			if(viz1 != null){
@@ -1206,7 +1224,7 @@ function runApp(){
 				viz1.mult = 1;
 			}
 		}
-		else if(this.value == 4){
+		else if(speed == 4){
 			viz.setJdDelta(2);
 			viz.mult = 2;
 			if(viz1 != null){
@@ -1214,7 +1232,7 @@ function runApp(){
 				viz1.mult = 2;
 			}
 		}
-		else if(this.value == 5){
+		else if(speed == 5){
 			viz.setJdDelta(4);
 			viz.mult = 4;
 			if(viz1 != null){
@@ -1234,7 +1252,7 @@ function runApp(){
 	}
 
 	// A slider that changes the length of the tail of a body
-	var tail_slider = document.getElementById("tail-length");
+	var tail_slider = document.getElementById("myRange2");
 	tail_slider.oninput = function() {
 		viz.tail_length = this.value / 100;
 		if(viz1 != null){
@@ -1243,7 +1261,7 @@ function runApp(){
 	}
 
 	// A button that will set the simulation to real time
-	document.getElementById("real-time").addEventListener("click", function() {
+	document.getElementById("real_time").addEventListener("click", function() {
 		viz.setDate(Date.now());
 		viz.setJdPerSecond(realTimeRate);
 	});
@@ -1257,28 +1275,43 @@ function runApp(){
 	});
 
 	// A button that stops the simulation
+
+	/* Depreciated. No stop button. Either make the Start button a toggle or just remove this
 	document.getElementById("stop-button").addEventListener("click", function() {
 		viz.stop();
 		if(viz1 != null){
 			viz1.stop();
 		}
 	});
+	*/
 
-	// Dropdown that lets the user zoom to a planet
-	document.getElementById("submit-button").addEventListener("click", function(){
-		let planetZoomChoice = document.getElementById("zoom-dropdown");
-		let choiceStr = planetZoomChoice.options[planetZoomChoice.selectedIndex].value;
+	document.getElementById("zoomToBody").addEventListener("click" , function(){
+		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
+	    console.log(bodyName);
+	    hideContextMenu();
+	    ZoomToBody(bodyName);
+	});
 
-		viz.getViewer().followObject(visualizer_list[choiceStr] , [0, 0, 0]);
+	function ZoomToBody(body){
+		viz.getViewer().followObject(visualizer_list[body] , [0, 0, 0]);
 		viz.getViewer().get3jsCamera().zoom = 10;
 		viz.getViewer().get3jsCamera().updateProjectionMatrix();
-	});
+	}
+
+	function hideContextMenu() {
+        let contextMenu = document.getElementsByClassName("context-menu")[0];
+        contextMenu.style.display = "none";
+    }
+	// Dropdown that lets the user zoom to a planet
 
 
 	// Resets the simulation to default state
+
+	/*
 	document.getElementById("reset-button").addEventListener("click", function(){
 		window.location.reload();
 	});
+	*/
 
 	// for(var i = 0; i < 10000; i++){
 	// 	console.log("waiting...");
