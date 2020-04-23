@@ -12,21 +12,37 @@
 		<script src="https://typpo.github.io/spacekit/build/spacekit.js"></script>
          <script>function openForm() {
               document.getElementById("form-container1").style.display = "block";
+              viz.stop();
+              if(viz1){
+                  viz1.stop();
+              }
             }
 
             function closeForm() {
               document.getElementById("form-container1").style.display = "none";
+                viz.start();
+                if(viz1){
+                    viz1.start();
+                }
             }
 
             function openForm2() {
                 document.getElementById("form-container2").style.display = "block";
+                viz.stop();
+                if(viz1){
+                    viz1.stop();
+                }
             }
 
             function closeForm2() {
                 document.getElementById("form-container2").style.display = "none";
+                viz.start();
+                if(viz1){
+                    viz1.start();
+                }
             } 
         </script>
-        <!-- <script src="/js/three.min.js"></script> -->
+        <script src="/js/three.min.js"></script>
 <!--         <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.2.0/gsap.min.js"></script>
  -->        <link rel="stylesheet" type="text/css" href="/views/index.css">
     </head>
@@ -37,8 +53,8 @@
         <!-- Main menu div -->
         <div id="menu">
 
-            <form class="form" id="myForm" style="color: white;" enctype="multipart/form-data">
-                Choose a kernel: <input type="file" style="color: white;" name="file"/><BR>
+            <form class="form" id="myForm" enctype="multipart/form-data">
+                Choose the file: <input type="file" name="file"/><BR>
                     <input type="submit" value="Upload"/>
             </form>
 
@@ -89,7 +105,6 @@
             <br>
             <button id="reset-button">Reset</button>
 
-            
             <h4 id="toggle-vis" style="color: white">Toggle Visibility</h4>
             <div class="multiselect">
                 <div class="selectBox" onclick="showCheckboxes()">
@@ -98,8 +113,9 @@
                     </select>
                     <div class="overSelect"></div>
                 </div>
+                <div id="checkboxes"></div>
             </div>
-            <div id="checkboxes"></div>
+
             <button class="create-button" onclick="openForm()">Create Sim</button>
 
             <div class="form-popup" id="form-container1">
@@ -112,8 +128,8 @@
                 <label for="targets" style="color: black">Targets</label>
                 <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
 
-                <label for="jd_start" style="color: black">Starting Julian Date</label>
-                <input type="text" placeholder="i.e. 2451545.0" name="jd_start" required>
+                <label for="jd_start" style="color: black">Starting Date</label>
+                <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start" required>
 
                 <button type="submit" class="btn" onclick="closeForm()">Create</button>
                 <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
@@ -133,8 +149,8 @@
                         <label for="targets" style="color: black">Targets</label>
                         <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
 
-                        <label for="jd_start" style="color: black">Starting Julian Date</label>
-                        <input type="text" placeholder="i.e. 2451545.0" name="jd_start" required>
+                        <label for="jd_start" style="color: black">Starting Date</label>
+                        <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start" required>
 
                     </div>
                     <div class="column">
@@ -145,8 +161,8 @@
                         <label for="targets2" style="color: black">Targets</label>
                         <input type="text" placeholder="i.e. sun+earth+moon" name="targets2" required>
 
-                        <label for="jd_start2" style="color: black">Starting Julian Date</label>
-                        <input type="text" placeholder="i.e. 2451545.0" name="jd_start2" required>
+                        <label for="jd_start2" style="color: black">Starting Date</label>
+                        <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start2" required>
 
                         <button type="submit" class="btn" onclick="closeForm2()">Create</button>
                         <button type="button" class="btn cancel" onclick="closeForm2()">Close</button>
@@ -157,7 +173,6 @@
 
             </div>
         </div>
-
         <!-- Main 3D simulation -->
         <div id="main-container">
             <div id="error-console">
