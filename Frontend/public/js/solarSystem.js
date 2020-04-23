@@ -688,6 +688,8 @@ var simulation_stack = []; // stack of simulations
 var viz; // pointer to active simulation
 var viz1;
 
+var togglePlay = true;
+
 /////////////////////////////////
 /////// Utility Functions ///////
 /////////////////////////////////
@@ -862,6 +864,9 @@ let body_textures = {
 /*
 	Calls async function to handle data retrieved
 */
+
+//Rework this section to new UI
+/*
 getAvailableBodies().then(data =>{
  	//console.log(document.getElementById("Moon-checkbox").parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.nodeName);
  	var ul_element = document.createElement("UL");
@@ -871,6 +876,7 @@ getAvailableBodies().then(data =>{
  	}
  	checkboxes.appendChild(ul_element);
 });
+*/
 
 /*
 	Creates a child elements in nested checkbox for bodies
@@ -940,6 +946,9 @@ function appendCheckboxElement(parent_element , child_element_name){
 /*
 	Toggles the checkbox menu when the menu is clicked
 */
+
+//Either Unneccessary or need to be updated
+/*
 function showCheckboxes() {
 	var checkboxes = document.getElementById("checkboxes");
 	if (!expanded) {
@@ -950,6 +959,7 @@ function showCheckboxes() {
 		expanded = false;
   	}
 }
+*/
 
 /*
 	Sets the date of the visualization
@@ -1045,10 +1055,12 @@ compare_form.addEventListener('submit', function(e){
 
 // Form to submit a new spk kernel
 let form = document.getElementById('myForm');
-
+let form_submit = document.getElementById("submit_SPK");
 /*
 	Calls API endpoint to upload a kernel
 */
+
+
 form.addEventListener('submit', function(event){
 	event.preventDefault();
 	const formData = new FormData(this);
@@ -1067,8 +1079,8 @@ form.addEventListener('submit', function(event){
 	.catch(error => {
     	console.error(error);
   	});
+  	this.style.display = "none";
 })
-
 
 /*
 	Create an AetherSimulation and add the bodies to the simulation
@@ -1285,11 +1297,13 @@ function runApp(){
 	const sim_time = document.getElementById('sim_time');
 
 	const sim_rate = document.getElementById("sim_rate");
-
+  
 	// A time slider that changes the rate of time for the simulation
-	var time_slider = document.getElementById("time-rate");
+	var time_slider = document.getElementById("myRange");
 	time_slider.oninput = function() {
-		if(this.value == 1){
+		let speed = Math.floor(this.value / 25) + 1;
+		console.log(speed);
+		if(speed == 1){
 			viz.setJdDelta(-1);
 			viz.mult = -1;
 			if(viz1 != null){
@@ -1297,15 +1311,15 @@ function runApp(){
 				viz1.mult = -1;
 			}
 		}
-		else if(this.value == 2){
-			viz.setJdDelta(1/60);
-			viz.mult = 1/60;
+		else if(speed == 2){
+			viz.setJdDelta(1.0/60);
+			viz.mult = 1.0/60;
 			if(viz1 != null){
-				viz1.setJdDelta(1/60);
-				viz1.mult = 1/60;
+				viz1.setJdDelta(1.0/60);
+				viz1.mult = 1.0/60;
 			}
 		}
-		else if(this.value == 3){
+		else if(speed == 3){
 			viz.setJdDelta(1);
 			viz.mult = 1;
 			if(viz1 != null){
@@ -1313,7 +1327,7 @@ function runApp(){
 				viz1.mult = 1;
 			}
 		}
-		else if(this.value == 4){
+		else if(speed == 4){
 			viz.setJdDelta(2);
 			viz.mult = 2;
 			if(viz1 != null){
@@ -1321,7 +1335,7 @@ function runApp(){
 				viz1.mult = 2;
 			}
 		}
-		else if(this.value == 5){
+		else if(speed == 5){
 			viz.setJdDelta(4);
 			viz.mult = 4;
 			if(viz1 != null){
@@ -1341,7 +1355,7 @@ function runApp(){
 	}
 
 	// A slider that changes the length of the tail of a body
-	var tail_slider = document.getElementById("tail-length");
+	var tail_slider = document.getElementById("myRange2");
 	tail_slider.oninput = function() {
 		viz.tail_length = this.value / 100;
 		if(viz1 != null){
@@ -1350,42 +1364,74 @@ function runApp(){
 	}
 
 	// A button that will set the simulation to real time
-	document.getElementById("real-time").addEventListener("click", function() {
+	document.getElementById("real_time").addEventListener("click", function() {
 		viz.setDate(Date.now());
 		viz.setJdPerSecond(realTimeRate);
 	});
 
-	// A button that starts the simulation
+	// A button that starts and pauses the simulation
 	document.getElementById("start-button").addEventListener("click", function() {
-		viz.start();
-		if(viz1 != null){
-			viz1.start();
+		togglePlay = !togglePlay;
+		if(togglePlay){
+			viz.start();
+			if(viz1 != null){
+				viz1.start();
+			}
+		} else {
+			viz.stop();
+			if(viz1 != null){
+				viz1.stop();
+			}
 		}
 	});
 
-	// A button that stops the simulation
-	document.getElementById("stop-button").addEventListener("click", function() {
-		viz.stop();
-		if(viz1 != null){
-			viz1.stop();
-		}
+	document.getElementById("input_time_set").addEventListener("click" , function(){
+		let input = document.getElementById("input_time").value;
+		//This pulls the value input from the time set field
+
+		//Todo, do something with this
+		console.log(input);
 	});
 
-	// Dropdown that lets the user zoom to a planet
-	document.getElementById("submit-button").addEventListener("click", function(){
-		let planetZoomChoice = document.getElementById("zoom-dropdown");
-		let choiceStr = planetZoomChoice.options[planetZoomChoice.selectedIndex].value;
+	document.getElementById("input_length_set").addEventListener("click" , function(){
+		let input = document.getElementById("input_length").value;
+		//This pulls the value input from the time set field
 
-		viz.getViewer().followObject(visualizer_list[choiceStr] , [0, 0, 0]);
+		//Todo, do something with this
+		viz.tail_length = input / 100;
+		if(viz1 != null){
+			viz1.tail_length = input / 100;
+		}
+		console.log(input);
+	});
+
+	document.getElementById("zoomToBody").addEventListener("click" , function(){
+		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
+	    console.log(bodyName);
+	    hideContextMenu();
+	    ZoomToBody(bodyName);
+	});
+
+	function ZoomToBody(body){
+		viz.getViewer().followObject(visualizer_list[body] , [0, 0, 0]);
 		viz.getViewer().get3jsCamera().zoom = 10;
 		viz.getViewer().get3jsCamera().updateProjectionMatrix();
-	});
+	}
+
+	function hideContextMenu() {
+        let contextMenu = document.getElementsByClassName("context-menu")[0];
+        contextMenu.style.display = "none";
+    }
+	// Dropdown that lets the user zoom to a planet
 
 
 	// Resets the simulation to default state
+
+	/*Depreciated.
 	document.getElementById("reset-button").addEventListener("click", function(){
 		window.location.reload();
 	});
+	*/
 
 	// for(var i = 0; i < 10000; i++){
 	// 	console.log("waiting...");

@@ -9,8 +9,13 @@
         <meta name="viewport"
             content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
         <title>Solar System</title>
+
 		<script src="https://typpo.github.io/spacekit/build/spacekit.js"></script>
-         <script>function openForm() {
+
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+
+         <script>
+            function openForm() {
               document.getElementById("form-container1").style.display = "block";
               viz.stop();
               if(viz1){
@@ -41,24 +46,37 @@
                     viz1.start();
                 }
             } 
+
+            function openForm3() {
+              document.getElementById("myForm").style.display = "block";
+              viz.stop();
+              if(viz1){
+                  viz1.stop();
+              }
+            }
+
+            function closeForm3() {
+              document.getElementById("myForm").style.display = "none";
+                viz.start();
+                if(viz1){
+                    viz1.start();
+                }
+            }
         </script>
+
         <script src="/js/three.min.js"></script>
 <!--         <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.2.0/gsap.min.js"></script>
  -->        <link rel="stylesheet" type="text/css" href="/views/index.css">
     </head>
+
     <body>
-
-
-
         <!-- Main menu div -->
         <div id="menu">
+            <button class="openbtn" id="openbtn" onclick="openNav1()">Bodies</button>
+            <button class="Ropenbtn" id="Ropenbtn" onclick="openNav2()">Settings</button>
 
-            <form class="form" id="myForm" enctype="multipart/form-data">
-                Choose the file: <input type="file" name="file"/><BR>
-                    <input type="submit" value="Upload"/>
-            </form>
-
-           <!--  <form class="form" id="newSimForm">
+            <!-- Comments, maybe depreciated
+              <form class="form" id="newSimForm">
                 Enter the body from which all positions will be calculated (i.e. solar system barycenter):
                 <input type="text" name="wrt"><br>
                 Enter the names of the targets you would like to view, separated by a '+' (i.e. sun+earth+moon):
@@ -66,110 +84,259 @@
                 Enter the JD you would like to begin the simulation at (i.e. 2451545.0)
                 <input type="text" name="jd_start">
                 <input type="submit" value="Create">
-            </form> -->
+              </form> 
+            -->
 
-            
+            <!-- To Remove
+              <h4 style="color: white">Time Controls</h4>
+            -->
 
+            <!-- To Remove once updated
+              <p style="color: gray">Rate of Time</p>
+              <div class="slidecontainer">
+                <input type="range" min="1" max="5" value="3"   step="1" class="slider" id="time-rate">
+              </div>
+            -->
 
+            <div id="mySidebar1" class="sidebar">
+              <div id="topOfSidebar">
+                <a href="javascript:void(0)" class="closebtn" onclick="closeNav1()">&minus;</a>
+                <h3> Visible Bodies</h3>
+              </div>
+              <div id="content1" class="content1">
 
-            <h4 style="color: white">Time Controls</h4>
-            <p style="color: gray">Rate of Time</p>
-            <div class="slidecontainer">
-                <input type="range" min="1" max="5" value="3" step="1" class="slider" id="time-rate">
-            </div>
-            <p style="color: gray">Tail Length</p>
-            <div class="slidecontainer">
-                <input type="range" min="0" max=100 value=100 step="1" class="slider" id="tail-length">
-            </div>
-            <button class="vis-controls__set-date">Set Date</button>
-            <button id="real-time">Real Time</button>
-            <button id="start-button">Start</button>
-            <button id="stop-button">Stop</button>
-
-            <h4 style="color: white">Zoom to planet</h4>
-            <select id="zoom-dropdown">
-                <option id='sun'>Sun</option>
-                <option id='mercury'>Mercury</option>
-                <option id='venus'>Venus</option>
-                <option id='earth'>Earth</option>
-                <option id='moon'>Moon</option>
-                <option id='mars'>Mars</option>
-                <option id='jupiter'>Jupiter</option>
-                <option id='saturn'>Saturn</option>
-                <option id='uranus'>Uranus</option>
-                <option id='neptune'>Neptune</option>
-                <option id='pluto'>Pluto</option>
-                <option value="none" selected="selected">None</option>
-            </select>
-            <button id="submit-button">Submit</button>
-            <br>
-            <button id="reset-button">Reset</button>
-
-            <h4 id="toggle-vis" style="color: white">Toggle Visibility</h4>
-            <div class="multiselect">
-                <div class="selectBox" onclick="showCheckboxes()">
-                    <select>
-                        <option>Visible Bodies</option>
-                    </select>
-                    <div class="overSelect"></div>
+                <div id="Sun-box" class="body-box">
+                  <div class="checkbox_and_label" id= "Sun">
+                    <input type="checkbox" id="Sun-body" name="Sun-body" value="Sun">
+                    <label for="Sun-body">Sun</label><br>
+                  </div>
                 </div>
-                <div id="checkboxes"></div>
+
+                <div id="Mercury-box" class="body-box">
+                  <div class="checkbox_and_label" id="Mercury">
+                    <input type="checkbox" id="Mercury-body" name="Mercury-body" value="Mercury">
+                    <label for="Mercury-body">Mercury</label><br>
+                  </div>
+                  <div id="nestedMercury" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Asteroids-1">
+                      <input type="checkbox" id="Asteroids-body-1" name="Asteroids-body-1" value="Asteroids-1">
+                      <label for="Asteroids-body-1">Asteroids</label><br>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="Venus-box" class="body-box">
+                  <div class="checkbox_and_label" id="Venus">
+                    <input type="checkbox" id="Venus-body" name="Venus-body" value="Venus">
+                    <label for="Venus-body">Venus</label><br>
+                  </div>
+                  <div id="nestedVenus" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Asteroids-2">
+                      <input type="checkbox" id="Asteroids-body-2" name="Asteroids-body-2" value="Asteroids-2">
+                      <label for="Asteroids-body-2">Asteroids</label><br>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="Earth-box" class="body-box">
+                  <div class="checkbox_and_label" id="Earth">
+                    <input type="checkbox" id="Earth-body" name="Earth-body" value="Earth">
+                    <label for="Earth-body">Earth</label><br>
+                  </div>
+                  <div id="nestedEarth" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Moon">
+                      <input type="checkbox" id="Moon-body" name="Moon-body" value="Moon">
+                      <label for="Moon-body">Moon</label><br>
+                    </div>
+                    <div class="checkbox_and_label" id="Hubble">
+                      <input type="checkbox" id="Hubble-body" name="Hubble-body" value="Hubble">
+                      <label for="Hubble-body">Hubble</label><br>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="Mars-box" class="body-box">
+                  <div class="checkbox_and_label" id="Mars">
+                    <input type="checkbox" id="Mars-body" name="Mars-body" value="Mars">
+                    <label for="Mars-body">Mars</label><br>
+                  </div>
+                  <div id="nestedMars" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Asteroids-3">
+                      <input type="checkbox" id="Asteroids-body-3" name="Asteroids-body-3" value="Asteroids-3">
+                      <label for="Asteroids-body-3">Asteroids</label><br>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="Jupiter-box" class="body-box">
+                  <div class="checkbox_and_label" id="Jupiter">
+                    <input type="checkbox" id="Jupiter-body" name="Jupiter-body" value="Jupiter">
+                    <label for="Jupiter-body">Jupiter</label><br>
+                  </div>
+                  <div id="nestedJupiter" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Asteroids-4">
+                      <input type="checkbox" id="Asteroids-body-4" name="Asteroids-body-4" value="Asteroids-4">
+                      <label for="Asteroids-body-4">Asteroids</label><br>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="Saturn-box" class="body-box">
+                  <div class="checkbox_and_label" id="Saturn">
+                    <input type="checkbox" id="Saturn-body" name="Saturn-body" value="Saturn">
+                    <label for="Saturn-body">Saturn</label><br>
+                  </div>
+                  <div id="nestedSaturn" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Asteroids-5">
+                      <input type="checkbox" id="Asteroids-body-5" name="Asteroids-body-5" value="Asteroids-5">
+                      <label for="Asteroids-body-5">Asteroids</label><br>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="Uranus-box" class="body-box">
+                  <div class="checkbox_and_label" id="Uranus">
+                    <input type="checkbox" id="Uranus-body" name="Uranus-body" value="Uranus">
+                    <label for="Uranus-body">Uranus</label><br>
+                  </div>
+                  <div id="nestedUranus" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Asteroids-6">
+                      <input type="checkbox" id="Asteroids-body-6" name="Asteroids-body-6" value="Asteroids-6">
+                      <label for="Asteroids-body-6">Asteroids</label><br>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="Neptune-box" class="body-box">
+                  <div class="checkbox_and_label" id="Neptune">
+                    <input type="checkbox" id="Neptune-body" name="Neptune-body" value="Neptune">
+                    <label for="Neptune-body">Neptune</label><br>
+                  </div>
+                  <div id="nestedNeptune" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Asteroids-7">
+                      <input type="checkbox" id="Asteroids-body-7" name="Asteroids-body-7" value="Asteroids-7">
+                      <label for="Asteroids-body-7">Asteroids</label><br>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="Pluto-box" class="body-box">
+                  <div class="checkbox_and_label" id="Pluto">
+                    <input type="checkbox" id="Pluto-body" name="Pluto-body" value="Pluto">
+                    <label for="Pluto-body">Pluto</label><br>
+                  </div>
+                  <div id="nestedPluto" style="display:none" class="nested_list">
+                    <div class="checkbox_and_label" id="Asteroids-8">
+                      <input type="checkbox" id="Asteroids-body-8" name="Asteroids-body-8" value="Asteroids-8">
+                      <label for="Asteroids-body-8">Asteroids</label><br>
+                    </div>
+                  </div>
+                </div>
+              </div>
+                <button id="kernel" onclick="openForm3()">Upload New SPK Kernel</button>
+                <form class="form" id="myForm" enctype="multipart/form-data">Choose the file: <input type="file" name="file"/><BR>
+                <input type="submit" value="Upload" id="submit_SPK"/>
+        </form>
             </div>
+    
+            <div id="mySidebar2" class="Rsidebar">
+              <a href="javascript:void(0)" class="closebtn" onclick="closeNav2()">&minus;</a>
+              <div class="slidecontainer">
+                <h3>Rate Of Time</h3>
+                <input type="range" min="1" max="100" value="50" class="slider" id="myRange">
+              </div>
+              <form class="form-inline">
+                <input type="text" id="input_time" placeholder="JD/sec">
+                <button type="button" id="input_time_set">Set</button>
+                <button type="button" id="real_time">Real Time</button>
+              </form>
+              <div class="slidecontainer">
+                <h3>Tail Length</h3>
+                <input type="range" min="1" max="100" value="50" class="slider" id="myRange2">
+              </div>
+              <form class="form-inline">
+                <input type="text" id="input_length" placeholder="JD" >
+                <button type="button" id="input_length_set">Set</button>
+              </form>
+              <a><button type="button" class="playbtn" id="start-button">Start</button></a>
 
-            <button class="create-button" onclick="openForm()">Create Sim</button>
-
-            <div class="form-popup" id="form-container1">
-              <form class="form-container" id="newSimForm">
-                <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
-
-                <label for="wrt" style="color: black">With Respect To</label>
-                <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
-
-                <label for="targets" style="color: black">Targets</label>
-                <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
-
-                <label for="jd_start" style="color: black">Starting Date</label>
-                <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start" required>
-
-                <button type="submit" class="btn" onclick="closeForm()">Create</button>
-                <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+              <form class="btn_group" action="javascipt:void(0)">
+                 <button type="button" class="action_btn reset" onclick="openForm()">Reset</button>
+                 <button type="button" class="action_btn compare" onclick="openForm2()">Compare</button>
               </form>
             </div>
 
-            <button class="compare-button" onclick="openForm2()">Compare Sim</button>
-            <div class="form-popup" id="form-container2">
-                <form class="form-container" id="comparison-form">
-                    <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
+    <!--Context Menu (Hidden by default)-->
+            <div id="context-menu" class="context-menu">
+              <div id="toggleViewButton" class="context-menu-option">
+                <label><input type="checkbox" id="toggleView">Toggle Body Visibility</label>
+              </div>
+              <div id="Zoom" class="context-menu-option">
+                    <label><input type="checkbox" id="zoomToBody" name="zoomTB" value="Zoom to Body" style="display: none;">Zoom To Body</label>
+                </div>
+            </div>
+        </div>
 
-                    <div class="column">
-                        <h5 style="color: black">Simulation 1</h5>
-                        <label for="wrt" style="color: black">With Respect To</label>
-                        <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
+        <!-- Main 3D simulation -->
+        <div id="main-container">
+            
+        </div>
+        <!-- <div id="active_sim"></div> -->
+        <div class='sim-time'>
+            <h3 id="sim_time"></h3>
+            <h4 id="sim_rate"></h4>
+        </div> 
 
-                        <label for="targets" style="color: black">Targets</label>
-                        <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
+        <!--Form for resetting the sim(hidden by default) -->
+        <div class="form-popup" id="form-container1">
+            <form class="form-container" id="newSimForm">
+            <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
 
-                        <label for="jd_start" style="color: black">Starting Date</label>
-                        <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start" required>
+            <label for="wrt" style="color: black">With Respect To</label>
+            <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
 
-                    </div>
-                    <div class="column">
-                        <h5 style="color: black">Simulation 2</h5>
-                        <label for="wrt2" style="color: black">With Respect To</label>
-                        <input type="text" placeholder="i.e. solar system barycenter" name="wrt2" required>
+            <label for="targets" style="color: black">Targets</label>
+            <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
 
-                        <label for="targets2" style="color: black">Targets</label>
-                        <input type="text" placeholder="i.e. sun+earth+moon" name="targets2" required>
+            <label for="jd_start" style="color: black">Starting Date</label>
+            <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start" required>
 
-                        <label for="jd_start2" style="color: black">Starting Date</label>
-                        <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start2" required>
+            <button type="submit" class="btn" onclick="closeForm()">Create</button>
+            <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+            </form>
+        </div>
 
-                        <button type="submit" class="btn" onclick="closeForm2()">Create</button>
-                        <button type="button" class="btn cancel" onclick="closeForm2()">Close</button>
-                    </div>
-                    
-                </form>
-                
+        <!--Form for the compare sim button -->
+        <div class="form-popup" id="form-container2">
+            <form class="form-container" id="comparison-form">
+                <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
+                <div class="column">
+                    <h5 style="color: black">Simulation 1</h5>
+                    <label for="wrt" style="color: black">With Respect To</label>
+                    <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
+
+                    <label for="targets" style="color: black">Targets</label>
+                    <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
+
+                    <label for="jd_start" style="color: black">Starting Date</label>
+                    <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start" required>
+
+                </div>
+                <div class="column">
+                    <h5 style="color: black">Simulation 2</h5>
+                    <label for="wrt2" style="color: black">With Respect To</label>
+                    <input type="text" placeholder="i.e. solar system barycenter" name="wrt2" required>
+
+                    <label for="targets2" style="color: black">Targets</label>
+                    <input type="text" placeholder="i.e. sun+earth+moon" name="targets2" required>
+
+                    <label for="jd_start2" style="color: black">Starting Date</label>
+                    <input type="text" placeholder="i.e. 01 Jan 12:00:00 UTC" name="jd_start2" required>
+
+                    <button type="submit" class="btn" onclick="closeForm2()">Create</button>
+                    <button type="button" class="btn cancel" onclick="closeForm2()">Close</button>
+                </div>
+            </form>
 
             </div>
         </div>
@@ -182,12 +349,9 @@
                 
                 </ul>
             </div>
+
         </div>
-        <!-- <div id="active_sim"></div> -->
-        <div class='sim-time'>
-            <h3 id="sim_time"></h3>
-            <h4 id="sim_rate"></h4>
-        </div> 
+
        <!--  <div id="comparison1">
             
         </div>
@@ -197,6 +361,98 @@
 
         
         <script src="/js/solarSystem.js"></script>
+        <script type="text/javascript">
+    //functions of the nested checkboxes under each planet
+          $('#Mercury-body').change(function() {
+              $('#nestedMercury').toggle();
+          });
+          $('#Venus-body').change(function() {
+              $('#nestedVenus').toggle();
+          });
+          $('#Earth-body').change(function() {
+              $('#nestedEarth').toggle();
+          });
+          $('#Mars-body').change(function() {
+              $('#nestedMars').toggle();
+          });
+          $('#Jupiter-body').change(function() {
+              $('#nestedJupiter').toggle();
+          });
+          $('#Saturn-body').change(function() {
+              $('#nestedSaturn').toggle();
+          });
+          $('#Uranus-body').change(function() {
+              $('#nestedUranus').toggle();
+          });
+          $('#Neptune-body').change(function() {
+              $('#nestedNeptune').toggle();
+          });
+          $('#Pluto-body').change(function() {
+              $('#nestedPluto').toggle();
+          });
+          function test() {
+            alert("Clicked");
+          }
+          function openNav1() {
+            document.getElementById("mySidebar1").style.width = "180px";
+            //document.getElementById("main").style.marginLeft = "250px";
+            document.getElementById("openbtn").style.display = "none";
+            //document.getElementById("Ropenbtn").style.top = "40%";
+          };
+          function closeNav1() {
+            document.getElementById("mySidebar1").style.width = "0px";
+            //document.getElementById("main").style.marginLeft = "0px";
+            document.getElementById("openbtn").style.display = "block";
+            //document.getElementById("Ropenbtn").style.top = "50px";
+          };
+          function openNav2() {
+            document.getElementById("mySidebar2").style.width = "180px";
+            //document.getElementById("main").style.marginLeft = "250px";
+            document.getElementById("Ropenbtn").style.display = "none";
+          };
+          function closeNav2() {
+            document.getElementById("mySidebar2").style.width = "0px";
+            //document.getElementById("main").style.marginLeft = "0px";
+            document.getElementById("Ropenbtn").style.display = "block";
+          };
+          // function showNested() {
+          //   alert("Clicked");
+          // };
+
+          function hideContextMenu() {
+            let contextMenu = document.getElementsByClassName("context-menu")[0];
+              contextMenu.style.display = "none";
+          }
+          /*
+          The function below creates a new event listener to display a context menu when the user right clicks an option in the visible body list
+          */
+          (function(){
+            let boxes = document.querySelectorAll(".checkbox_and_label");
+            boxes.forEach(function(item){
+              let itemID = item.id;
+              item.addEventListener("contextmenu" , function(e){
+                e.preventDefault();
+                let contextMenu = document.getElementsByClassName("context-menu")[0];
+                contextMenu.style.top = e.clientY + "px";
+                contextMenu.style.left = e.clientX + "px";
+                contextMenu.style.display = "block";
+                contextMenu.id = itemID + "-context-menu";
+                contextMenu.name = itemID;
+              });
+            });
+          })();
+          /*
+          This function creates an event listener that will activate when the checkbox is checked, which will hide bodies
+          */
+          (function(){
+            let checkbox = document.getElementById("toggleView");
+            checkbox.addEventListener("change" , function(){
+              console.log(checkbox.checked);
+              hideContextMenu();
+              //Todo, add functionality to hide bodies
+            });
+          })();
+      </script>
         
     </body>
 </html>
