@@ -8,7 +8,7 @@ class AetherSimulation extends Spacekit.Simulation {
         super(simulationElt, options);
         this.mult = options.mult || 1;
         this.tail_length = options.tail_length || 1;
-        this.wrt = options.wrt || "solar system barycenter";
+		this.wrt = options.wrt || "solar system baryncenter";
 	}
 
 	/*
@@ -72,7 +72,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		this.doCameraDrift();
 		}
 		this._camera.update();
-	
+		
 		// Update three.js scene
 		this._renderer.render(this._scene, this._camera.get3jsCamera());
 	
@@ -121,6 +121,10 @@ class AetherObject extends Spacekit.SphereObject {
 		this.nut_prec_dec = null;
 		this.axis_of_rotation_vector = null;
 		this.radius_polar = 0;
+		this.colorGradient = null;
+		this.map = null;
+		this.hidden = false;
+		this.mesh = null;
         this.init();
       }
 
@@ -131,7 +135,9 @@ class AetherObject extends Spacekit.SphereObject {
         let map;
         if (this._options.textureUrl) {
           map = new Spacekit.THREE.TextureLoader().load(this._options.textureUrl);
-        }
+		  this.map = map;
+		}
+		console.log(map);
 	 
 		//Level of detail segments changed to (can be changed)
         const detailedObj = new Spacekit.THREE.LOD();
@@ -146,7 +152,7 @@ class AetherObject extends Spacekit.SphereObject {
         	const radius = this.radius_polar * 1000.0;
         	for (let i = 0; i < levelsOfDetail.length; i += 1) {
           const level = levelsOfDetail[i];
-          var sphereGeometry = new THREE.SphereGeometry(
+          const sphereGeometry = new Spacekit.THREE.SphereGeometry(
             radius,
             level.segments,
             level.segments,
@@ -181,8 +187,8 @@ class AetherObject extends Spacekit.SphereObject {
 			//mesh material changed to transparent and opacity to 0 to not see weird meshes
             material = new Spacekit.THREE.MeshBasicMaterial({
                 transparent: true, 
-                opacity: 0,
-            });
+				opacity: 0,
+			});
           }
 		  Object.defineProperty( material, 'needsUpdate', {
 			value: true,
@@ -195,7 +201,7 @@ class AetherObject extends Spacekit.SphereObject {
 		  // Change the coordinate system to have Z-axis pointed up.
 		  // TODO: change mesh rotation
           mesh.rotation.x = Math.PI / 2;
-     
+		  this.mesh = mesh;
           // Show this number of segments at distance >= radii * level.radii.
           detailedObj.addLevel(mesh, radius * level.radii);
         }
@@ -226,25 +232,21 @@ class AetherObject extends Spacekit.SphereObject {
      
         this._renderMethod = 'SPHERE';
      
-        if (this._simulation) {
+        //if (this._simulation) {
           // Add it all to visualization.
-          this._simulation.addObject(this, false /* noUpdate */);
-        }
+        //  this._simulation.addObject(this, false /* noUpdate */);
+        //}
 
         // set object's initial position
         this._obj.position.set(this.positionVectors[this.currIndex].x, this.positionVectors[this.currIndex].y, this.positionVectors[this.currIndex].z);
 
-
-        //init trajectory tail
+		//init trajectory tail
+		this.updateColorGradient();
         this.geometry = new Spacekit.THREE.BufferGeometry();
-		this.material = new Spacekit.THREE.LineBasicMaterial({color: new Spacekit.THREE.Color(0x6495ED)});
-		//this.material.depthWrite = false;
+		//this.material = new Spacekit.THREE.LineBasicMaterial({color: new Spacekit.THREE.Color(0x6495ED)});
+		this.geometry.attributes['color'] = new Spacekit.THREE.BufferAttribute( this.colorGradient, 3);																				
+		this.material = new Spacekit.THREE.LineBasicMaterial({vertexColors: THREE.VertexColors});
 		//this.geometry.vertices.needsUpdate = true;
-		Object.defineProperty( this.material, 'needsUpdate', {
-			value: true,
-			writable: true
-		} );
-
 
 		// 1D array describing the vertices of the line
 		// i.e. [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
@@ -258,7 +260,8 @@ class AetherObject extends Spacekit.SphereObject {
 			this.geometry,
 			this.material,
 		);
-
+		line.geometry.attributes[ "color" ].needsUpdate = true;
+		line.frustumCulled = false;
 		// reference to positions
 		var positions2 = line.geometry.attributes.position.array;
 		var index = 0;
@@ -268,7 +271,6 @@ class AetherObject extends Spacekit.SphereObject {
 			positions2[index ++] = this.positionVectors[i].y;
 			positions2[index ++] = this.positionVectors[i].z;
 		}
-
 		// add line to the scene
 		let scene = this._simulation.getScene();
 		scene.add(line);
@@ -323,6 +325,33 @@ class AetherObject extends Spacekit.SphereObject {
        //  }
 
 
+	  }
+
+	updateColorGradient(){
+		this.colorGradient = new Float32Array(this.positionVectors.length * 3);
+		let kmPosX = this.positionVectors.map(pos => Spacekit.auToKm(pos.x));
+		let kmPosY = this.positionVectors.map(pos => Spacekit.auToKm(pos.y));
+		let kmPosZ = this.positionVectors.map(pos => Spacekit.auToKm(pos.z));
+		for(var i = 0; i < this.positionVectors.length-1; i++){
+			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / secondsPerDay / 1000;
+			if(kmPerSec >= 50){
+				this.colorGradient[ i * 3 ] = 1.0;
+    			this.colorGradient[ i * 3 + 1 ] = 0.0;
+    			this.colorGradient[ i * 3 + 2 ] = 0.0;
+			}
+			else if (kmPerSec >= 25) {
+				this.colorGradient[ i * 3 ] = 1.0;
+    			this.colorGradient[ i * 3 + 1 ] = 1.0;
+    			this.colorGradient[ i * 3 + 2 ] = 0.0;
+			}
+			else{
+				this.colorGradient[ i * 3 ] = 0.0;
+    			this.colorGradient[ i * 3 + 1 ] = 0.0;
+    			this.colorGradient[ i * 3 + 2 ] = 1.0;
+			}
+			
+		}
+		
 	  }
 
 
@@ -423,8 +452,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  updateTailLength(){
 	  	this.tail_length = this.currIndex - this.tailStartIndex + 1;
 	  }
-
-
+ 	  
 	  /*
 		  Update the object's line object according to its position indexes
 	  */
@@ -484,9 +512,12 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
 	  updateLineData(){
 	  	var position_array = new Float32Array( this.positionVectors.length * 3);
-	  	// create 1D array of form [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
+
+		// create 1D array of form [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
 		this.geometry.attributes['position'] = new Spacekit.THREE.BufferAttribute( position_array, 3);
-		//this.geometry.setAttribute( 'position', new Spacekit.THREE.BufferAttribute( position_array, 3) );																								
+		this.updateColorGradient();
+		this.material = new Spacekit.THREE.LineBasicMaterial({vertexColors: Spacekit.THREE.VertexColors});
+		this.geometry.attributes['color'] = new Spacekit.THREE.BufferAttribute( this.colorGradient, 3);	
 		// set drawrange to start at tailStartIndex and draw this.currIndex many vertices
 		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex); // todo: might break when time rate is negative
 		let line = new Spacekit.THREE.Line(
@@ -494,6 +525,7 @@ class AetherObject extends Spacekit.SphereObject {
 			this.material,
 		);
 
+		line.frustumCulled = false;
 		// reference to positions
 		var positions2 = line.geometry.attributes.position.array;
 		var index = 0;
@@ -524,15 +556,14 @@ class AetherObject extends Spacekit.SphereObject {
 	  	@param {boolean} [old_data=false] - flag indicating whether the data returned is old or not
 	  */
 	  positionGetRequest(wrt = this._simulation.wrt, obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = 1, tail_length_jd = "0", valid_time_seconds = "10", old_data = false){
-	  	this.ephemUpdate(wrt, obj_name, start_date_jd, jd_delta, tail_length_jd, valid_time_seconds).then(data => {
-     
-      			// adjust results to be in km and in ecliptic plane
+	  	this.ephemUpdate(wrt, obj_name, start_date_jd, jd_delta, tail_length_jd, valid_time_seconds).then(data => {  
+			// adjust results to be in km and in ecliptic plane
       			var position_vectors = data[this.name].positions.map(function(pos){
 			  		var adjusted_val = pos.map(Spacekit.kmToAu);//[Spacekit.kmToAu(pos[0]), Spacekit.kmToAu(pos[1]), Spacekit.kmToAu(pos[2])];
 			  		var adjusted_val2 = Spacekit.equatorialToEcliptic_Cartesian(adjusted_val[0], adjusted_val[1], adjusted_val[2], Spacekit.getObliquity());
 			  		return new Spacekit.THREE.Vector3(adjusted_val2[0] * 1000, adjusted_val2[1] * 1000, adjusted_val2[2] * 1000);
 			  	});
-
+				
 			  	// update position list, time list, and line
       			this.addPositionData(position_vectors, old_data);
       			this.addTimeData(data[obj_name].times, old_data);
@@ -683,6 +714,80 @@ function tick(){
 	}
 }
 
+function displayError(error){
+	if(error.error){
+		let li = document.createElement("LI"); 
+		let err = document.createTextNode("Error: " + error.error);
+		li.appendChild(err);
+		li.setAttribute("style", "color: red;");
+		document.getElementById("error-list").appendChild(li);
+	}
+	else{
+		let li = document.createElement("LI"); 
+		let err = document.createTextNode("Error: " + error);
+		li.appendChild(err);
+		li.setAttribute("style", "color: red;");
+		document.getElementById("error-list").appendChild(li);
+	}
+}
+
+function handleCheckboxClick(checkboxId, bodyName){
+	let checked = document.getElementById(checkboxId).checked;
+	//console.log(visualizer_list);
+	let label = visualizer_list[bodyName]._label;
+	if(!checked){
+		if(label != null){
+			visualizer_list[bodyName].setLabelVisibility(false);
+		}
+		//console.log(visualizer_list[i], visualizer_list[i].line);
+		//console.log(visualizer_list[bodyName], visualizer_list[bodyName].line.material);
+		console.log(visualizer_list[bodyName]);
+		//visualizer_list[bodyName].material = false;
+		visualizer_list[bodyName].material.opacity = 0;
+		visualizer_list[bodyName].material.transparent = true;
+		visualizer_list[bodyName].material.needsUpdate = true;
+		//viz.getScene().remove(visualizer_list[bodyName].line);
+		//viz.removeObject(visualizer_list[bodyName]);
+		//viz.getScene().remove(visualizer_list[i].line);
+		if(viz1 != null){
+			viz1.removeObject(visualizer_list[bodyName]);
+			viz1.getScene().remove(visualizer_list[bodyName].line);
+		}   
+	} else {
+		if(label != null){
+			visualizer_list[i].setLabelVisibility(true);
+		}
+		//visualizer_list[bodyName].material.opacity = 1;
+		//visualizer_list[bodyName].line.material.opacity = 1;
+		//visualizer_list[bodyName].line.material.transparent = false;
+		visualizer_list[bodyName].material.opacity = 1;
+		visualizer_list[bodyName].material.transparent = false;
+		visualizer_list[bodyName].material.needsUpdate = true;
+		//viz.addObject(visualizer_list[bodyName]);
+		//viz.getScene().add(visualizer_list[bodyName].line)
+		if(viz1 != null){
+			viz1.addObject(visualizer_list[bodyName]);
+			viz1.getScene().add(visualizer_list[bodyName].line);
+		}
+		
+	}
+}
+
+function initCheckboxes(){
+	let checkboxes = document.getElementById("checkboxes").getElementsByTagName('input');
+	let planetKeys = Object.keys(visualizer_list);
+	for(let x = 0; x < checkboxes.length; x++){
+		let checkbox = checkboxes[x];
+		let checkBoxId = checkboxes[x].id;
+		let checkBoxBody = checkboxes[x].id.split("-")[0];
+		if(planetKeys.includes(checkBoxBody)){
+			checkbox.checked = true;
+		}
+		else{
+			checkbox.disabled = true;
+		}
+	}
+}
 
 /*
 	async function to get data from API
@@ -752,8 +857,8 @@ let body_textures = {
 	"saturn" : '/js/textures/2k_saturn.jpg',
 	"uranus" : '/js/textures/2k_uranus.jpg',
 	"neptune" : '/js/textures/2k_neptune.jpg',
-	"pluto" : '/js/textures/plutomap2k.jpg',
-	"moon" : '/js/textures/2k_moon.jpg'
+	"pluto" : '/js/textures/plu0rss1.jpg',
+	"moon" : '/js/textures/2k_moon.jpg',
 };
 
 /*
@@ -788,6 +893,8 @@ function createSubElements(name , sublist){
 	var input_element = document.createElement("INPUT");
 	input_element.setAttribute("type" , "checkbox");
 	input_element.setAttribute("id" , checkbox_name);
+	input_element.setAttribute("name" , name2);
+	input_element.setAttribute("onClick" , "handleCheckboxClick(id, name)");
 	var text_node = document.createTextNode(name2);
 	label_element.appendChild(input_element);
 	label_element.appendChild(text_node);
@@ -931,6 +1038,9 @@ compare_form.addEventListener('submit', function(e){
 	// convert time entered entered into milliseconds passed UNIX epoch
 	const start_time =  Date.parse(formData.get('jd_start')) ;
 
+	for (var member in visualizer_list) delete visualizer_list[member];
+	const checkboxes = document.getElementById('checkboxes');
+	checkboxes.innerHTML = '';
 	// Create two new simulations that will be compared side by side
 	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison1");
 	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison2");
@@ -959,12 +1069,15 @@ form.addEventListener('submit', function(event){
 		method: 'POST',
 		body: formData
 	})
-	.then(response => response.json())
-	.then(data => {
-		console.log(data)
-  	})
+	.then(response => {
+		if(response.status === 400){
+			console.log(response);
+			displayError("File not valid");
+			return response;
+		}
+	})
 	.catch(error => {
-    	console.error(error)
+    	console.error(error);
   	});
   	this.style.display = "none";
 })
@@ -1015,11 +1128,14 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 	var rotation_data = {};
 
 	getRotationData(targets).then(data => {
+		console.log(data);
 		// TODO: angle processing
 		for(const property in data){
 
 			// If call didn't return rotation data for a body, set its parameters to null
 			if(data[property] == "NO ROTATION DATA AVAILABLE"){
+				console.log("here");
+				console.log(property + data[property]);
 				rotation_data[property] = {
 					"ra": null,
 					"dec": null,
@@ -1031,6 +1147,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					"nut_prec_ra": null,
 					"nut_prec_dec": null,
 				};
+				displayError(property + " HAS " + data[property]);
 			}
 			else{
 				rotation_data[property] = data[property]; // Keep track of rotation details
@@ -1038,11 +1155,18 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 				// console.log(property);
 			}
 		}
+	})
+	.catch(error => {
+		console.error(error);
 		//rotation_data = data;
-	});
+  	});
 
 	// Retrieve the position data with the specified parameters
 	getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10).toString(), "10").then(data => {
+		if(data.error){
+			displayError(data);
+			return data;
+		}
 		// iterate over each body returned by the API call
 		for(const property in data){
 			// Array of [x,y,z] coords in AU
@@ -1101,7 +1225,8 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 
 			// Create a new space object
 			let body = new_viz.createAetherObject(property, {
-				labelText: bodyName,
+				//labelText: bodyName,
+				_id: cur_idx,
 				name: property,
 				textureUrl: body_textures[property],
 				currIndex: cur_idx,
@@ -1137,10 +1262,20 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 
 
 			// Update global variables
-			visualizer_list[bodyName] = body;
+			if(bodyName in visualizer_list){
+				visualizer_list[bodyName + '1'] = body;
+			}
+			else{
+				visualizer_list[bodyName] = body;
+			}
+			//console.log(visualizer_list);
 			adjusted_positions[bodyName] = allAdjustedVals;
 			adjusted_times[bodyName] = allAdjustedTimes;
 		}
+		initCheckboxes()
+	})
+	.catch(error => {
+		console.error(error);
 	});
 	new_viz.onTick = tick;
 	return new_viz;
@@ -1155,47 +1290,14 @@ function runApp(){
 	/////////////////////////////////
 
 	// Main visualization object
-	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto', 1, Date.now()); // todo: change last parameter to be in JD
+	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', 1, Date.now()); // todo: change last parameter to be in JD
 	//simulation_stack.push(viz);
 
 	document.getElementById('sim_time').innerHTML = viz.getDate();
 	const sim_time = document.getElementById('sim_time');
 
 	const sim_rate = document.getElementById("sim_rate");
-
-	//This loop adds checkbox elements for each visualized object. This allowed for every visualized element to be togglable. It also adds an event listener for each element to toggle each object.
-	
-	//Update this for the new UI
-	/*
-	var checkboxes = document.getElementById("checkboxes");
-	for(let i of Object.keys(visualizer_list)){
-		appendCheckboxElement(checkboxes , i);
-		let checkbox_element = i.concat("-checkbox");
-		document.getElementById(checkbox_element).addEventListener("click" , function(){
-			let checked = document.getElementById(checkbox_element).checked;
-			let label = visualizer_list[i]._label;
-			if(!checked){
-				if(label != null){
-					visualizer_list[i].setLabelVisibility(false);
-				}
-				viz.removeObject(visualizer_list[i]);
-				if(viz1 != null){
-					viz1.removeObject(visualizer_list[i]);
-				}
-			} else {
-				if(label != null){
-					visualizer_list[i].setLabelVisibility(true);
-				}
-				viz.addObject(visualizer_list[i]);
-				if(viz1 != null){
-					viz1.addObject(visualizer_list[i]);
-				}
-			}
-		});
-	}
-	*/
-
-
+  
 	// A time slider that changes the rate of time for the simulation
 	var time_slider = document.getElementById("myRange");
 	time_slider.oninput = function() {

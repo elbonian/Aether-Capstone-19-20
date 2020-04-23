@@ -50,9 +50,6 @@ input[type="text"]::placeholder {
   height: 100%;
 }
 
- {box-sizing: border-box;}
-
-
 /* Button used to open the contact form - fixed at the bottom of the page */
 .compare-button {
   background-color: #555;
@@ -574,4 +571,13 @@ button {
 /*The container holding the checkbox/label combos and all sublists for bodies in the Bodies menu*/
 .body-box {
   border-radius: inherit;
+
+#error-console{
+  position: absolute;
+  bottom: 10px;
+  left: 1100px;
+  width: 160px;
+  height: 110px;
+  overflow: scroll;
+  opacity: 0.7;
 }
