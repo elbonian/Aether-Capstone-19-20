@@ -571,8 +571,9 @@ button {
 /*The container holding the checkbox/label combos and all sublists for bodies in the Bodies menu*/
 .body-box {
   border-radius: inherit;
+}
 
-#error-console{
+#error-console {
   position: absolute;
   bottom: 10px;
   left: 1100px;
