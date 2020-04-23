@@ -85,8 +85,8 @@ input[type="text"]::placeholder {
   font-family: Helvetica, Arial, sans-serif;
   display: none;
   position: absolute;
-  top: 50%;
-  left: 0px;
+  top: 0;
+  left: 0;
   margin-right: -50%;
   border: 3px solid #f1f1f1;
   z-index: 9;
@@ -94,7 +94,7 @@ input[type="text"]::placeholder {
 
 /* Add styles to the form container */
 .form-container {
-  /*max-width: 300px;*/
+  max-width: 300px;
   padding: 10px;
   background-color: white;
 }
@@ -143,6 +143,14 @@ input[type="text"]::placeholder {
 
 .multiselect {
   width: 100%;
+}
+
+#myForm {
+  display:none;
+  position: fixed;
+  background: white;
+  width: inherit;
+  max-height: fit-content;
 }
 
 .selectBox {

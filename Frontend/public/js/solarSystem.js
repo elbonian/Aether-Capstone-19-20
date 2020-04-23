@@ -657,6 +657,8 @@ var simulation_stack = []; // stack of simulations
 var viz; // pointer to active simulation
 var viz1;
 
+var togglePlay = true;
+
 /////////////////////////////////
 /////// Utility Functions ///////
 /////////////////////////////////
@@ -943,13 +945,12 @@ compare_form.addEventListener('submit', function(e){
 
 // Form to submit a new spk kernel
 let form = document.getElementById('myForm');
-
+let form_submit = document.getElementById("submit_SPK");
 /*
 	Calls API endpoint to upload a kernel
 */
 
-//Fix this to fit new UI
-/*
+
 form.addEventListener('submit', function(event){
 	event.preventDefault();
 	const formData = new FormData(this);
@@ -965,8 +966,8 @@ form.addEventListener('submit', function(event){
 	.catch(error => {
     	console.error(error)
   	});
+  	this.style.display = "none";
 })
-*/
 
 /*
 	Create an AetherSimulation and add the bodies to the simulation
@@ -1266,24 +1267,41 @@ function runApp(){
 		viz.setJdPerSecond(realTimeRate);
 	});
 
-	// A button that starts the simulation
+	// A button that starts and pauses the simulation
 	document.getElementById("start-button").addEventListener("click", function() {
-		viz.start();
-		if(viz1 != null){
-			viz1.start();
+		togglePlay = !togglePlay;
+		if(togglePlay){
+			viz.start();
+			if(viz1 != null){
+				viz1.start();
+			}
+		} else {
+			viz.stop();
+			if(viz1 != null){
+				viz1.stop();
+			}
 		}
 	});
 
-	// A button that stops the simulation
+	document.getElementById("input_time_set").addEventListener("click" , function(){
+		let input = document.getElementById("input_time").value;
+		//This pulls the value input from the time set field
 
-	/* Depreciated. No stop button. Either make the Start button a toggle or just remove this
-	document.getElementById("stop-button").addEventListener("click", function() {
-		viz.stop();
-		if(viz1 != null){
-			viz1.stop();
-		}
+		//Todo, do something with this
+		console.log(input);
 	});
-	*/
+
+	document.getElementById("input_length_set").addEventListener("click" , function(){
+		let input = document.getElementById("input_length").value;
+		//This pulls the value input from the time set field
+
+		//Todo, do something with this
+		viz.tail_length = input / 100;
+		if(viz1 != null){
+			viz1.tail_length = input / 100;
+		}
+		console.log(input);
+	});
 
 	document.getElementById("zoomToBody").addEventListener("click" , function(){
 		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
@@ -1307,7 +1325,7 @@ function runApp(){
 
 	// Resets the simulation to default state
 
-	/*
+	/*Depreciated.
 	document.getElementById("reset-button").addEventListener("click", function(){
 		window.location.reload();
 	});
