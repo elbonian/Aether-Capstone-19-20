@@ -5,18 +5,27 @@
 from flask import Flask, Response, request
 from werkzeug.utils import secure_filename
 import jsonpickle
+from signal import signal, SIGINT
 import re
 # import numpy as np
 import spiceypy as spice
 from flask_cors import CORS
 from db_connect import Database
-from SPKParser import SPKParser
+# from SPKParser import SPKParser
+from AetherBodies import AetherBodies
 from MetakernelWriter import MetakernelWriter
-from os import stat
+# from os import stat
 
 # Initialize the Flask application
 app = Flask(__name__)
 CORS(app)
+aether_bodies = AetherBodies()
+
+
+def exitNicely(sig, frame):
+    spice.kclear()
+    print("\nCleared loaded kernels.\nExiting...")
+    exit(0)
 
 
 def returnResponse(response, status):
@@ -27,14 +36,14 @@ def returnResponse(response, status):
 
 @app.route('/api/positions2/<string:ref_frame>/<string:targets>/<string:curVizJd>/<string:curVizJdDelta>/<string:tailLenJd>/<int:validSeconds>', methods=['GET'])
 def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd, validSeconds):
-    valid_targets = ('solar system barycenter', 'sun', 'mercury barycenter', 'mercury', 'venus barycenter', 'venus',
-                     'earth barycenter', 'mars barycenter', 'jupiter barycenter', 'saturn barycenter',
-                     'uranus barycenter', 'neptune barycenter', 'pluto barycenter', 'earth', 'moon', 'mars', 'phobos',
-                     'deimos', 'jupiter', 'io', 'europa', 'ganymede', 'callisto', 'amalthea', 'thebe', 'adrastea',
-                     'metis', 'saturn', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'iapetus',
-                     'phoebe', 'helene', 'telesto', 'calypso', 'methone', 'polydeuces', 'uranus', 'ariel', 'umbriel',
-                     'titania', 'oberon', 'miranda', 'neptune', 'triton', 'nereid', 'proteus', 'pluto', 'charon', 'nix',
-                     'hydra', 'kerberos', 'styx', '-31', '-32')
+    # valid_targets = ('solar system barycenter', 'sun', 'mercury barycenter', 'mercury', 'venus barycenter', 'venus',
+    #                  'earth barycenter', 'mars barycenter', 'jupiter barycenter', 'saturn barycenter',
+    #                  'uranus barycenter', 'neptune barycenter', 'pluto barycenter', 'earth', 'moon', 'mars', 'phobos',
+    #                  'deimos', 'jupiter', 'io', 'europa', 'ganymede', 'callisto', 'amalthea', 'thebe', 'adrastea',
+    #                  'metis', 'saturn', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'iapetus',
+    #                  'phoebe', 'helene', 'telesto', 'calypso', 'methone', 'polydeuces', 'uranus', 'ariel', 'umbriel',
+    #                  'titania', 'oberon', 'miranda', 'neptune', 'triton', 'nereid', 'proteus', 'pluto', 'charon', 'nix',
+    #                  'hydra', 'kerberos', 'styx', '-31', '-32')
 
     # convert string of targets into a list -- ensure lower case for consistency
     targets_list = [target.lower() for target in targets.split('+')]
@@ -42,11 +51,11 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
     ref_frame = ref_frame.lower()
 
     # check to make sure the reference frame and targets are valid
-    if ref_frame not in valid_targets:
+    if not aether_bodies.isValidRefFrame(ref_frame): #ref_frame not in valid_targets:
         return returnResponse({'error': '{} is not a valid reference frame.'.format(ref_frame)}, 400)
 
     for target in targets_list:
-        if target not in valid_targets:
+        if (not aether_bodies.isValidID(target)) and (not aether_bodies.isValidName(target)): #target not in valid_targets:
             return returnResponse({'error': '{} is not a known target.'.format(target)}, 401)
 
     # TODO: consider modifying api params to only accept floats instead of strings
@@ -270,23 +279,30 @@ def get_available_bodies():
 
     return returnResponse(results, 200)
 
+@app.route('/api/available-bodies/', methods=['GET'])
+def get_available_bodies2():
+    return returnResponse(aether_bodies.getBodies(), 200)
+
 
 # consider changing name to get-body-radius and refactoring
-@app.route('/api/body-info/<string:targets>', methods=['GET'])
+@app.route('/api/body-radius/<string:targets>', methods=['GET'])
 def get_body_info(targets):
 
-    valid_targets = ('SUN','MERCURY','VENUS','MOON','EARTH','IO','EUROPA','GANYMEDE','CALLISTO','AMALTHEA','THEBE',
-                     'ADRASTEA','METIS','JUPITER','PHOBOS','DEIMOS','MARS','TRITON','NEREID','PROTEUS','NEPTUNE','CHARON',
-                     'PLUTO','MIMAS','ENCELADUS','TETHYS','DIONE','RHEA','TITAN','HYPERION','IAPETUS','PHOEBE','HELENE',
-                     'TELESTO','CALYPSO','METHONE','POLYDEUCES','SATURN','ARIEL','UMBRIEL','TITANIA','OBERON','MIRANDA','URANUS')
+    # valid_targets = ('SUN','MERCURY','VENUS','MOON','EARTH','IO','EUROPA','GANYMEDE','CALLISTO','AMALTHEA','THEBE',
+    #                  'ADRASTEA','METIS','JUPITER','PHOBOS','DEIMOS','MARS','TRITON','NEREID','PROTEUS','NEPTUNE','CHARON',
+    #                  'PLUTO','MIMAS','ENCELADUS','TETHYS','DIONE','RHEA','TITAN','HYPERION','IAPETUS','PHOEBE','HELENE',
+    #                  'TELESTO','CALYPSO','METHONE','POLYDEUCES','SATURN','ARIEL','UMBRIEL','TITANIA','OBERON','MIRANDA','URANUS')
 
-    targets_list = [target.upper() for target in targets.split('+')]
+    targets_list = [target.lower() for target in targets.split('+')]
 
     response_data = dict()
 
     for target in targets_list:
 
-        if target not in valid_targets:
+        # TODO: remove when all calls are based on key
+        target_id = aether_bodies.getBodyID(target)
+
+        if not aether_bodies.hasRadiusData(target_id): #target not in valid_targets:
             response_data[target] = "NO RADIUS DATA AVAILABLE"
 
         else:
@@ -302,10 +318,10 @@ def get_body_info(targets):
 @app.route('/api/rotations/<string:targets>', methods=['GET'])
 def get_object_rotation(targets):
 
-    valid_targets = ('SUN', 'MERCURY', 'VENUS', 'MOON', 'EARTH', 'IO', 'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA',
-                     'THEBE', 'ADRASTEA', 'METIS', 'JUPITER', 'PHOBOS', 'DEIMOS', 'MARS', 'TRITON', 'PROTEUS', 'NEPTUNE',
-                     'CHARON', 'PLUTO', 'MIMAS', 'ENCELADUS', 'TETHYS', 'DIONE', 'RHEA', 'TITAN', 'IAPETUS', 'PHOEBE',
-                     'HELENE', 'TELESTO', 'CALYPSO', 'SATURN', 'ARIEL', 'UMBRIEL', 'TITANIA', 'OBERON', 'MIRANDA', 'URANUS')
+    # valid_targets = ('SUN', 'MERCURY', 'VENUS', 'MOON', 'EARTH', 'IO', 'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA',
+    #                  'THEBE', 'ADRASTEA', 'METIS', 'JUPITER', 'PHOBOS', 'DEIMOS', 'MARS', 'TRITON', 'PROTEUS', 'NEPTUNE',
+    #                  'CHARON', 'PLUTO', 'MIMAS', 'ENCELADUS', 'TETHYS', 'DIONE', 'RHEA', 'TITAN', 'IAPETUS', 'PHOEBE',
+    #                  'HELENE', 'TELESTO', 'CALYPSO', 'SATURN', 'ARIEL', 'UMBRIEL', 'TITANIA', 'OBERON', 'MIRANDA', 'URANUS')
 
     targets_list = [target.upper() for target in targets.split('+')]
 
@@ -313,7 +329,10 @@ def get_object_rotation(targets):
 
     for target in targets_list:
 
-        if target not in valid_targets:
+        # TODO: remove when all calls are based on key
+        target_id = aether_bodies.getBodyID(target)
+
+        if not aether_bodies.hasRotationData(target_id): #target not in valid_targets:
             response_data[target] = "NO ROTATION DATA AVAILABLE"
         else:
             try:
@@ -366,6 +385,8 @@ def get_object_rotation(targets):
 
 @app.route('/api/spk-upload', methods=['POST'])
 def spk_upload():
+    global aether_bodies
+
     spk_extension = '.bsp'
 
     # check if the post request has the file part
@@ -389,31 +410,36 @@ def spk_upload():
 
         file.save(file_path)
 
-        spk_parser = SPKParser()
+        # spk_parser = SPKParser()
+        #
+        # # TODO: wrap this in a try-except and have the parser class raise an exception if the file is bad
+        # uploaded_spk_info = spk_parser.parse(file_path)
+        # # keys: bodies -> [(body name, wrt, naif id)], start_date, end_date
+        #
+        # spk_size_bytes = stat(file_path).st_size
+        #
+        # db = Database('aether_backend_data.db')
+        #
+        # sql = "INSERT INTO Kernel (path, start_date, end_date, size) VALUES (?, ?, ?, ?)"
+        #
+        # db.executeNonQuery(sql, variables=[file_path, uploaded_spk_info['time_start'], uploaded_spk_info['time_end'],
+        #                                    spk_size_bytes])
+        #
+        # for body_tuple in uploaded_spk_info['bodies']:
+        #     sql = "INSERT INTO Body (path, name, wrt, naif_id) VALUES (?, ?, ?, ?)"
+        #
+        #     db.executeNonQuery(sql, variables=[file_path, body_tuple[0], body_tuple[1], body_tuple[2]])
+        #
+        # db.closeDatabase()
 
-        # TODO: wrap this in a try-except and have the parser class raise an exception if the file is bad
-        uploaded_spk_info = spk_parser.parse(file_path)
-        # keys: bodies -> [(body name, wrt, naif id)], start_date, end_date
+        new_bodies = aether_bodies.addFromKernel(file_path, returnNewBodies=True)
 
-        spk_size_bytes = stat(file_path).st_size
-
-        db = Database('aether_backend_data.db')
-
-        sql = "INSERT INTO Kernel (path, start_date, end_date, size) VALUES (?, ?, ?, ?)"
-
-        db.executeNonQuery(sql, variables=[file_path, uploaded_spk_info['time_start'], uploaded_spk_info['time_end'],
-                                           spk_size_bytes])
-
-        for body_tuple in uploaded_spk_info['bodies']:
-            sql = "INSERT INTO Body (path, name, wrt, naif_id) VALUES (?, ?, ?, ?)"
-
-            db.executeNonQuery(sql, variables=[file_path, body_tuple[0], body_tuple[1], body_tuple[2]])
-
-        db.closeDatabase()
+        # DEBUG
+        print(new_bodies)
 
         spice.furnsh(file_path)
 
-        return returnResponse({}, 200)
+        return returnResponse(new_bodies, 200)
 
 
 if __name__ == '__main__':
@@ -423,6 +449,8 @@ if __name__ == '__main__':
 
     # load the kernels
     spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
+
+    signal(SIGINT, exitNicely)
 
     # start the server
     app.run(host="0.0.0.0", port=5000, threaded=False)
