@@ -323,7 +323,7 @@ def get_object_rotation(targets):
     #                  'CHARON', 'PLUTO', 'MIMAS', 'ENCELADUS', 'TETHYS', 'DIONE', 'RHEA', 'TITAN', 'IAPETUS', 'PHOEBE',
     #                  'HELENE', 'TELESTO', 'CALYPSO', 'SATURN', 'ARIEL', 'UMBRIEL', 'TITANIA', 'OBERON', 'MIRANDA', 'URANUS')
 
-    targets_list = [target.upper() for target in targets.split('+')]
+    targets_list = [target.lower() for target in targets.split('+')]
 
     response_data = dict()
 
@@ -435,7 +435,7 @@ def spk_upload():
         new_bodies = aether_bodies.addFromKernel(file_path, returnNewBodies=True)
 
         # DEBUG
-        print(new_bodies)
+        # print(new_bodies)
 
         spice.furnsh(file_path)
 
