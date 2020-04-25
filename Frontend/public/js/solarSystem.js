@@ -325,10 +325,16 @@ class AetherObject extends Spacekit.SphereObject {
        //  }
 
 
-	  }
+	}
 
 	updateColorGradient(){
 		this.colorGradient = new Float32Array(this.positionVectors.length * 3);
+		let startCol = "#0000FF";
+		let endCol = "#FF0000";
+		let steps = this.positionVectors.length;
+		var tmp = generateColor(startCol, endCol, steps);
+		console.log(tmp);
+		console.log(steps)
 		let kmPosX = this.positionVectors.map(pos => Spacekit.auToKm(pos.x));
 		let kmPosY = this.positionVectors.map(pos => Spacekit.auToKm(pos.y));
 		let kmPosZ = this.positionVectors.map(pos => Spacekit.auToKm(pos.z));
@@ -348,10 +354,8 @@ class AetherObject extends Spacekit.SphereObject {
 				this.colorGradient[ i * 3 ] = 0.0;
     			this.colorGradient[ i * 3 + 1 ] = 0.0;
     			this.colorGradient[ i * 3 + 2 ] = 1.0;
-			}
-			
+			}	
 		}
-		
 	  }
 
 
@@ -598,7 +602,8 @@ class AetherObject extends Spacekit.SphereObject {
       		else if(need_old_data){
       			this.isUpdating = true;
       			this.positionGetRequest( this._simulation.wrt, this.name, this.jdTimeData[0].toString(), 1, (1*60*10).toString(), "0", true);
-      		}
+			  }
+			  
       	}
       	
 
@@ -631,7 +636,9 @@ class AetherObject extends Spacekit.SphereObject {
 		      	this.setNextTailStart();
 		      	this.drawLineSegment();   	
 			}
-      	}
+		  }
+		// Update label position
+      	//super.updateLabelPosition([this.positionVectors[Math.floor(this.currIndex)].x, this.positionVectors[Math.floor(this.currIndex)].y, this.positionVectors[Math.floor(this.currIndex)].z]);
     }
 
 }
@@ -730,6 +737,63 @@ function displayError(error){
 		document.getElementById("error-list").appendChild(li);
 	}
 }
+
+function hex (c) {
+	var s = "0123456789abcdef";
+	var i = parseInt (c);
+	if (i == 0 || isNaN (c))
+		return "00";
+	i = Math.round (Math.min (Math.max (0, i), 255));
+	return s.charAt ((i - i % 16) / 16) + s.charAt (i % 16);
+}
+
+/* Convert an RGB triplet to a hex string */
+function convertToHex (rgb) {
+	return hex(rgb[0]) + hex(rgb[1]) + hex(rgb[2]);
+}
+
+/* Remove '#' in color hex string */
+function trim (s) { return (s.charAt(0) == '#') ? s.substring(1, 7) : s }
+
+/* Convert a hex string to an RGB triplet */
+function convertToRGB (hex) {
+	var color = [];
+	color[0] = parseInt ((trim(hex)).substring (0, 2), 16);
+	color[1] = parseInt ((trim(hex)).substring (2, 4), 16);
+	color[2] = parseInt ((trim(hex)).substring (4, 6), 16);
+	return color;
+}
+
+function generateColor(colorStart,colorEnd,colorCount){
+	// The beginning of gradient
+	var start = convertToRGB (colorStart);    
+
+	// The end of gradient
+	var end   = convertToRGB (colorEnd);    
+
+	// The number of colors to compute
+	var len = colorCount;
+
+	//Alpha blending amount
+	var alpha = 0.0;
+
+	var colors = [];
+
+	for (i = 0; i < len; i++) {
+		var c = [];
+		alpha += (1.0/len);
+
+		c[0] = start[0] * alpha + (1 - alpha) * end[0];
+		c[1] = start[1] * alpha + (1 - alpha) * end[1];
+		c[2] = start[2] * alpha + (1 - alpha) * end[2];
+
+		colors.push(c);
+	}
+
+	return colors;
+
+}
+  
 
 function handleCheckboxClick(checkboxId, bodyName){
 	let checked = document.getElementById(checkboxId).checked;
