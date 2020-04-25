@@ -72,8 +72,8 @@
     <body>
         <!-- Main menu div -->
         <div id="menu">
-            <button class="openbtn" id="openbtn" onclick="openNav1()">Bodies</button>
-            <button class="Ropenbtn" id="Ropenbtn" onclick="openNav2()">Settings</button>
+            <button class="openbtn" id="openbtn" onclick="openNav1()">Available Bodies</button>
+            <button class="Ropenbtn" id="Ropenbtn" onclick="openNav2()">Time Controls</button>
 
             <!-- Comments, maybe depreciated
               <form class="form" id="newSimForm">
@@ -103,140 +103,12 @@
                 <a href="javascript:void(0)" class="closebtn" onclick="closeNav1()">&minus;</a>
                 <h3> Visible Bodies</h3>
               </div>
-              <div id="content1" class="content1">
-
-                <div id="Sun-box" class="body-box">
-                  <div class="checkbox_and_label" id= "Sun">
-                    <input type="checkbox" id="Sun-body" name="Sun-body" value="Sun">
-                    <label for="Sun-body">Sun</label><br>
-                  </div>
-                </div>
-
-                <div id="Mercury-box" class="body-box">
-                  <div class="checkbox_and_label" id="Mercury">
-                    <input type="checkbox" id="Mercury-body" name="Mercury-body" value="Mercury">
-                    <label for="Mercury-body">Mercury</label><br>
-                  </div>
-                  <div id="nestedMercury" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Asteroids-1">
-                      <input type="checkbox" id="Asteroids-body-1" name="Asteroids-body-1" value="Asteroids-1">
-                      <label for="Asteroids-body-1">Asteroids</label><br>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="Venus-box" class="body-box">
-                  <div class="checkbox_and_label" id="Venus">
-                    <input type="checkbox" id="Venus-body" name="Venus-body" value="Venus">
-                    <label for="Venus-body">Venus</label><br>
-                  </div>
-                  <div id="nestedVenus" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Asteroids-2">
-                      <input type="checkbox" id="Asteroids-body-2" name="Asteroids-body-2" value="Asteroids-2">
-                      <label for="Asteroids-body-2">Asteroids</label><br>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="Earth-box" class="body-box">
-                  <div class="checkbox_and_label" id="Earth">
-                    <input type="checkbox" id="Earth-body" name="Earth-body" value="Earth">
-                    <label for="Earth-body">Earth</label><br>
-                  </div>
-                  <div id="nestedEarth" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Moon">
-                      <input type="checkbox" id="Moon-body" name="Moon-body" value="Moon">
-                      <label for="Moon-body">Moon</label><br>
-                    </div>
-                    <div class="checkbox_and_label" id="Hubble">
-                      <input type="checkbox" id="Hubble-body" name="Hubble-body" value="Hubble">
-                      <label for="Hubble-body">Hubble</label><br>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="Mars-box" class="body-box">
-                  <div class="checkbox_and_label" id="Mars">
-                    <input type="checkbox" id="Mars-body" name="Mars-body" value="Mars">
-                    <label for="Mars-body">Mars</label><br>
-                  </div>
-                  <div id="nestedMars" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Asteroids-3">
-                      <input type="checkbox" id="Asteroids-body-3" name="Asteroids-body-3" value="Asteroids-3">
-                      <label for="Asteroids-body-3">Asteroids</label><br>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="Jupiter-box" class="body-box">
-                  <div class="checkbox_and_label" id="Jupiter">
-                    <input type="checkbox" id="Jupiter-body" name="Jupiter-body" value="Jupiter">
-                    <label for="Jupiter-body">Jupiter</label><br>
-                  </div>
-                  <div id="nestedJupiter" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Asteroids-4">
-                      <input type="checkbox" id="Asteroids-body-4" name="Asteroids-body-4" value="Asteroids-4">
-                      <label for="Asteroids-body-4">Asteroids</label><br>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="Saturn-box" class="body-box">
-                  <div class="checkbox_and_label" id="Saturn">
-                    <input type="checkbox" id="Saturn-body" name="Saturn-body" value="Saturn">
-                    <label for="Saturn-body">Saturn</label><br>
-                  </div>
-                  <div id="nestedSaturn" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Asteroids-5">
-                      <input type="checkbox" id="Asteroids-body-5" name="Asteroids-body-5" value="Asteroids-5">
-                      <label for="Asteroids-body-5">Asteroids</label><br>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="Uranus-box" class="body-box">
-                  <div class="checkbox_and_label" id="Uranus">
-                    <input type="checkbox" id="Uranus-body" name="Uranus-body" value="Uranus">
-                    <label for="Uranus-body">Uranus</label><br>
-                  </div>
-                  <div id="nestedUranus" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Asteroids-6">
-                      <input type="checkbox" id="Asteroids-body-6" name="Asteroids-body-6" value="Asteroids-6">
-                      <label for="Asteroids-body-6">Asteroids</label><br>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="Neptune-box" class="body-box">
-                  <div class="checkbox_and_label" id="Neptune">
-                    <input type="checkbox" id="Neptune-body" name="Neptune-body" value="Neptune">
-                    <label for="Neptune-body">Neptune</label><br>
-                  </div>
-                  <div id="nestedNeptune" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Asteroids-7">
-                      <input type="checkbox" id="Asteroids-body-7" name="Asteroids-body-7" value="Asteroids-7">
-                      <label for="Asteroids-body-7">Asteroids</label><br>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="Pluto-box" class="body-box">
-                  <div class="checkbox_and_label" id="Pluto">
-                    <input type="checkbox" id="Pluto-body" name="Pluto-body" value="Pluto">
-                    <label for="Pluto-body">Pluto</label><br>
-                  </div>
-                  <div id="nestedPluto" style="display:none" class="nested_list">
-                    <div class="checkbox_and_label" id="Asteroids-8">
-                      <input type="checkbox" id="Asteroids-body-8" name="Asteroids-body-8" value="Asteroids-8">
-                      <label for="Asteroids-body-8">Asteroids</label><br>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <!-- content1 div will contain the nested dropdown checklist, contents are generated by solarSystem.js -->
+              <div id="content1" class="content1"></div>
                 <button id="kernel" onclick="openForm3()">Upload New SPK Kernel</button>
                 <form class="form" id="myForm" enctype="multipart/form-data">Choose the file: <input type="file" name="file"/><BR>
                 <input type="submit" value="Upload" id="submit_SPK"/>
-        </form>
+                </form>
             </div>
     
             <div id="mySidebar2" class="Rsidebar">
@@ -357,39 +229,9 @@
         
         <script src="/js/solarSystem.js"></script>
         <script type="text/javascript">
-    //functions of the nested checkboxes under each planet
-          $('#Mercury-body').change(function() {
-              $('#nestedMercury').toggle();
-          });
-          $('#Venus-body').change(function() {
-              $('#nestedVenus').toggle();
-          });
-          $('#Earth-body').change(function() {
-              $('#nestedEarth').toggle();
-          });
-          $('#Mars-body').change(function() {
-              $('#nestedMars').toggle();
-          });
-          $('#Jupiter-body').change(function() {
-              $('#nestedJupiter').toggle();
-          });
-          $('#Saturn-body').change(function() {
-              $('#nestedSaturn').toggle();
-          });
-          $('#Uranus-body').change(function() {
-              $('#nestedUranus').toggle();
-          });
-          $('#Neptune-body').change(function() {
-              $('#nestedNeptune').toggle();
-          });
-          $('#Pluto-body').change(function() {
-              $('#nestedPluto').toggle();
-          });
-          function test() {
-            alert("Clicked");
-          }
+          //functions to open and close the two side menus
           function openNav1() {
-            document.getElementById("mySidebar1").style.width = "180px";
+            document.getElementById("mySidebar1").style.width = "200px";
             //document.getElementById("main").style.marginLeft = "250px";
             document.getElementById("openbtn").style.display = "none";
             //document.getElementById("Ropenbtn").style.top = "40%";
@@ -401,7 +243,7 @@
             //document.getElementById("Ropenbtn").style.top = "50px";
           };
           function openNav2() {
-            document.getElementById("mySidebar2").style.width = "180px";
+            document.getElementById("mySidebar2").style.width = "200px";
             //document.getElementById("main").style.marginLeft = "250px";
             document.getElementById("Ropenbtn").style.display = "none";
           };
@@ -410,43 +252,8 @@
             //document.getElementById("main").style.marginLeft = "0px";
             document.getElementById("Ropenbtn").style.display = "block";
           };
-          // function showNested() {
-          //   alert("Clicked");
-          // };
-
-          function hideContextMenu() {
-            let contextMenu = document.getElementsByClassName("context-menu")[0];
-              contextMenu.style.display = "none";
-          }
-          /*
-          The function below creates a new event listener to display a context menu when the user right clicks an option in the visible body list
-          */
-          (function(){
-            let boxes = document.querySelectorAll(".checkbox_and_label");
-            boxes.forEach(function(item){
-              let itemID = item.id;
-              item.addEventListener("contextmenu" , function(e){
-                e.preventDefault();
-                let contextMenu = document.getElementsByClassName("context-menu")[0];
-                contextMenu.style.top = e.clientY + "px";
-                contextMenu.style.left = e.clientX + "px";
-                contextMenu.style.display = "block";
-                contextMenu.id = itemID + "-context-menu";
-                contextMenu.name = itemID;
-              });
-            });
-          })();
-          /*
-          This function creates an event listener that will activate when the checkbox is checked, which will hide bodies
-          */
-          (function(){
-            let checkbox = document.getElementById("toggleView");
-            checkbox.addEventListener("change" , function(){
-              console.log(checkbox.checked);
-              hideContextMenu();
-              //Todo, add functionality to hide bodies
-            });
-          })();
+          openNav1();
+          openNav2();
       </script>
         
     </body>
