@@ -148,6 +148,7 @@ input[type="text"]::placeholder {
   background: white;
   width: inherit;
   max-height: fit-content;
+  z-index: 2;
 }
 
 .selectBox {
@@ -209,7 +210,7 @@ input.readonly {
   background-color: lightgrey; /* Black*/
   overflow-x: hidden; /* Disable horizontal scroll */
   transition: 0.5s; /* 0.5 second transition effect to slide in the sidebar */
-  border-radius: 20px;
+  border-radius: 10px;
   z-index: 0;
 }
 
@@ -224,7 +225,7 @@ input.readonly {
   background-color: lightgrey; /* Black*/
   overflow-x: hidden; /* Disable horizontal scroll */
   transition: 0.5s; /* 0.5 second transition effect to slide in the sidebar */
-  border-radius: 20px;
+  border-radius: 10px;
   float: left;
   text-align: left;
 }
@@ -585,10 +586,11 @@ button {
 
 #error-console {
   position: absolute;
+  color: #060606;
   bottom: 10px;
-  left: 1100px;
+  right: 0px;
   width: 160px;
   height: 110px;
   overflow: scroll;
-  opacity: 0.7;
+  /*opacity: 0.7;*/
 }

@@ -48,6 +48,7 @@
             } 
 
             function openForm3() {
+              console.log(document.getElementById("myForm"));
               document.getElementById("myForm").style.display = "block";
               viz.stop();
               if(viz1){
@@ -218,6 +219,10 @@
 
             </div>
         </div>
+        <button id="kernel" onclick="openForm3()">Upload New SPK Kernel</button>
+                <form class="form" id="myForm" enctype="multipart/form-data">Choose the file: <input type="file" name="file"/><BR>
+                <input type="submit" value="Upload" id="submit_SPK"/>
+                </form>
 
        <!--  <div id="comparison1">
             
