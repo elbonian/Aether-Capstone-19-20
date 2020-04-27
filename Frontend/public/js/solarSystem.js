@@ -929,7 +929,7 @@ let body_textures = {
 	"saturn" : '/js/textures/2k_saturn.jpg',
 	"uranus" : '/js/textures/2k_uranus.jpg',
 	"neptune" : '/js/textures/2k_neptune.jpg',
-	"pluto" : '/js/textures/plu0rss1.jpg',
+	"pluto" : '/js/textures/plutomap2k.jpg',
 	"moon" : '/js/textures/2k_moon.jpg',
 };
 
