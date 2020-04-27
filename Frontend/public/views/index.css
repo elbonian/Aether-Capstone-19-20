@@ -576,9 +576,23 @@ button {
 #error-console {
   position: absolute;
   bottom: 10px;
-  left: 1100px;
+  right: 10px;
   width: 160px;
   height: 110px;
-  overflow: scroll;
+  /* overflow: scroll; */
   opacity: 0.7;
+  overflow-x: hidden;
+  overflow-y: auto;
+  right: 10px;
+}
+
+.info_panel {
+  width: 177px;
+  height: 200px;
+  position: fixed;
+  background-color: lightgray;
+  top: calc(50% - 100px);
+  right: 0;
+  border-radius: 10px;
+  text-align: center;
 }

@@ -1412,6 +1412,23 @@ function runApp(){
 	    ZoomToBody(bodyName);
 	});
 
+	document.getElementById("infoButton").addEventListener("click", function(){
+		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
+		hideContextMenu();
+		displayBodyInfo(bodyName);
+	});
+
+	function displayBodyInfo(name){
+		let info_panel = document.getElementById("info_panel1");
+		let children = info_panel.children;
+		for(let x = 0; x < children.length; x ++){
+			children.item(x).remove();
+		}
+		let title = document.createElement("H1");
+		title.innerText = name;
+		info_panel.appendChild(title);
+	}
+
 	function ZoomToBody(body){
 		viz.getViewer().followObject(visualizer_list[body] , [0, 0, 0]);
 		viz.getViewer().get3jsCamera().zoom = 10;
