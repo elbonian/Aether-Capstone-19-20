@@ -929,7 +929,7 @@ let body_textures = {
 	"saturn" : '/js/textures/2k_saturn.jpg',
 	"uranus" : '/js/textures/2k_uranus.jpg',
 	"neptune" : '/js/textures/2k_neptune.jpg',
-	"pluto" : '/js/textures/plu0rss1.jpg',
+	"pluto" : '/js/textures/plutomap2k.jpg',
 	"moon" : '/js/textures/2k_moon.jpg',
 };
 
@@ -1640,6 +1640,23 @@ function runApp(){
 		}
 		console.log(input);
 	});
+
+	document.getElementById("infoButton").addEventListener("click", function(){
+		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
+		hideContextMenu();
+		displayBodyInfo(bodyName);
+	});
+
+	function displayBodyInfo(name){
+		let info_panel = document.getElementById("info_panel1");
+		let children = info_panel.children;
+		for(let x = 0; x < children.length; x ++){
+			children.item(x).remove();
+		}
+		let title = document.createElement("H1");
+		title.innerText = name;
+		info_panel.appendChild(title);
+	}
 
 	document.getElementById("zoomToBody").addEventListener("click" , function(){
 		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
