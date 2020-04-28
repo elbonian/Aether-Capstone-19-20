@@ -1650,12 +1650,14 @@ function runApp(){
 	function displayBodyInfo(name){
 		let info_panel = document.getElementById("info_panel1");
 		let children = info_panel.children;
-		for(let x = 0; x < children.length; x ++){
-			children.item(x).remove();
-		}
+		while(children.length != 0) children.item(0).remove();
 		let title = document.createElement("H1");
 		title.innerText = name;
 		info_panel.appendChild(title);
+		let radius = Spacekit.auToKm(visualizer_list[name].radius).toFixed(2);
+		let radiusE = document.createElement("H3");
+		radiusE.innerText = "Radius: " + radius + "km";
+		info_panel.appendChild(radiusE);
 	}
 
 	document.getElementById("zoomToBody").addEventListener("click" , function(){
