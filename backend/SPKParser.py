@@ -70,7 +70,14 @@ class SPKParser:
                 # time_start = datetime.strptime(line[:24], "%Y %b %d %H:%M:%S.%f").strftime("%Y-%m-%d %H:%M:%S.%f")
                 # time_end = datetime.strptime(line[-24:], "%Y %b %d %H:%M:%S.%f").strftime("%Y-%m-%d %H:%M:%S.%f")
                 # results.append({'bodies': bodies, 'time_start':time_start[:-3], 'time_end':time_end[:-3]})
-                results.append({ 'bodies': bodies, 'time_start': line[:24], 'time_end': line[-24:] })
+                
+                                
+                # B.C. Check
+                time_start = line[:24] if not 'B.C.' in line[:30] else '0001 JAN 01 00:00:00.000'                    
+                time_end = line[-24:] if 'B.C.' not in line[-30:] else '0001 Dec 31 00:00:00.000'
+                
+                results.append({ 'bodies': bodies, 'time_start': time_start, 'time_end': time_end })
+    
                 bodies = []
 
         return results
