@@ -1649,6 +1649,7 @@ function runApp(){
 
 	function displayBodyInfo(name){
 		let info_panel = document.getElementById("info_panel1");
+		info_panel.style.display = "block";
 		let children = info_panel.children;
 		while(children.length != 0) children.item(0).remove();
 		let title = document.createElement("H1");
@@ -1658,6 +1659,14 @@ function runApp(){
 		let radiusE = document.createElement("H3");
 		radiusE.innerText = "Radius: " + radius + "km";
 		info_panel.appendChild(radiusE);
+		let closebtn = document.createElement("button");
+		closebtn.id = "info_close";
+		closebtn.innerText = "\x2D";
+		closebtn.style.display = "block";
+		closebtn.addEventListener("click", function() {
+			document.getElementById("info_panel1").style.display = "none";
+		})
+		info_panel.appendChild(closebtn);
 	}
 
 	document.getElementById("zoomToBody").addEventListener("click" , function(){

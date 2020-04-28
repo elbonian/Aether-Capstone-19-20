@@ -270,6 +270,20 @@ input.readonly {
   float: right;
 }
 
+.info_panel #info_close {
+  position: absolute;
+  font-size: 2.3em;
+  float: left;
+  cursor: pointer;
+  top: 0;
+  background: none;
+  border: none;
+  width: 40px;
+  height: 40px;
+  margin: 1px;
+  padding: 0px;
+}
+
 /*Container for the Title and close button of the Bodies menu*/
 #topOfSidebar{
   position: relative;
@@ -606,4 +620,5 @@ button {
   right: 0;
   border-radius: 10px;
   text-align: center;
+  /* cursor: pointer; */
 }
