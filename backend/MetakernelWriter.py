@@ -11,14 +11,14 @@ class MetakernelWriter:
 
         kernel_paths_to_write = list()
 
-        valid_kernel_extensions = ('.bsp', '.bpc', '.tls', '.tpc')
+        valid_kernel_extensions = ('bsp', 'bpc', 'tls', 'tpc', 'tf')
 
         # traverse default kernels directory and add each path to the list
         for root, dirs, files in os.walk('./SPICE/kernels/default/', topdown=True):
             for name in files:
                 kern_path = os.path.join(root, name)
 
-                if kern_path[-4:] in valid_kernel_extensions:
+                if kern_path.split('.')[-1] in valid_kernel_extensions:
                     # add single quotes around path and comma at the end so that it gets written to file correctly
                     kernel_paths_to_write.append("'" + kern_path + "',\n")
 
@@ -26,7 +26,7 @@ class MetakernelWriter:
         for root, dirs, files in os.walk('./SPICE/kernels/user_uploaded/', topdown=True):
             for name in files:
                 kern_path = os.path.join(root, name)
-                if kern_path[-4:] in valid_kernel_extensions:
+                if kern_path.split('.')[-1] in valid_kernel_extensions:
                     kernel_paths_to_write.append("'" + kern_path + "',\n")
 
         # remove the comma from the end of the last kernel path and change it to a ) instead

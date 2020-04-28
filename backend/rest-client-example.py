@@ -2,6 +2,7 @@ import requests
 import json
 import argparse
 from pprint import pprint
+import time
 
 
 def get_solar_target_positions(ip, ref_frame, target_list, startDate, endDate, steps_list):
@@ -20,9 +21,9 @@ def get_solar_target_positions(ip, ref_frame, target_list, startDate, endDate, s
 	return response, json.loads(response.text)
 
 
-def get_dropdown_bodies(ip):
+def get_body_info(ip):
 
-	addr = 'http://{}:5000/api/body-list/'.format(ip)
+	addr = 'http://{}:5000/api/available-bodies/'.format(ip)
 
 	# make the request and get the response
 	response = requests.get(addr)
@@ -75,22 +76,28 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	pprint("Response: {}".format(get_solar_target_positions(args.ip, ref_frame, target_list, args.start_date_time, args.end_date_time, steps_list)))
-	print('-------------------------------------------------')
-	ddown_resp = get_dropdown_bodies(args.ip)
-	print("Response:", ddown_resp[0])
-	pprint(ddown_resp[1])
+	# print('-------------------------------------------------')
+	time_start = time.time()
 
-	valid_targets = ['SUN', 'MERCURY', 'VENUS', 'MOON', 'EARTH', 'IO', 'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA',
-					 'THEBE', 'ADRASTEA', 'METIS', 'JUPITER', 'PHOBOS', 'DEIMOS', 'MARS', 'TRITON', 'NEREID', 'PROTEUS',
-					 'NEPTUNE', 'CHARON', 'NIX', 'HYDRA','KERBEROS', 'STYX', 'PLUTO', 'MIMAS', 'ENCELADUS', 'TETHYS',
-					 'DIONE', 'RHEA', 'TITAN', 'HYPERION', 'IAPETUS', 'PHOEBE', 'HELENE', 'TELESTO', 'CALYPSO', 'METHONE',
-					 'POLYDEUCES', 'SATURN', 'ARIEL', 'UMBRIEL', 'TITANIA', 'OBERON', 'MIRANDA', 'URANUS']
+	bod_info_resp = get_body_info(args.ip)
 
-	radii_resp = get_radius(args.ip, valid_targets)
-	print("Response:", radii_resp[0])
-	pprint(radii_resp[1])
+	time_end = time.time()
+	print("Response:", bod_info_resp[0])
+	pprint(bod_info_resp[1])
 
-	rotation_resp = get_rotation_info(args.ip, valid_targets)
-	print("Response:", rotation_resp[0])
-	pprint(rotation_resp[1])
+	print("Time taken:", time_end - time_start)
+	#
+	# valid_targets = ['SUN', 'MERCURY', 'VENUS', 'MOON', 'EARTH', 'IO', 'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA',
+	# 				 'THEBE', 'ADRASTEA', 'METIS', 'JUPITER', 'PHOBOS', 'DEIMOS', 'MARS', 'TRITON', 'NEREID', 'PROTEUS',
+	# 				 'NEPTUNE', 'CHARON', 'NIX', 'HYDRA','KERBEROS', 'STYX', 'PLUTO', 'MIMAS', 'ENCELADUS', 'TETHYS',
+	# 				 'DIONE', 'RHEA', 'TITAN', 'HYPERION', 'IAPETUS', 'PHOEBE', 'HELENE', 'TELESTO', 'CALYPSO', 'METHONE',
+	# 				 'POLYDEUCES', 'SATURN', 'ARIEL', 'UMBRIEL', 'TITANIA', 'OBERON', 'MIRANDA', 'URANUS']
+	#
+	# radii_resp = get_radius(args.ip, valid_targets)
+	# print("Response:", radii_resp[0])
+	# pprint(radii_resp[1])
+	#
+	# rotation_resp = get_rotation_info(args.ip, valid_targets)
+	# print("Response:", rotation_resp[0])
+	# pprint(rotation_resp[1])
 

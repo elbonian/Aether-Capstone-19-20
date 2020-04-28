@@ -7,14 +7,13 @@ from werkzeug.utils import secure_filename
 import jsonpickle
 from signal import signal, SIGINT
 import re
-# import numpy as np
+import numpy as np
 import spiceypy as spice
 from flask_cors import CORS
-from db_connect import Database
-# from SPKParser import SPKParser
+from datetime import datetime, timedelta
 from AetherBodies import AetherBodies
 from MetakernelWriter import MetakernelWriter
-# from os import stat
+
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -28,6 +27,114 @@ def exitNicely(sig, frame):
     exit(0)
 
 
+def get_min_max_speed(bod_id, time_range_list):
+
+    #   For each body
+    #       For each time range
+    #           Do a uniform sample within the time range
+    #           For each time in the sample, create another time 1 minute after
+    #           Get positions for each time tuple from the sample and figure out the speed based on 1 minute offset
+    #       Get the min and max speeds across all time ranges for the body
+
+    speed_list = list()
+
+    # TODO: change this to iterate over each time range once time range merging is implemented
+    for time_tupe in time_range_list[0:1]:
+        # start - end results in a timedelta object
+        try:
+            t_start = datetime.strptime(time_tupe[0], "%Y-%m-%d %H:%M:%S.%f")
+        except ValueError:
+            # handle B.C. dates... This could be a lot more elegant
+            t_start = datetime(year=1, month=1, day=1)
+
+        t_end = datetime.strptime(time_tupe[1], "%Y-%m-%d %H:%M:%S.%f")
+
+        t_delta_minutes = int((t_end - t_start).total_seconds() // 60)
+
+        # print(t_delta_minutes)
+        # print(bod_id)
+
+        # uniformly sample 10 offsets from the range
+        sampled_offsets = list(range(0, t_delta_minutes - 1, (t_delta_minutes - 1) // 9))
+
+        for offset in sampled_offsets:
+            etStart = spice.datetime2et(t_start + timedelta(seconds=offset))
+            # generate an end time that is 1 minute after the start
+            etEnd = spice.datetime2et(t_start + timedelta(seconds=offset + 60))
+
+            target_positions, _ = spice.spkpos(bod_id, [etStart, etEnd], 'J2000', 'NONE', 'solar system barycenter')
+
+            # logic from: https://stackoverflow.com/questions/20184992/
+            squared_dist = np.sum((target_positions[1] - target_positions[0]) ** 2, axis=0)
+            # dist is in km -- distance traveled by obj in one minute
+            dist = np.sqrt(squared_dist)
+
+            # dist in km traveled in one minute. Divide by 60 to get km/sec
+            speed = dist / 60
+
+            speed_list.append(speed)
+
+    return float(np.min(speed_list)), float(np.max(speed_list))
+
+
+def get_radius(bod_id):
+    try:
+        return spice.bodvrd(bod_id, "RADII", 3)[1].tolist()
+    # This should never be hit, but just in case...
+    except:
+        return "NO RADIUS DATA AVAILABLE"
+
+
+def get_rotation_data(bod_id, bod_name):
+
+    try:
+        target_RA_all = spice.bodvrd(bod_id, "POLE_RA", 3)[1].tolist()
+        target_DEC_all = spice.bodvrd(bod_id, "POLE_DEC", 3)[1].tolist()
+        target_PM_all = spice.bodvrd(bod_id, "PM", 3)[1].tolist()
+
+        target_RA_j2000 = target_RA_all[0]
+        target_DEC_j2000 = target_DEC_all[0]
+        target_PM_j2000 = target_PM_all[0]
+
+        # Get right ascension and declination polynomial coefficients
+        target_RA_delta = target_RA_all[1]
+        target_DEC_delta = target_DEC_all[1]
+        target_PM_delta = target_PM_all[1]
+
+        ret_dict = {
+            "ra": target_RA_j2000,
+            "ra_delta": target_RA_delta,
+            "dec": target_DEC_j2000,
+            "dec_delta": target_DEC_delta,
+            "pm": target_PM_j2000,
+            "pm_delta": target_PM_delta
+        }
+    # this except should never be hit, but just in case...
+    except:
+        ret_dict = "NO ROTATION DATA AVAILABLE"
+        return ret_dict
+
+    # get NUT_PREC_RA, NUT_PREC_DEC and NUT_PREC_ANGLES
+    try:
+        target_NUT_PREC_RA = spice.bodvrd(bod_id, "NUT_PREC_RA", 20)
+        target_NUT_PREC_DEC = spice.bodvrd(bod_id, "NUT_PREC_DEC", 20)
+
+        ret_dict['nut_prec_ra'] = target_NUT_PREC_RA[1].tolist()[:target_NUT_PREC_RA[0]]
+        ret_dict['nut_prec_dec'] = target_NUT_PREC_DEC[1].tolist()[:target_NUT_PREC_DEC[0]]
+
+        try:
+            target_NUT_PREC_ANGLES = spice.bodvrd(bod_name + " BARYCENTER", "NUT_PREC_ANGLES", 72)
+            ret_dict['nut_prec_angles'] = target_NUT_PREC_ANGLES[1].tolist()[:target_NUT_PREC_ANGLES[0]]
+        # the case where there are no nutation-precession angles for the body
+        except:
+            pass
+    # the case where there is no nutation-precession info for the body -- go on to the next loop iteration
+    except:
+        pass
+
+    return ret_dict
+
+
 def returnResponse(response, status):
     response_pickled = jsonpickle.encode(response)
 
@@ -36,14 +143,6 @@ def returnResponse(response, status):
 
 @app.route('/api/positions2/<string:ref_frame>/<string:targets>/<string:curVizJd>/<string:curVizJdDelta>/<string:tailLenJd>/<int:validSeconds>', methods=['GET'])
 def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd, validSeconds):
-    # valid_targets = ('solar system barycenter', 'sun', 'mercury barycenter', 'mercury', 'venus barycenter', 'venus',
-    #                  'earth barycenter', 'mars barycenter', 'jupiter barycenter', 'saturn barycenter',
-    #                  'uranus barycenter', 'neptune barycenter', 'pluto barycenter', 'earth', 'moon', 'mars', 'phobos',
-    #                  'deimos', 'jupiter', 'io', 'europa', 'ganymede', 'callisto', 'amalthea', 'thebe', 'adrastea',
-    #                  'metis', 'saturn', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'iapetus',
-    #                  'phoebe', 'helene', 'telesto', 'calypso', 'methone', 'polydeuces', 'uranus', 'ariel', 'umbriel',
-    #                  'titania', 'oberon', 'miranda', 'neptune', 'triton', 'nereid', 'proteus', 'pluto', 'charon', 'nix',
-    #                  'hydra', 'kerberos', 'styx', '-31', '-32')
 
     # convert string of targets into a list -- ensure lower case for consistency
     targets_list = [target.lower() for target in targets.split('+')]
@@ -79,10 +178,6 @@ def get_object_positions2(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd
     # Convert back to string and add 'jd ' to the front for SPICE
     startDate = 'jd ' + str(jd_start)
     # endDate = 'jd ' + str(jd_end)
-
-    # TODO: put this outside the function so that it does not execute on every api call
-    # load the kernels
-    # spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
 
     # ----- REMEMBER: ET (ephemeris time) is simply seconds past J2000 epoch. J2000 epoch is JD 2451545.0 -----
 
@@ -226,65 +321,108 @@ def get_object_positions(ref_frame, targets, startDate, endDate, steps):
     return returnResponse(response_data, 200)
 
 
-# TODO: cookies?
-@app.route('/api/body-list/', methods=['GET'])
-def get_available_bodies():
-    top_level_dropdown_elems = ('mercury', 'venus', 'earth', 'mars', 'asteroids', 'jupiter', 'saturn', 'uranus',
-                                'neptune', 'pluto')
-
-    db = Database('aether_backend_data.db')
-
-    results = {
-        'SUN': {}
-    }
-
-    for elem in top_level_dropdown_elems:
-
-        # convert to upper case since DB values are all upper case # todo consider changing set so this isn't needed
-        elem = elem.upper()
-
-        if elem != 'ASTEROIDS':
-
-            # group by name to remove duplicates
-            sql = "SELECT name FROM Body WHERE wrt LIKE '{}%' GROUP BY name".format(elem)
-
-            query_res = db.executeQuery(sql, variables=[])
-
-            body_list = [body['name'] for body in query_res]
-
-            results[elem] = {}
-
-            for body in body_list:
-                # make sure we're not searching for sub-bodies in a circle
-                if body != elem:
-                    sql = "SELECT name FROM Body WHERE wrt LIKE '{}%' GROUP BY name".format(body)
-                    query_res = db.executeQuery(sql, variables=[])
-                    sub_body_list = [sub_body['name'] for sub_body in query_res]
-                    results[elem][body] = {}
-                    for sub_body in sub_body_list:
-                        results[elem][body][sub_body] = {}
-        else:
-            sql = "SELECT name FROM Body WHERE path = ? GROUP BY name"
-
-            query_res = db.executeQuery(sql, variables=['SPICE/kernels/Sun/codes_300ast_20100725.bsp'])
-
-            body_list = [body['name'] for body in query_res]
-
-            results[elem] = {}
-
-            for body in body_list:
-                results[elem][body] = {}
-
-    db.closeDatabase()
-
-    return returnResponse(results, 200)
-
 @app.route('/api/available-bodies/', methods=['GET'])
 def get_available_bodies2():
-    return returnResponse(aether_bodies.getBodies(), 200)
+
+    known_bodies = aether_bodies.getBodies()
+
+    # TODO: mass
+    # get rotation, mass, radius, min-max speeds for each body
+    # print(len(known_bodies))
+
+    for bod_dict in known_bodies:
+
+        # print(bod_dict)
+
+        bod_id = str(bod_dict['spice id'])
+
+        min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'])
+        bod_dict['min speed'] = min_max_speeds[0]
+        bod_dict['max speed'] = min_max_speeds[1]
+
+        if bod_dict['has radius data']:
+            bod_dict['radius'] = get_radius(bod_id)
+
+        if bod_dict['has rotation data']:
+            bod_dict['rotation data'] = get_rotation_data(bod_id, bod_dict['body name'])
+
+    return returnResponse(known_bodies, 200)
 
 
-# consider changing name to get-body-radius and refactoring
+@app.route('/api/spk-upload', methods=['POST'])
+def spk_upload():
+    global aether_bodies
+
+    spk_extension = '.bsp'
+
+    # check if the post request has the file part
+    if 'file' not in request.files:
+        return returnResponse({'error': 'No file part in the request.'}, 400)
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return returnResponse({'error': 'No file selected for uploading'}, 400)
+
+    filename = secure_filename(file.filename)
+
+    if not filename.endswith(spk_extension):
+
+        return returnResponse({'error': 'Only .bsp files are allowed.'})
+
+    else:
+
+        file_path = 'SPICE/kernels/user_uploaded/' + filename
+
+        file.save(file_path)
+
+        # spk_parser = SPKParser()
+        #
+        # # TODO: wrap this in a try-except and have the parser class raise an exception if the file is bad
+        # uploaded_spk_info = spk_parser.parse(file_path)
+        # # keys: bodies -> [(body name, wrt, naif id)], start_date, end_date
+        #
+        # spk_size_bytes = stat(file_path).st_size
+        #
+        # db = Database('aether_backend_data.db')
+        #
+        # sql = "INSERT INTO Kernel (path, start_date, end_date, size) VALUES (?, ?, ?, ?)"
+        #
+        # db.executeNonQuery(sql, variables=[file_path, uploaded_spk_info['time_start'], uploaded_spk_info['time_end'],
+        #                                    spk_size_bytes])
+        #
+        # for body_tuple in uploaded_spk_info['bodies']:
+        #     sql = "INSERT INTO Body (path, name, wrt, naif_id) VALUES (?, ?, ?, ?)"
+        #
+        #     db.executeNonQuery(sql, variables=[file_path, body_tuple[0], body_tuple[1], body_tuple[2]])
+        #
+        # db.closeDatabase()
+
+        new_bodies = aether_bodies.addFromKernel(file_path, returnNewBodies=True)
+
+        for bod_dict in new_bodies:
+
+            bod_id = str(bod_dict['spice id'])
+
+            min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'])
+            bod_dict['min speed'] = min_max_speeds[0]
+            bod_dict['max speed'] = min_max_speeds[1]
+
+            if bod_dict['has radius data']:
+                bod_dict['radius'] = get_radius(bod_id)
+
+            if bod_dict['has rotation data']:
+                bod_dict['rotation data'] = get_rotation_data(bod_id, bod_dict['body name'])
+
+        # DEBUG
+        # print(new_bodies)
+
+        spice.furnsh(file_path)
+
+        return returnResponse(new_bodies, 200)
+
+
+# TODO: remove these two endpoints
 @app.route('/api/body-radius/<string:targets>', methods=['GET'])
 def get_body_info(targets):
 
@@ -382,64 +520,6 @@ def get_object_rotation(targets):
 
     return returnResponse(response_data, 200)
 
-
-@app.route('/api/spk-upload', methods=['POST'])
-def spk_upload():
-    global aether_bodies
-
-    spk_extension = '.bsp'
-
-    # check if the post request has the file part
-    if 'file' not in request.files:
-        return returnResponse({'error': 'No file part in the request.'}, 400)
-
-    file = request.files['file']
-
-    if file.filename == '':
-        return returnResponse({'error': 'No file selected for uploading'}, 400)
-
-    filename = secure_filename(file.filename)
-
-    if not filename.endswith(spk_extension):
-
-        return returnResponse({'error': 'Only .bsp files are allowed.'})
-
-    else:
-
-        file_path = 'SPICE/kernels/user_uploaded/' + filename
-
-        file.save(file_path)
-
-        # spk_parser = SPKParser()
-        #
-        # # TODO: wrap this in a try-except and have the parser class raise an exception if the file is bad
-        # uploaded_spk_info = spk_parser.parse(file_path)
-        # # keys: bodies -> [(body name, wrt, naif id)], start_date, end_date
-        #
-        # spk_size_bytes = stat(file_path).st_size
-        #
-        # db = Database('aether_backend_data.db')
-        #
-        # sql = "INSERT INTO Kernel (path, start_date, end_date, size) VALUES (?, ?, ?, ?)"
-        #
-        # db.executeNonQuery(sql, variables=[file_path, uploaded_spk_info['time_start'], uploaded_spk_info['time_end'],
-        #                                    spk_size_bytes])
-        #
-        # for body_tuple in uploaded_spk_info['bodies']:
-        #     sql = "INSERT INTO Body (path, name, wrt, naif_id) VALUES (?, ?, ?, ?)"
-        #
-        #     db.executeNonQuery(sql, variables=[file_path, body_tuple[0], body_tuple[1], body_tuple[2]])
-        #
-        # db.closeDatabase()
-
-        new_bodies = aether_bodies.addFromKernel(file_path, returnNewBodies=True)
-
-        # DEBUG
-        # print(new_bodies)
-
-        spice.furnsh(file_path)
-
-        return returnResponse(new_bodies, 200)
 
 
 if __name__ == '__main__':

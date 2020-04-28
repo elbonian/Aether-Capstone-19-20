@@ -88,8 +88,8 @@ class AetherBodies:
                             (6, "saturn barycenter"), (7, "uranus barycenter"), (8, "neptune barycenter"),
                             (9,"pluto barycenter")]
 
-        self.no_rotation = (607, 632, 634, 802, 902, 903, 905, 905)
-        self.no_radius = (902, 903, 905, 905)
+        self.no_rotation = (607, 632, 634, 802, 902, 903, 904, 905)
+        self.no_radius = (902, 903, 904, 905)
 
         for root, dirs, files in walk('./SPICE/kernels/default/', topdown=True):
             for name in files:
@@ -139,8 +139,8 @@ class AetherBodies:
                         self.bodies[body_id] = [
                             body_tuple[0].lower(),
                             [(toDatetime(bod_group['time_start']), toDatetime(bod_group['time_end']))],
-                            body_id not in self.no_rotation,
-                            body_id not in self.no_radius,
+                            body_id not in self.no_rotation and 9 < body_id < 1000,
+                            body_id not in self.no_radius and 9 < body_id < 1000,
                             category,
                             uploaded
                         ]
