@@ -148,6 +148,7 @@ input[type="text"]::placeholder {
   background: white;
   width: inherit;
   max-height: fit-content;
+  z-index: 2;
 }
 
 .selectBox {
@@ -209,7 +210,7 @@ input.readonly {
   background-color: lightgrey; /* Black*/
   overflow-x: hidden; /* Disable horizontal scroll */
   transition: 0.5s; /* 0.5 second transition effect to slide in the sidebar */
-  border-radius: 20px;
+  border-radius: 10px;
   z-index: 0;
 }
 
@@ -224,7 +225,7 @@ input.readonly {
   background-color: lightgrey; /* Black*/
   overflow-x: hidden; /* Disable horizontal scroll */
   transition: 0.5s; /* 0.5 second transition effect to slide in the sidebar */
-  border-radius: 20px;
+  border-radius: 10px;
   float: left;
   text-align: left;
 }
@@ -267,6 +268,20 @@ input.readonly {
   top: -0.3em;
   font-size: 2.3em;
   float: right;
+}
+
+.info_panel #info_close {
+  position: absolute;
+  font-size: 2.3em;
+  float: left;
+  cursor: pointer;
+  top: 0;
+  background: none;
+  border: none;
+  width: 40px;
+  height: 40px;
+  margin: 1px;
+  padding: 0px;
 }
 
 /*Container for the Title and close button of the Bodies menu*/
@@ -586,9 +601,24 @@ button {
 #error-console {
   position: absolute;
   bottom: 10px;
-  left: 1100px;
+  right: 10px;
   width: 160px;
   height: 110px;
-  overflow: scroll;
+  /* overflow: scroll; */
   opacity: 0.7;
+  overflow-x: hidden;
+  overflow-y: auto;
+  right: 10px;
+}
+
+.info_panel {
+  width: 177px;
+  height: 200px;
+  position: fixed;
+  background-color: lightgray;
+  top: calc(50% - 100px);
+  right: 0;
+  border-radius: 10px;
+  text-align: center;
+  /* cursor: pointer; */
 }

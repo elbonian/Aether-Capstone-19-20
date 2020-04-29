@@ -770,7 +770,7 @@ var simulation_stack = []; // stack of simulations
 var viz; // pointer to active simulation
 var viz1;
 
-var togglePlay = true;
+var togglePlay = false;
 
 
 var body_meta_data = [];
@@ -956,7 +956,7 @@ let body_textures = {
 	"saturn" : '/js/textures/2k_saturn.jpg',
 	"uranus" : '/js/textures/2k_uranus.jpg',
 	"neptune" : '/js/textures/2k_neptune.jpg',
-	"pluto" : '/js/textures/plu0rss1.jpg',
+	"pluto" : '/js/textures/plutomap2k.jpg',
 	"moon" : '/js/textures/2k_moon.jpg',
 };
 
@@ -1020,9 +1020,8 @@ function createSubElements(lower_name, sublist){
 
 	// Add inner div as child of outermost div
 	planet_box_div.appendChild(body_label_div);
-
 	// If sublist has bodies in it, add sublist of bodies to outermost div
-	if(sublist.length > 0){
+	if(sublist.size > 0){
 		// Create a nested div
 		var nested_div = document.createElement("div");
 		nested_div.setAttribute("id", "nested" + name);
@@ -1033,8 +1032,11 @@ function createSubElements(lower_name, sublist){
 		planet_box_div.appendChild(nested_div);
 
 		// Iterate over bodies in sublist
-		for(var i = 0; i < sublist.length; i++){
-			const upper_name = capitalizeFirstLetter(sublist[i]);
+				//console.log(sublist.values());
+
+		for(const i of sublist.values()){
+			//console.log(i)
+			const upper_name = capitalizeFirstLetter(i);
 			// Create an inner div
 			var inner_nested_div = document.createElement("div");
 			inner_nested_div.setAttribute("id", upper_name); // IS ID OKAY?
@@ -1176,8 +1178,8 @@ sim_form.addEventListener('submit', function(e){
 	// Push the simulation on the stack
 	simulation_stack.push[new_viz];
 	viz = new_viz;
-	console.log(viz);
-	viz.start();
+	// console.log(viz);
+	// viz.start();
 	console.log(document.getElementById('main-container').children);
 });
 
@@ -1287,20 +1289,20 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 			// Mapping of planet bodies and their natural satellites
 			// i.e. categories["mars"] = ["deimos", "phobos"]
 		 	var categories = {
-		 		"sun" : [],
-		 		"mercury" : [],
-		 		"venus" : [],
-		 		"earth" : [],
-		 		"mars" : [],
-		 		"jupiter" : [],
-		 		"saturn" : [],
-		 		"uranus" : [],
-		 		"neptune" : [],
-		 		"pluto" : [],
-		 		"spacecraft": [],
-		 		"asteroid" : [],
-		 		"comet" : [],
-		 		"misc" : [],
+		 		"sun" : new Set(),
+		 		"mercury" : new Set(),
+		 		"venus" : new Set(),
+		 		"earth" : new Set(),
+		 		"mars" : new Set(),
+		 		"jupiter" : new Set(),
+		 		"saturn" : new Set(),
+		 		"uranus" : new Set(),
+		 		"neptune" : new Set(),
+		 		"pluto" : new Set(),
+		 		"spacecraft": new Set(),
+		 		"asteroid" : new Set(),
+		 		"comet" : new Set(),
+		 		"misc" : new Set(),
 		 	};
 
 		 	// Iterate over API results in order to populate the above mapping
@@ -1308,12 +1310,14 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 		 		// Prevent a planet from adding itself to its natural satellite list
 		 		// i.e. categories["mars"] = ["mars", deimos", "phobos"] would be bad
 		 		if(!(data[index]["body name"] in categories)){
-			 		categories[data[index]["category"]].push(data[index]["body name"]);
+			 		categories[data[index]["category"]].add(data[index]["body name"]);
 			 	}
 		 	}
+		 	console.log(categories);
 
 		 	// Add the html for the nested checkbox list for each overarching category of body
 		 	for(const primary_body in categories){
+
 		 		div.appendChild(createSubElements(primary_body, categories[primary_body]));
 		 	}
 		 	
@@ -1403,7 +1407,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 						"nut_prec_ra": null,
 						"nut_prec_dec": null,
 					};
-					displayError(property + " HAS " + data[property]);
+					//displayError(property + " HAS " + data[property]);
 				}
 				else{
 					rotation_data[property] = data[property]; // Keep track of rotation details
@@ -1663,6 +1667,34 @@ function runApp(){
 		}
 		console.log(input);
 	});
+
+	document.getElementById("infoButton").addEventListener("click", function(){
+		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
+		hideContextMenu();
+		displayBodyInfo(bodyName);
+	});
+
+	function displayBodyInfo(name){
+		let info_panel = document.getElementById("info_panel1");
+		info_panel.style.display = "block";
+		let children = info_panel.children;
+		while(children.length != 0) children.item(0).remove();
+		let title = document.createElement("H1");
+		title.innerText = name;
+		info_panel.appendChild(title);
+		let radius = Spacekit.auToKm(visualizer_list[name].radius).toFixed(2);
+		let radiusE = document.createElement("H3");
+		radiusE.innerText = "Radius: " + radius + "km";
+		info_panel.appendChild(radiusE);
+		let closebtn = document.createElement("button");
+		closebtn.id = "info_close";
+		closebtn.innerText = "\x2D";
+		closebtn.style.display = "block";
+		closebtn.addEventListener("click", function() {
+			document.getElementById("info_panel1").style.display = "none";
+		})
+		info_panel.appendChild(closebtn);
+	}
 
 	document.getElementById("zoomToBody").addEventListener("click" , function(){
 		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
