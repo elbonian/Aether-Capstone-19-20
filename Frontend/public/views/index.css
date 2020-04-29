@@ -278,10 +278,11 @@ input.readonly {
   top: 0;
   background: none;
   border: none;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   margin: 1px;
   padding: 0px;
+  line-height: 10px;
 }
 
 /*Container for the Title and close button of the Bodies menu*/
@@ -612,8 +613,8 @@ button {
 }
 
 .info_panel {
-  width: 177px;
-  height: 200px;
+  width: 227px;
+  height: 300px;
   position: fixed;
   background-color: lightgray;
   top: calc(50% - 100px);

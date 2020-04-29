@@ -1649,24 +1649,40 @@ function runApp(){
 
 	function displayBodyInfo(name){
 		let info_panel = document.getElementById("info_panel1");
+		let body = visualizer_list[name];
 		info_panel.style.display = "block";
+
+		//remove the children
 		let children = info_panel.children;
 		while(children.length != 0) children.item(0).remove();
+
+		//Give it a title
 		let title = document.createElement("H1");
 		title.innerText = name;
 		info_panel.appendChild(title);
-		let radius = Spacekit.auToKm(visualizer_list[name].radius).toFixed(2);
-		let radiusE = document.createElement("H3");
-		radiusE.innerText = "Radius: " + radius + "km";
+
+		//Display the Equatorial radius in Km
+		let radius = Spacekit.auToKm(body.radius).toFixed(2);
+		let radiusE = document.createElement("H4");
+		radiusE.innerText = "Equatorial Radius: " + radius + " Km";
 		info_panel.appendChild(radiusE);
+
+		//Display the polar radius in Km
+		let pradius = Spacekit.auToKm(body.radius_polar).toFixed(2);
+		let pradiusE = document.createElement("H4");
+		pradiusE.innerText = "Polar Radius: " + pradius + " Km";
+		info_panel.appendChild(pradiusE);
+
 		let closebtn = document.createElement("button");
 		closebtn.id = "info_close";
 		closebtn.innerText = "\x2D";
 		closebtn.style.display = "block";
+		closebtn.title = "close";
 		closebtn.addEventListener("click", function() {
 			document.getElementById("info_panel1").style.display = "none";
 		})
 		info_panel.appendChild(closebtn);
+		console.log(body);
 	}
 
 	document.getElementById("zoomToBody").addEventListener("click" , function(){
