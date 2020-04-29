@@ -168,20 +168,18 @@ class AetherObject extends Spacekit.SphereObject {
 		this.sprite = null;
 		this.minSpeed = null;
 		this.maxSpeed = null;
-        this.init();
+        this.initAetherObj();
 	}
 
 	/*
 	  Initialize function. Mostly the same as SphereObject with minor changes
 	*/
-	init(){
+	initAetherObj(){
         let map;
         if (this._options.textureUrl) {
           map = new Spacekit.THREE.TextureLoader().load(this._options.textureUrl);
-		  this.map = map;
 		}
-		//console.log(map);
-	 
+		this.map = map;
 		//Level of detail segments changed to (can be changed)
         const detailedObj = new Spacekit.THREE.LOD();
         const levelsOfDetail = this._options.levelsOfDetail || [
@@ -252,8 +250,9 @@ class AetherObject extends Spacekit.SphereObject {
 				else {
 					//mesh material changed to transparent and opacity to 0 to not see weird meshes
 					material = new Spacekit.THREE.MeshBasicMaterial({
-					transparent: true, 
-					opacity: 0,
+						map,
+						transparent: true, 
+						opacity: 0,
 					});
 				}
 				Object.defineProperty( material, 'needsUpdate', {
@@ -263,11 +262,10 @@ class AetherObject extends Spacekit.SphereObject {
 				const mesh = new Spacekit.THREE.Mesh(sphereGeometry, material);
 				mesh.receiveShadow = true;
 				mesh.castShadow = true;
-
 				// Change the coordinate system to have Z-axis pointed up.
 				// TODO: change mesh rotation
 				mesh.rotation.x = Math.PI / 2;
-
+				this.mesh = mesh;
 				// Show this number of segments at distance >= radii * level.radii.
 				detailedObj.addLevel(mesh, radius * level.radii);
 			}
@@ -290,7 +288,7 @@ class AetherObject extends Spacekit.SphereObject {
           this._obj.rotation.y += rad(this._options.axialTilt);
         }
      
-     
+		
         if (this._simulation) {
           // Add it all to visualization.
          this._simulation.addObject(this, false /* noUpdate */);
@@ -305,7 +303,7 @@ class AetherObject extends Spacekit.SphereObject {
 		//this.material = new Spacekit.THREE.LineBasicMaterial({color: new Spacekit.THREE.Color(0x6495ED)});
 		this.geometry.attributes['color'] = new Spacekit.THREE.BufferAttribute( this.colorGradient, 3);																				
 		this.material = new Spacekit.THREE.LineBasicMaterial({vertexColors: THREE.VertexColors});
-		//this.geometry.vertices.needsUpdate = true;
+		this.material.needsUpdate = true;
 
 		// 1D array describing the vertices of the line
 		// i.e. [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
@@ -394,7 +392,15 @@ class AetherObject extends Spacekit.SphereObject {
 		}
 		for (var i = 0; i < kmPerSecList.length; i++) {
 			var unscaled = kmPerSecList[i];
-			var scaled = scaleBetween(unscaled, 0.0, 1.0, this.minSpeed-1, this.maxSpeed+1);
+			var scaled = 0;
+			// Bodies with larger orbit will have less accurate max and min, so +/- 0.5 on scaled speed 
+			if(this.name === "saturn" || this.name === "jupiter" || this.name === "neptune" || this.name === "pluto" || this.name === "uranus"){
+				scaled = scaleBetween(unscaled, 0.0, 1.0, this.minSpeed-0.5, this.maxSpeed+0.5);
+			}
+			else{
+				scaled = scaleBetween(unscaled, 0.0, 1.0, this.minSpeed, this.maxSpeed);
+			}
+			
 			adjKmPerSec.push(parseFloat(scaled.toFixed(2)));
 		}
 		for(let i = 0; i < adjKmPerSec.length; i++){
@@ -579,12 +585,15 @@ class AetherObject extends Spacekit.SphereObject {
 		Uses this.positionVectors, this.currentIndex, and this.tailStartIndex to determine line vertices and drawRange
 	  */
 	  updateLineData(){
+		let scene = this._simulation.getScene();
+		scene.remove(this.line);
 	  	var position_array = new Float32Array( this.positionVectors.length * 3);
 
 		// create 1D array of form [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
 		this.geometry.attributes['position'] = new Spacekit.THREE.BufferAttribute( position_array, 3);
 		this.updateColorGradient();
 		this.material = new Spacekit.THREE.LineBasicMaterial({vertexColors: Spacekit.THREE.VertexColors});
+		this.material.needsUpdate = true;
 		this.geometry.attributes['color'] = new Spacekit.THREE.BufferAttribute( this.colorGradient, 3);	
 		// set drawrange to start at tailStartIndex and draw this.currIndex many vertices
 		this.geometry.setDrawRange( this.tailStartIndex, this.currIndex); // todo: might break when time rate is negative
@@ -606,9 +615,11 @@ class AetherObject extends Spacekit.SphereObject {
 		}
 
 		// add line to the scene
-		let scene = this._simulation.getScene();
+		//let scene = this._simulation.getScene();
 		// remove old line
-		scene.add(line);
+		if(!this.hidden){
+			scene.add(line);
+		}
 		this.line = line;
 		this.previousLineId = line.id;
 	  }
@@ -822,43 +833,37 @@ function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
 
 function handleCheckboxClick(checkboxId, bodyName){
 	let checked = document.getElementById(checkboxId).checked;
-	//console.log(visualizer_list);
 	let label = visualizer_list[bodyName]._label;
+	let objs = visualizer_list[bodyName].get3jsObjects();
 	if(!checked){
 		if(label != null){
 			visualizer_list[bodyName].setLabelVisibility(false);
 		}
-		//console.log(visualizer_list[i], visualizer_list[i].line);
-		//console.log(visualizer_list[bodyName], visualizer_list[bodyName].line.material);
-		//console.log(visualizer_list[bodyName]);
-		//visualizer_list[bodyName].material = false;
 		visualizer_list[bodyName].material.opacity = 0;
 		visualizer_list[bodyName].material.transparent = true;
 		visualizer_list[bodyName].material.needsUpdate = true;
-		//viz.getScene().remove(visualizer_list[bodyName].line);
-		//viz.removeObject(visualizer_list[bodyName]);
-		//viz.getScene().remove(visualizer_list[i].line);
+		objs[0].visible = false;
 		if(viz1 != null){
 			viz1.removeObject(visualizer_list[bodyName]);
 			viz1.getScene().remove(visualizer_list[bodyName].line);
-		}   
+		}
+		visualizer_list[bodyName].hidden = true;
 	} else {
 		if(label != null){
-			visualizer_list[i].setLabelVisibility(true);
+			visualizer_list[bodyName].setLabelVisibility(true);
 		}
-		//visualizer_list[bodyName].material.opacity = 1;
-		//visualizer_list[bodyName].line.material.opacity = 1;
-		//visualizer_list[bodyName].line.material.transparent = false;
 		visualizer_list[bodyName].material.opacity = 1;
 		visualizer_list[bodyName].material.transparent = false;
 		visualizer_list[bodyName].material.needsUpdate = true;
-		//viz.addObject(visualizer_list[bodyName]);
-		//viz.getScene().add(visualizer_list[bodyName].line)
+		objs[0].visible = true;
 		if(viz1 != null){
 			viz1.addObject(visualizer_list[bodyName]);
 			viz1.getScene().add(visualizer_list[bodyName].line);
 		}
-		
+		if(visualizer_list[bodyName].hidden === true){
+			viz.getScene().add(visualizer_list[bodyName].line);
+		}
+		visualizer_list[bodyName].hidden = false;
 	}
 }
 
@@ -1006,6 +1011,7 @@ function createSubElements(lower_name, sublist){
 	planet_input.setAttribute("class", "readonly");
 	planet_input.setAttribute("name", name + "-body");
 	planet_input.setAttribute("value", name);
+	planet_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
 
 	var planet_label = document.createElement("label");
 	planet_label.setAttribute("for", name + "-body");
@@ -1055,6 +1061,7 @@ function createSubElements(lower_name, sublist){
 			//inner_input.setAttribute("readonly", "readonly");
 			inner_input.setAttribute("name", upper_name + "-body");
 			inner_input.setAttribute("value", upper_name);
+			inner_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
 
 			var inner_label = document.createElement("label");
 			inner_label.setAttribute("for", upper_name + "-body");
@@ -1252,6 +1259,9 @@ form.addEventListener('submit', function(event){
 			displayError("File not valid");
 			return response;
 		}
+		else{
+			console.log(response);
+		}
 	})
 	.catch(error => {
     	console.error(error);
@@ -1319,10 +1329,10 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 		 	for(const primary_body in categories){
 
 		 		div.appendChild(createSubElements(primary_body, categories[primary_body]));
-		 	}
+			 }
 		 	
 		 	// Set up the right-click context menu for the dropdown items
-		 	let boxes = document.querySelectorAll(".checkbox_and_label");
+			let boxes = document.querySelectorAll(".checkbox_and_label");
 			boxes.forEach(function(item){
 			  let itemID = item.id;
 			  // Add the event listener
@@ -1336,14 +1346,13 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 			    contextMenu.name = itemID;
 			  });
 			});
-
 			// Allow the context menu to be hidden
 			// TODO: Improve this behavior
-			let checkbox = document.getElementById("toggleView");
-			checkbox.addEventListener("change" , function(){
-			  hideContextMenu();
+			//let checkbox = document.getElementById("toggleView");
+			//checkbox.addEventListener("change" , function(){
+			//  hideContextMenu();
 			  //Todo, add functionality to hide bodies
-			});
+			//});
 
 			// SET GLOBAL VARIABLE FOR BODY METADATA
 			// i.e. body name, category, has radius data, has rotation data, is user-uploaded, spice id, range(s) of valid ephemeris times
@@ -1378,8 +1387,10 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 
 	// Get radius info for bodys in simulation
 	getRadii(targets).then(data => {
+		console.log(data);
 		for(const property in data){
-			if(data[property] == "NO RADIUS DATA AVAILABLE"){
+			if(data[property] === "NO RADIUS DATA AVAILABLE"){
+				displayError(property + " HAS " + data[property]);
 				radii[property] = [-1, -1]; // If the call didn't return a radius, set radius to -1
 				body_textures[property.toUpperCase()] = '/js/textures/smallparticle.png';
 			}
@@ -1407,7 +1418,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 						"nut_prec_ra": null,
 						"nut_prec_dec": null,
 					};
-					//displayError(property + " HAS " + data[property]);
+					displayError(property + " HAS " + data[property]);
 				}
 				else{
 					rotation_data[property] = data[property]; // Keep track of rotation details
@@ -1474,7 +1485,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					if(rotation_data[property].ra == null){
 						is_rotating = false; // disable the object's rotation if no rotation data
 					}
-
+					console.log(radii, property);
 					// Create a new space object
 					let body = new_viz.createAetherObject(property, {
 						labelText: bodyName,
@@ -1505,7 +1516,6 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 						nut_prec_ra: rotation_data[property].nut_prec_ra,
 						nut_prec_dec: rotation_data[property].nut_prec_dec,
 					});
-
 					// Update global variables
 					if(bodyName in visualizer_list){
 						visualizer_list[bodyName + '1'] = body;
@@ -1513,7 +1523,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					else{
 						visualizer_list[bodyName] = body;
 					}
-
+					initCheckboxes();
 					// Set globals
 					adjusted_positions[bodyName] = allAdjustedVals;
 					adjusted_times[bodyName] = allAdjustedTimes;
@@ -1522,6 +1532,19 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					document.getElementById(bodyName + "-label").removeAttribute("class");
 					document.getElementById(bodyName + "-body").removeAttribute("class");
 					document.getElementById(bodyName + "-body").removeAttribute("disabled");
+					document.getElementById("Asteroid-label").removeAttribute("class");
+					document.getElementById("Asteroid-body").removeAttribute("class");
+					document.getElementById("Asteroid-body").removeAttribute("disabled");
+\					document.getElementById("Asteroid-body").removeAttribute("input");
+					document.getElementById("Spacecraft-label").removeAttribute("class");
+					document.getElementById("Spacecraft-body").removeAttribute("class");
+					document.getElementById("Spacecraft-body").removeAttribute("disabled");
+					document.getElementById("Comet-label").removeAttribute("class");
+					document.getElementById("Comet-body").removeAttribute("class");
+					document.getElementById("Comet-body").removeAttribute("disabled");
+					document.getElementById("Misc-label").removeAttribute("class");
+					document.getElementById("Misc-body").removeAttribute("class");
+					document.getElementById("Misc-body").removeAttribute("disabled");
 				}
 				//console.log(visualizer_list);
 				
@@ -1552,8 +1575,9 @@ function runApp(){
 	/////////////////////////////////
 
 	// Main visualization object
+	//viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon+2000003+2000005+2000006+2000426', 1, Date.now()); // todo: change last parameter to be in JD
 	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', 1, Date.now()); // todo: change last parameter to be in JD
-
+	
 	document.getElementById('sim_time').innerHTML = viz.getDate();
 	const sim_time = document.getElementById('sim_time');
 
@@ -1632,19 +1656,17 @@ function runApp(){
 
 	// A button that starts and pauses the simulation
 	document.getElementById("start-button").addEventListener("click", function() {
-		//togglePlay = !togglePlay;
+		togglePlay = !togglePlay;
 		if(togglePlay){
 			viz.start();
 			if(viz1 != null){
 				viz1.start();
 			}
-			togglePlay = !togglePlay;
 		} else {
 			viz.stop();
 			if(viz1 != null){
 				viz1.stop();
 			}
-			togglePlay = !togglePlay;
 		}
 	});
 
