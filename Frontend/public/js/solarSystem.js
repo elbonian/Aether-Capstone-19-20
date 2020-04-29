@@ -9,6 +9,7 @@ class AetherSimulation extends Spacekit.Simulation {
         this.mult = options.mult || 1;
         this.tail_length = options.tail_length || 1;
 		this.wrt = options.wrt || "solar system baryncenter";
+		this.xy_grid = this.createGrid(); // TODO: bad to do this inside constructor
 	}
 
 	/*
@@ -18,6 +19,17 @@ class AetherSimulation extends Spacekit.Simulation {
 	*/
 	createAetherObject(...args){
 		return new AetherObject(...args, this);
+	}
+
+	/*
+		Creates a grid on the xy plane that represents the ecliptic plane
+	*/
+	createGrid(){
+		var grid = new Spacekit.THREE.GridHelper(1000.0 * 60, 60, 0x040404, 0x040404);
+		grid.rotation.x = Math.PI/2;
+		//grid.setColors( new Spacekit.THREE.Color(0x808080), new Spacekit.THREE.Color(0x808080) );
+		this.getScene().add(grid);
+		return grid;
 	}
 
 	/*
@@ -34,7 +46,35 @@ class AetherSimulation extends Spacekit.Simulation {
           }
           this._renderMethod = 'SPRITE';
         }
-      }
+    }
+
+    /*
+    	Removes the simulation's xy grid from the scene
+    */
+    hideGrid(){
+    	if(this.xy_grid != null){
+    		this.getScene().remove(this.xy_grid);
+    	}
+    }
+
+    /*
+    	Adds the simulation's xy grid back to the scene
+    */
+    showGrid(){
+    	if(this.xy_grid != null){
+    		this.getScene().add(this.xy_grid);
+    	}
+    }
+
+    /*
+    	Tune camera control speed
+    */
+    tuneCameraControls(rotate_speed, zoom_speed, pan_speed, key_pan_speed){
+		this.getViewer().get3jsCameraControls().rotateSpeed = rotate_speed;
+		this.getViewer().get3jsCameraControls().zoomSpeed = zoom_speed;
+		this.getViewer().get3jsCameraControls().panSpeed = pan_speed;
+		this.getViewer().get3jsCameraControls().keyPanSpeed = key_pan_speed;
+    }
 
 	/*
 	@private
@@ -125,19 +165,22 @@ class AetherObject extends Spacekit.SphereObject {
 		this.map = null;
 		this.hidden = false;
 		this.mesh = null;
+		this.sprite = null;
+		this.minSpeed = null;
+		this.maxSpeed = null;
         this.init();
-      }
+	}
 
-	  /*
-		  Initialize function. Mostly the same as SphereObject with minor changes
-	  */
-      init(){
+	/*
+	  Initialize function. Mostly the same as SphereObject with minor changes
+	*/
+	init(){
         let map;
         if (this._options.textureUrl) {
           map = new Spacekit.THREE.TextureLoader().load(this._options.textureUrl);
 		  this.map = map;
 		}
-		console.log(map);
+		//console.log(map);
 	 
 		//Level of detail segments changed to (can be changed)
         const detailedObj = new Spacekit.THREE.LOD();
@@ -147,74 +190,91 @@ class AetherObject extends Spacekit.SphereObject {
 
         this.radius = this._options.radius;
         this.radius_polar = this._options.radius_polar;
-        // HANDLE SPHERE/ELLIPSOID GEOMETRY
-        if(this.radius != -1){
-        	const radius = this.radius_polar * 1000.0;
-        	for (let i = 0; i < levelsOfDetail.length; i += 1) {
-          const level = levelsOfDetail[i];
-          const sphereGeometry = new Spacekit.THREE.SphereGeometry(
-            radius,
-            level.segments,
-            level.segments,
-          );
-          if(this.radius != this.radius_polar){
-          	// console.log(this.radius/this.radius_polar);
-          	// console.log(sphereGeometry);
-    		const matrix = new THREE.Matrix4().makeScale( this.radius/this.radius_polar, 1.0, this.radius/this.radius_polar );
-    		sphereGeometry.applyMatrix( matrix ); // Squash length in Z direction
-    		// console.log(sphereGeometry);
-    		var min = new THREE.Vector3( this.radius*0.5, this.radius*0.5, this.radius*0.5 );
-			var max = min.clone().negate();
-			sphereGeometry.boundingSphere = null;
-			sphereGeometry.boundingBox = new Spacekit.THREE.Box3( min, max );
-    	  }
-     
-          let material;
-          if (this._simulation.isUsingLightSources()) {
-            const uniforms = {
-              sphereTexture: { value: null },
-              lightPos: { value: new Spacekit.THREE.Vector3() },
-            };
-            uniforms.sphereTexture.value = map;
-            uniforms.lightPos.value.copy(this._simulation.getLightPosition());
-            material = new Spacekit.THREE.ShaderMaterial({
-              uniforms,
-              vertexShader: Spacekit.SPHERE_SHADER_VERTEX,
-              fragmentShader: Spacekit.SPHERE_SHADER_FRAGMENT,
-              transparent: true,
-            });
-          } else {
-			//mesh material changed to transparent and opacity to 0 to not see weird meshes
-            material = new Spacekit.THREE.MeshBasicMaterial({
-                transparent: true, 
-				opacity: 0,
+		this.name = this._options.name;
+		console.log(this.name);
+
+         // Check if body has radius data
+        if(this.radius == -1){
+
+        	// Create a  sprite to represent the body
+        	var material = new Spacekit.THREE.SpriteMaterial( { map: map, color: 0xffffff, fog: true , sizeAttenuation: false, } ); // Size attenuation set to false so that the sprite is always a constant size to the viewer
+        	var sprite = new Spacekit.THREE.Sprite( material );
+        	Object.defineProperty( material, 'needsUpdate', {
+				value: true,
+				writable: true
 			});
-          }
-		  Object.defineProperty( material, 'needsUpdate', {
-			value: true,
-  			writable: true
-			} );
-          const mesh = new Spacekit.THREE.Mesh(sphereGeometry, material);
-          mesh.receiveShadow = true;
-		  mesh.castShadow = true;
-     
-		  // Change the coordinate system to have Z-axis pointed up.
-		  // TODO: change mesh rotation
-          mesh.rotation.x = Math.PI / 2;
-		  this.mesh = mesh;
-          // Show this number of segments at distance >= radii * level.radii.
-          detailedObj.addLevel(mesh, radius * level.radii);
+
+			this.sprite = sprite;
+			sprite.scale.set(10/1000.0, 10/1000.0, 1) // TODO: scale sprite according to simulation scale factor
+        	this._obj.add(sprite);
+        	this._renderMethod = 'SPRITE';
         }
-      }
+        else{
 
+        	// Create a sphere to represent the body
+        	const radius = this.radius_polar * 1000.0; // TODO: replace 1000.0 with simulation scale factor
 
+        	// Create multiple spheres for the object, each of differing level of detail
+			for (let i = 0; i < levelsOfDetail.length; i += 1) {
+				const level = levelsOfDetail[i];
+				var sphereGeometry = new THREE.SphereGeometry(
+					radius,
+					level.segments,
+					level.segments,
+				);
+				// HANDLE TRIAXIAL ELLIPSOID GEOMETRY
+				if(this.radius != this.radius_polar){
 
-        //const radius = this.getScaledRadius();
-     	
-        
-     
-        // Add to the parent base object.
-        this._obj.add(detailedObj);
+					const matrix = new THREE.Matrix4().makeScale( this.radius/this.radius_polar, 1.0, this.radius/this.radius_polar );
+					sphereGeometry.applyMatrix( matrix ); // Squash length in Z direction
+
+					// Recalculate bounding box
+					var min = new Spacekit.THREE.Vector3( this.radius*0.5, this.radius*0.5, this.radius*0.5 );
+					var max = min.clone().negate();
+					sphereGeometry.boundingBox = new Spacekit.THREE.Box3( min, max );
+				}
+
+				let material;
+				if (this._simulation.isUsingLightSources()) {
+					const uniforms = {
+					sphereTexture: { value: null },
+					lightPos: { value: new Spacekit.THREE.Vector3() },
+					};
+					uniforms.sphereTexture.value = map;
+					uniforms.lightPos.value.copy(this._simulation.getLightPosition());
+					material = new Spacekit.THREE.ShaderMaterial({
+					uniforms,
+					vertexShader: Spacekit.SPHERE_SHADER_VERTEX,
+					fragmentShader: Spacekit.SPHERE_SHADER_FRAGMENT,
+					transparent: true,
+					});
+				}
+				else {
+					//mesh material changed to transparent and opacity to 0 to not see weird meshes
+					material = new Spacekit.THREE.MeshBasicMaterial({
+					transparent: true, 
+					opacity: 0,
+					});
+				}
+				Object.defineProperty( material, 'needsUpdate', {
+					value: true,
+					writable: true
+				});
+				const mesh = new Spacekit.THREE.Mesh(sphereGeometry, material);
+				mesh.receiveShadow = true;
+				mesh.castShadow = true;
+
+				// Change the coordinate system to have Z-axis pointed up.
+				// TODO: change mesh rotation
+				mesh.rotation.x = Math.PI / 2;
+
+				// Show this number of segments at distance >= radii * level.radii.
+				detailedObj.addLevel(mesh, radius * level.radii);
+			}
+			// Add to the parent base object.
+			this._obj.add(detailedObj);
+			this._renderMethod = 'SPHERE';
+		}
      
      	// set current index
         this.currIndex = this._options.currIndex;
@@ -230,12 +290,11 @@ class AetherObject extends Spacekit.SphereObject {
           this._obj.rotation.y += rad(this._options.axialTilt);
         }
      
-        this._renderMethod = 'SPHERE';
      
-        //if (this._simulation) {
+        if (this._simulation) {
           // Add it all to visualization.
-        //  this._simulation.addObject(this, false /* noUpdate */);
-        //}
+         this._simulation.addObject(this, false /* noUpdate */);
+        }
 
         // set object's initial position
         this._obj.position.set(this.positionVectors[this.currIndex].x, this.positionVectors[this.currIndex].y, this.positionVectors[this.currIndex].z);
@@ -262,15 +321,19 @@ class AetherObject extends Spacekit.SphereObject {
 		);
 		line.geometry.attributes[ "color" ].needsUpdate = true;
 		line.frustumCulled = false;
+		line.computeLineDistances();
+
 		// reference to positions
 		var positions2 = line.geometry.attributes.position.array;
 		var index = 0;
+
 		// set 1D array according to positionVectors
 		for(var i = 0; i < this.positionVectors.length; i++){
 			positions2[index ++] = this.positionVectors[i].x;
 			positions2[index ++] = this.positionVectors[i].y;
 			positions2[index ++] = this.positionVectors[i].z;
 		}
+
 		// add line to the scene
 		let scene = this._simulation.getScene();
 		scene.add(line);
@@ -299,62 +362,62 @@ class AetherObject extends Spacekit.SphereObject {
 		//this.radius_polar = this._options.radius_polar;
 
 
-		// Before base class init, check if object will be represented as a particle
+		// Object has a radius, call superclass init function
 		if(this.radius != -1){
-			this.particleSize = 10;
-		}
-        super.init();
-
-        // Check if radius is -1
-        if(this.radius == -1){
-        	// make mesh transparent
-        	this.material.transparent = true;
-        	
+        	super.init();
         }
-        // Radius data exists
-       //  else{
-       //  	// Check if sphere needs to be scaled to an ellipsoid
-       //  	if(this.radius != this.radius_polar){
-       //  		const matrix = new Spacekit.THREE.Matrix4().makeScale( 1.0, 1.0, 0.5 );
-       //  		this.geometry.applyMatrix( matrix ); // Squash length in Z direction
-       //  		var min = new Spacekit.THREE.Vector3( this.radius*0.5, this.radius*0.5, this.radius*0.5 );
-    			// var max = min.clone().negate();
-
-    			// this.boundingBox = new Spacekit.THREE.Box3( min, max );
-       //  	}
-       //  }
-
+        else{
+			// Object has no radius, manually create a label for it
+			var labelElt = super.createLabel();
+			this._simulation.getSimulationElement().appendChild(labelElt);
+			this._label = labelElt;
+			this._showLabel = true;
+		}
 
 	}
 
 	updateColorGradient(){
+		const body_data = body_meta_data.find(x => x["body name"] === this.name);
+		//console.log(body_data);
+		this.minSpeed = body_data["min speed"];
+		this.maxSpeed = body_data["max speed"];
 		this.colorGradient = new Float32Array(this.positionVectors.length * 3);
-		let startCol = "#0000FF";
-		let endCol = "#FF0000";
-		let steps = this.positionVectors.length;
-		var tmp = generateColor(startCol, endCol, steps);
-		console.log(tmp);
-		console.log(steps)
 		let kmPosX = this.positionVectors.map(pos => Spacekit.auToKm(pos.x));
 		let kmPosY = this.positionVectors.map(pos => Spacekit.auToKm(pos.y));
 		let kmPosZ = this.positionVectors.map(pos => Spacekit.auToKm(pos.z));
-		for(var i = 0; i < this.positionVectors.length-1; i++){
+		let kmPerSecList = [];
+		let adjKmPerSec = [];
+		//get max and min kmpersec and scale them between the max and min
+		for(let i = 0; i < kmPosX.length-1; i++){
 			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / secondsPerDay / 1000;
-			if(kmPerSec >= 50){
-				this.colorGradient[ i * 3 ] = 1.0;
-    			this.colorGradient[ i * 3 + 1 ] = 0.0;
-    			this.colorGradient[ i * 3 + 2 ] = 0.0;
+			kmPerSecList.push(kmPerSec);
+		}
+		for (var i = 0; i < kmPerSecList.length; i++) {
+			var unscaled = kmPerSecList[i];
+			var scaled = scaleBetween(unscaled, 0.0, 1.0, this.minSpeed-1, this.maxSpeed+1);
+			adjKmPerSec.push(parseFloat(scaled.toFixed(2)));
+		}
+		for(let i = 0; i < adjKmPerSec.length; i++){
+			if(adjKmPerSec[i] >= 0.75){
+				this.colorGradient[ i * 3 ] = adjKmPerSec[i];
+    			this.colorGradient[ i * 3 + 1 ] = 1-adjKmPerSec[i];
+				this.colorGradient[ i * 3 + 2 ] = 1-adjKmPerSec[i];
 			}
-			else if (kmPerSec >= 25) {
-				this.colorGradient[ i * 3 ] = 1.0;
-    			this.colorGradient[ i * 3 + 1 ] = 1.0;
-    			this.colorGradient[ i * 3 + 2 ] = 0.0;
+			else if(adjKmPerSec[i] > 0.5){
+				this.colorGradient[ i * 3 ] = adjKmPerSec[i] + 0.25;
+    			this.colorGradient[ i * 3 + 1 ] = adjKmPerSec[i];
+				this.colorGradient[ i * 3 + 2 ] = 1-adjKmPerSec[i];
+			}
+			else if(adjKmPerSec[i] > 0.25){
+				this.colorGradient[ i * 3 ] = adjKmPerSec[i] + 0.5;
+    			this.colorGradient[ i * 3 + 1 ] = adjKmPerSec[i] + 0.5;
+				this.colorGradient[ i * 3 + 2 ] = 1-adjKmPerSec[i];
 			}
 			else{
-				this.colorGradient[ i * 3 ] = 0.0;
-    			this.colorGradient[ i * 3 + 1 ] = 0.0;
-    			this.colorGradient[ i * 3 + 2 ] = 1.0;
-			}	
+				this.colorGradient[ i * 3 ] = adjKmPerSec[i];
+    			this.colorGradient[ i * 3 + 1 ] = adjKmPerSec[i];
+				this.colorGradient[ i * 3 + 2 ] = Math.abs(adjKmPerSec[i] - 1);
+			}
 		}
 	  }
 
@@ -395,10 +458,11 @@ class AetherObject extends Spacekit.SphereObject {
 	  	this._obj.applyQuaternion(quaternion);
 	  }
 
-
+	  /*
+	  	Rotates the object about its axis of rotation according to its prime meridian delta angle
+		No date is needed because the object's pm delta angle is for a change in time of one day, simply rotates the object according to its simulation's rate
+	  */
 	  rotate(jd){
-	  	
-	  	this.updateAxisOfRotation(jd);
 	  	const angle_of_rotation = Spacekit.rad(this.pm_delta);
 	  	this._obj.rotateOnWorldAxis(this.axis_of_rotation_vector, angle_of_rotation * this._simulation.mult);
 	  	
@@ -528,7 +592,7 @@ class AetherObject extends Spacekit.SphereObject {
 			this.geometry,
 			this.material,
 		);
-
+		line.computeLineDistances();
 		line.frustumCulled = false;
 		// reference to positions
 		var positions2 = line.geometry.attributes.position.array;
@@ -582,6 +646,11 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
       update(jd){
 
+      	////////////////////////////////////////////////////////////////////////////////////////
+      	//////// DEAL WITH FETCHING NEW/OLD POSITION DATA
+      	////////////////////////////////////////////////////////////////////////////////////////
+
+
       	if(!this.isUpdating){ // ensure object is not currently updating
       		// check if object is 2/3 of the way through its available data
 	      	const positive_rate_of_time = this._simulation.mult > 0;
@@ -607,6 +676,11 @@ class AetherObject extends Spacekit.SphereObject {
       	}
       	
 
+      	////////////////////////////////////////////////////////////////////////////////////////
+      	//////// DEAL WITH UPDATING POSITION DATA AND ROTATING OBJECT
+      	////////////////////////////////////////////////////////////////////////////////////////
+      	
+
 		// ensure we don't go out of bounds on the position list
 		if(this.currIndex >= 1 && this.currIndex < this.positionVectors.length-1){
 
@@ -626,6 +700,7 @@ class AetherObject extends Spacekit.SphereObject {
 			      this._options.rotation &&
 			      this._options.rotation.enable
 			    ) {
+			    	this.updateAxisOfRotation(jd);
       				this.rotate(jd);
       			}
 
@@ -636,9 +711,9 @@ class AetherObject extends Spacekit.SphereObject {
 		      	this.setNextTailStart();
 		      	this.drawLineSegment();   	
 			}
-		  }
-		// Update label position
-      	//super.updateLabelPosition([this.positionVectors[Math.floor(this.currIndex)].x, this.positionVectors[Math.floor(this.currIndex)].y, this.positionVectors[Math.floor(this.currIndex)].z]);
+      	}
+      	// Update label position
+      	super.updateLabelPosition([this.positionVectors[Math.floor(this.currIndex)].x, this.positionVectors[Math.floor(this.currIndex)].y, this.positionVectors[Math.floor(this.currIndex)].z]);
     }
 
 }
@@ -697,6 +772,9 @@ var viz1;
 
 var togglePlay = true;
 
+
+var body_meta_data = [];
+
 /////////////////////////////////
 /////// Utility Functions ///////
 /////////////////////////////////
@@ -738,62 +816,9 @@ function displayError(error){
 	}
 }
 
-function hex (c) {
-	var s = "0123456789abcdef";
-	var i = parseInt (c);
-	if (i == 0 || isNaN (c))
-		return "00";
-	i = Math.round (Math.min (Math.max (0, i), 255));
-	return s.charAt ((i - i % 16) / 16) + s.charAt (i % 16);
-}
-
-/* Convert an RGB triplet to a hex string */
-function convertToHex (rgb) {
-	return hex(rgb[0]) + hex(rgb[1]) + hex(rgb[2]);
-}
-
-/* Remove '#' in color hex string */
-function trim (s) { return (s.charAt(0) == '#') ? s.substring(1, 7) : s }
-
-/* Convert a hex string to an RGB triplet */
-function convertToRGB (hex) {
-	var color = [];
-	color[0] = parseInt ((trim(hex)).substring (0, 2), 16);
-	color[1] = parseInt ((trim(hex)).substring (2, 4), 16);
-	color[2] = parseInt ((trim(hex)).substring (4, 6), 16);
-	return color;
-}
-
-function generateColor(colorStart,colorEnd,colorCount){
-	// The beginning of gradient
-	var start = convertToRGB (colorStart);    
-
-	// The end of gradient
-	var end   = convertToRGB (colorEnd);    
-
-	// The number of colors to compute
-	var len = colorCount;
-
-	//Alpha blending amount
-	var alpha = 0.0;
-
-	var colors = [];
-
-	for (i = 0; i < len; i++) {
-		var c = [];
-		alpha += (1.0/len);
-
-		c[0] = start[0] * alpha + (1 - alpha) * end[0];
-		c[1] = start[1] * alpha + (1 - alpha) * end[1];
-		c[2] = start[2] * alpha + (1 - alpha) * end[2];
-
-		colors.push(c);
-	}
-
-	return colors;
-
-}
-  
+function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
+	return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
+} 
 
 function handleCheckboxClick(checkboxId, bodyName){
 	let checked = document.getElementById(checkboxId).checked;
@@ -805,7 +830,7 @@ function handleCheckboxClick(checkboxId, bodyName){
 		}
 		//console.log(visualizer_list[i], visualizer_list[i].line);
 		//console.log(visualizer_list[bodyName], visualizer_list[bodyName].line.material);
-		console.log(visualizer_list[bodyName]);
+		//console.log(visualizer_list[bodyName]);
 		//visualizer_list[bodyName].material = false;
 		visualizer_list[bodyName].material.opacity = 0;
 		visualizer_list[bodyName].material.transparent = true;
@@ -838,7 +863,7 @@ function handleCheckboxClick(checkboxId, bodyName){
 }
 
 function initCheckboxes(){
-	let checkboxes = document.getElementById("checkboxes").getElementsByTagName('input');
+	let checkboxes = document.getElementById("content1").getElementsByTagName('input');
 	let planetKeys = Object.keys(visualizer_list);
 	for(let x = 0; x < checkboxes.length; x++){
 		let checkbox = checkboxes[x];
@@ -895,11 +920,21 @@ async function getAvailableBodies(){
 }
 
 /*
+	async function to get which bodies are in the db
+	@return {json} data - JSON of available bodies
+*/
+async function getAvailableBodies2(){
+	let response = await fetch('http://0.0.0.0:5000/api/available-bodies/');
+	let data = await response.json();
+	return data;
+}
+
+/*
 	async function to get info for bodies
 	@return {json} data - JSON of body info such as radius, mass, etc.
 */
 async function getRadii(targets){
-	let response = await fetch('http://0.0.0.0:5000/api/body-info/' + targets);
+	let response = await fetch('http://0.0.0.0:5000/api/body-radius/' + targets);
 	let data = await response.json();
 	return data;
 }
@@ -925,22 +960,15 @@ let body_textures = {
 	"moon" : '/js/textures/2k_moon.jpg',
 };
 
-/*
-	Calls async function to handle data retrieved
-*/
 
-//Rework this section to new UI
 /*
-getAvailableBodies().then(data =>{
- 	//console.log(document.getElementById("Moon-checkbox").parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.nodeName);
- 	var ul_element = document.createElement("UL");
- 	var checkboxes = document.getElementById("checkboxes");
- 	for(let body in data){
- 		ul_element.appendChild(createSubElements(body , data[body]));
- 	}
- 	checkboxes.appendChild(ul_element);
-});
+	Hides the right-click menu in the bodies menu
 */
+function hideContextMenu() {
+	let contextMenu = document.getElementsByClassName("context-menu")[0];
+	contextMenu.style.display = "none";
+}
+
 
 /*
 	Creates a child elements in nested checkbox for bodies
@@ -948,28 +976,108 @@ getAvailableBodies().then(data =>{
 	@param {array} sublist - List of bodies that are 'sub-bodies' of the added body e.g Earth -> Moon
 	@return {documentElement} li_element - New dropdown element
 */
-function createSubElements(name , sublist){
-	var li_element = document.createElement("LI");
-	var label_element = document.createElement("LABEL");
-	var name2 = name[0].toUpperCase().concat(name.slice(1,name.length).toLowerCase());
-	var checkbox_name = name2.concat("-checkbox");
-	label_element.setAttribute("for" , checkbox_name);
-	var input_element = document.createElement("INPUT");
-	input_element.setAttribute("type" , "checkbox");
-	input_element.setAttribute("id" , checkbox_name);
-	input_element.setAttribute("name" , name2);
-	input_element.setAttribute("onClick" , "handleCheckboxClick(id, name)");
-	var text_node = document.createTextNode(name2);
-	label_element.appendChild(input_element);
-	label_element.appendChild(text_node);
-	li_element.appendChild(label_element);
-	if(isEmpty(sublist)) return li_element
-	var ul_element = document.createElement("UL");
-	for(let body in sublist){
-		ul_element.appendChild(createSubElements(body, sublist[body]));
+function createSubElements(lower_name, sublist){
+
+	// CHECK IF RESULTS IS A PLANET OR MOON
+	// if(results["category"] != "asteroid" && results["category"] != "comet" && results["category"] != "misc"){
+
+	// 	// CHECK IF RESULTS IS A PRIMARY BODY
+	// 	if(results["category"] == results["body name"]);{
+
+	// 	}
+	const name = capitalizeFirstLetter(lower_name);
+	// Create outermost div
+	var planet_box_div = document.createElement("div");
+	const box_id = name + "-box";
+	planet_box_div.setAttribute("id", box_id);
+	planet_box_div.setAttribute("class", "body-box");
+
+	// Create next innermost div
+	var body_label_div = document.createElement("div");
+	body_label_div.setAttribute("id", name);
+	body_label_div.setAttribute("class", "checkbox_and_label");
+
+	// Create planet body input and label
+	var planet_input = document.createElement("input");
+	planet_input.setAttribute("id", name + "-body");
+	planet_input.setAttribute("type", "checkbox");
+	planet_input.setAttribute("disabled", "disabled");
+	//planet_input.setAttribute("readonly", "readonly");
+	planet_input.setAttribute("class", "readonly");
+	planet_input.setAttribute("name", name + "-body");
+	planet_input.setAttribute("value", name);
+
+	var planet_label = document.createElement("label");
+	planet_label.setAttribute("for", name + "-body");
+	planet_label.setAttribute("class", "readonlylabel");
+	planet_label.setAttribute("id", name + "-label");
+	planet_label.innerHTML = name;
+	var br = document.createElement("br");
+	// Add input and label to innermost div
+	body_label_div.appendChild(planet_input);
+	body_label_div.appendChild(planet_label);
+	body_label_div.appendChild(br);
+
+	// Add inner div as child of outermost div
+	planet_box_div.appendChild(body_label_div);
+
+	// If sublist has bodies in it, add sublist of bodies to outermost div
+	if(sublist.length > 0){
+		// Create a nested div
+		var nested_div = document.createElement("div");
+		nested_div.setAttribute("id", "nested" + name);
+		nested_div.setAttribute("style", "display:none");
+		nested_div.setAttribute("class", "nested_list");
+
+		// Add nested div to the outermost div
+		planet_box_div.appendChild(nested_div);
+
+		// Iterate over bodies in sublist
+		for(var i = 0; i < sublist.length; i++){
+			const upper_name = capitalizeFirstLetter(sublist[i]);
+			// Create an inner div
+			var inner_nested_div = document.createElement("div");
+			inner_nested_div.setAttribute("id", upper_name); // IS ID OKAY?
+			inner_nested_div.setAttribute("class", "checkbox_and_label");
+			//inner_nested_div.setAttribute("value", sublist[i]); // IS VALUE OKAY?
+
+			// Add inner nested div to outer nested div
+			nested_div.appendChild(inner_nested_div);
+
+			// Create an input and label
+			var inner_input = document.createElement("input");
+			inner_input.setAttribute("id", upper_name + "-body");
+			inner_input.setAttribute("type", "checkbox");
+			inner_input.setAttribute("disabled", "disabled");
+			inner_input.setAttribute("class", "readonly");
+			//inner_input.setAttribute("readonly", "readonly");
+			inner_input.setAttribute("name", upper_name + "-body");
+			inner_input.setAttribute("value", upper_name);
+
+			var inner_label = document.createElement("label");
+			inner_label.setAttribute("for", upper_name + "-body");
+			inner_label.setAttribute("class", "readonlylabel");
+			inner_label.setAttribute("id", upper_name + "-label");
+			inner_label.innerHTML = upper_name;
+			var br1 = document.createElement("br");
+
+			// Add input and label to inner nested div
+			inner_nested_div.appendChild(inner_input);
+			inner_nested_div.appendChild(inner_label);
+			inner_nested_div.appendChild(br1);
+		}
+		
+		planet_input.addEventListener("click", function() {
+			var nested = document.getElementById("nested" + name);
+			if(nested.getAttribute("style") == "display:none"){
+				nested.setAttribute("style", "display:content");
+			}
+			else{
+				nested.setAttribute("style", "display:none");
+			}
+		});
 	}
-	li_element.appendChild(ul_element);
-	return li_element;
+	return planet_box_div;
 }
 
 /*
@@ -1089,6 +1197,8 @@ compare_form.addEventListener('submit', function(e){
 		viz1 = null;
 	}
 
+
+
 	var comparison_container = document.createElement('div');
 	comparison_container.id = "comparison_container";
 	var div1 = document.createElement('div');
@@ -1102,19 +1212,20 @@ compare_form.addEventListener('submit', function(e){
 	// convert time entered entered into milliseconds passed UNIX epoch
 	const start_time =  Date.parse(formData.get('jd_start')) ;
 
-	for (var member in visualizer_list) delete visualizer_list[member];
-	const checkboxes = document.getElementById('checkboxes');
-	checkboxes.innerHTML = '';
+	// TODO: check if both start times are the same
+	//		 if both times are identical, display the simulation time once on the top of the page
+	//		 if not, display two separate times on each mini div
+	
 	// Create two new simulations that will be compared side by side
 	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison1");
-	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison2");
+	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison2", false);
 	new_viz2._camera = new_viz1._camera;
 	
 	viz = new_viz1;
 	viz1 = new_viz2;
 	viz1.onTick = null;
-	viz.start();
-	viz1.start();
+	// viz.start();
+	// viz1.start();
 });
 
 // Form to submit a new spk kernel
@@ -1155,9 +1266,92 @@ form.addEventListener('submit', function(event){
 	@param {array[Number]} camera_start - Position for the camera to start, default=[2500,5000,5000]
 	@param {string} container - div to place the simulation in, default=main-container
 */
-function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[2500,5000,5000], container='main-container'){
+function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[2500,5000,5000], container='main-container', primary_sim=true){
 
-	// Create a new simulation
+	////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////// GET AVAILABLE BODY DETAILS FROM THE BACKEND /////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////
+
+	// Only get available body detail if this will be a primary sim, prevents two sims from issuing the API request if comparing sims
+	if(primary_sim){
+		getAvailableBodies2().then(data =>{
+			// Create new div to house nested checklist drodown menu
+		 	var div = document.createElement('div');
+			div.id = 'new-content1';
+
+			// Replace existing checklist dropdown with new div
+			document.getElementById("mySidebar1").replaceChild(div, document.getElementById("content1"));
+			div.id = 'content1'; // important
+			document.getElementById("content1").setAttribute("class", "content1");
+
+			// Mapping of planet bodies and their natural satellites
+			// i.e. categories["mars"] = ["deimos", "phobos"]
+		 	var categories = {
+		 		"sun" : [],
+		 		"mercury" : [],
+		 		"venus" : [],
+		 		"earth" : [],
+		 		"mars" : [],
+		 		"jupiter" : [],
+		 		"saturn" : [],
+		 		"uranus" : [],
+		 		"neptune" : [],
+		 		"pluto" : [],
+		 		"spacecraft": [],
+		 		"asteroid" : [],
+		 		"comet" : [],
+		 		"misc" : [],
+		 	};
+
+		 	// Iterate over API results in order to populate the above mapping
+		 	for(let index in data){
+		 		// Prevent a planet from adding itself to its natural satellite list
+		 		// i.e. categories["mars"] = ["mars", deimos", "phobos"] would be bad
+		 		if(!(data[index]["body name"] in categories)){
+			 		categories[data[index]["category"]].push(data[index]["body name"]);
+			 	}
+		 	}
+
+		 	// Add the html for the nested checkbox list for each overarching category of body
+		 	for(const primary_body in categories){
+		 		div.appendChild(createSubElements(primary_body, categories[primary_body]));
+		 	}
+		 	
+		 	// Set up the right-click context menu for the dropdown items
+		 	let boxes = document.querySelectorAll(".checkbox_and_label");
+			boxes.forEach(function(item){
+			  let itemID = item.id;
+			  // Add the event listener
+			  item.addEventListener("contextmenu" , function(e){
+			    e.preventDefault();
+			    let contextMenu = document.getElementsByClassName("context-menu")[0];
+			    contextMenu.style.top = e.clientY + "px";
+			    contextMenu.style.left = e.clientX + "px";
+			    contextMenu.style.display = "block";
+			    contextMenu.id = itemID + "-context-menu";
+			    contextMenu.name = itemID;
+			  });
+			});
+
+			// Allow the context menu to be hidden
+			// TODO: Improve this behavior
+			let checkbox = document.getElementById("toggleView");
+			checkbox.addEventListener("change" , function(){
+			  hideContextMenu();
+			  //Todo, add functionality to hide bodies
+			});
+
+			// SET GLOBAL VARIABLE FOR BODY METADATA
+			// i.e. body name, category, has radius data, has rotation data, is user-uploaded, spice id, range(s) of valid ephemeris times
+			body_meta_data = data;
+		});
+	}
+
+
+	////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////// CREATE THE SIMULATION OBJECT /////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////
+
 	var new_viz = new AetherSimulation(document.getElementById(container), {
 	  basePath: 'https://typpo.github.io/spacekit/src',
 	  jdDelta: jd_delta,
@@ -1168,179 +1362,179 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 	  	initialPosition: camera_start,
 	  	enableDrift: false,
 	  },
-	 //  debug: {
-	 //  	showAxes: true,
-		// showGrid: true,
-		// showStats: true,  
-	 //  },
 	  wrt: wrt
 	});
 
-	// Visualization's main
 
-	// Get body info for simulation
+	////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////
+
+	// TODO: use body_meta_data to avoid unneccesarily passing bodies to radii and rotation endpoints
+
+	// Get radius info for bodys in simulation
 	getRadii(targets).then(data => {
 		for(const property in data){
-			if(data[property] != "NO RADIUS DATA AVAILABLE"){
+			if(data[property] == "NO RADIUS DATA AVAILABLE"){
 				radii[property] = [-1, -1]; // If the call didn't return a radius, set radius to -1
-			}
-			radii[property] = [data[property].map(Spacekit.kmToAu)[0], data[property].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
-		}
-	});
-
-	// get body rotation data
-	var rotation_data = {};
-
-	getRotationData(targets).then(data => {
-		console.log(data);
-		// TODO: angle processing
-		for(const property in data){
-
-			// If call didn't return rotation data for a body, set its parameters to null
-			if(data[property] == "NO ROTATION DATA AVAILABLE"){
-				console.log("here");
-				console.log(property + data[property]);
-				rotation_data[property] = {
-					"ra": null,
-					"dec": null,
-					"pm": null,
-					"ra_delta": null,
-					"dec_delta": null,
-					"pm_delta": null,
-					"nut_prec_angles": null,
-					"nut_prec_ra": null,
-					"nut_prec_dec": null,
-				};
-				displayError(property + " HAS " + data[property]);
+				body_textures[property.toUpperCase()] = '/js/textures/smallparticle.png';
 			}
 			else{
-				rotation_data[property] = data[property]; // Keep track of rotation details
-				// console.log(rotation_data[property]);
-				// console.log(property);
+				radii[property] = [data[property].map(Spacekit.kmToAu)[0], data[property].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
 			}
 		}
-	})
-	.catch(error => {
-		console.error(error);
-		//rotation_data = data;
-  	});
 
-	// Retrieve the position data with the specified parameters
-	getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10).toString(), "10").then(data => {
-		if(data.error){
-			displayError(data);
-			return data;
-		}
-		// iterate over each body returned by the API call
-		for(const property in data){
-			// Array of [x,y,z] coords in AU
-			var allAdjustedVals = [];
-			// Array of Julian Dates corresponding to each position
-			var allAdjustedTimes = [];
-			// Current Julian Date
-			var cur_jd = new_viz.getJd();
+		// get body rotation data
+		var rotation_data = {};
 
-			// set tail indexes
-			var cur_idx = data[property].cur_time_idx;
-			const tail_start_idx = 0;
-			var tail_end_idx;
-			if(data[property].times.length % 2 == 0){
-				tail_end_idx = data[property].times.length / 2;
-			}
-			else {
-				tail_end_idx = Math.ceil(data[property].times.length / 2);
+		getRotationData(targets).then(data => {
+			for(const property in data){
+
+				// If call didn't return rotation data for a body, set its parameters to null
+				if(data[property] == "NO ROTATION DATA AVAILABLE"){
+					rotation_data[property] = {
+						"ra": null,
+						"dec": null,
+						"pm": null,
+						"ra_delta": null,
+						"dec_delta": null,
+						"pm_delta": null,
+						"nut_prec_angles": null,
+						"nut_prec_ra": null,
+						"nut_prec_dec": null,
+					};
+					displayError(property + " HAS " + data[property]);
+				}
+				else{
+					rotation_data[property] = data[property]; // Keep track of rotation details
+				}
 			}
 
+			// Retrieve the position data with the specified parameters
+			getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10).toString(), "10").then(data => {
+				if(data.error){
+					displayError(data);
+					return data;
+				}
+				// iterate over each body returned by the API call
+				for(const property in data){
+					// Array of [x,y,z] coords in AU
+					var allAdjustedVals = [];
+					// Array of Julian Dates corresponding to each position
+					var allAdjustedTimes = [];
+					// Current Julian Date
+					var cur_jd = new_viz.getJd();
 
-			// iterate over the data for the current body
-			var i = 0;
-			for(pos of data[property].positions){
-				// convert coordinates in km to au
-				adjustedVals = pos.map(Spacekit.kmToAu);
-				// convert coords to ecliptic
-				adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-				let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+					// set tail indexes
+					var cur_idx = data[property].cur_time_idx;
+					const tail_start_idx = 0;
+					var tail_end_idx;
+					if(data[property].times.length % 2 == 0){
+						tail_end_idx = data[property].times.length / 2;
+					}
+					else {
+						tail_end_idx = Math.ceil(data[property].times.length / 2);
+					}
+
+					// iterate over the data for the current body
+					var i = 0;
+					for(pos of data[property].positions){
+						// convert coordinates in km to au
+						adjustedVals = pos.map(Spacekit.kmToAu);
+						// convert coords to ecliptic
+						adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+						let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+						
+						// push positions and their corresponding times to arrays
+						allAdjustedVals.push(vector);
+						allAdjustedTimes.push(parseFloat(data[property].times[i]));
+						i++;
+					}
+					
+					// Create object
+					var bodyName = capitalizeFirstLetter(property)
+					var radius;
+					if(bodyName == "Sun"){
+						radius = 0.17;
+						//new_viz.createLight(allAdjustedVals[cur_idx]);
+					}
+					else if(bodyName == "Moon"){
+						radius = 0.0005;
+					}
+					else{
+						radius = .08;
+					}
+
+					// Check rotation data for body
+					var is_rotating = true;
+					if(rotation_data[property].ra == null){
+						is_rotating = false; // disable the object's rotation if no rotation data
+					}
+
+					// Create a new space object
+					let body = new_viz.createAetherObject(property, {
+						labelText: bodyName,
+						name: property,
+						textureUrl: body_textures[property],
+						currIndex: cur_idx,
+						radius: radii[property][0],
+						radius_polar: radii[property][1],
+						rotation: true,
+						hideOrbit: true,
+						positionVectors: allAdjustedVals,
+						ephemUpdate: getPositionData2,
+						jdTimeData: allAdjustedTimes,
+						levelsOfDetail: [{
+							threshold: 0,
+							segments: 40,
+						}],
+						rotation: {
+							enable: is_rotating,
+						},
+						ra: rotation_data[property].ra,
+						dec: rotation_data[property].dec,
+						pm: rotation_data[property].pm,
+						ra_delta: rotation_data[property].ra_delta,
+						dec_delta: rotation_data[property].dec_delta,
+						pm_delta: rotation_data[property].pm_delta,
+						nut_prec_angles: rotation_data[property].nut_prec_angles,
+						nut_prec_ra: rotation_data[property].nut_prec_ra,
+						nut_prec_dec: rotation_data[property].nut_prec_dec,
+					});
+
+					// Update global variables
+					if(bodyName in visualizer_list){
+						visualizer_list[bodyName + '1'] = body;
+					}
+					else{
+						visualizer_list[bodyName] = body;
+					}
+
+					// Set globals
+					adjusted_positions[bodyName] = allAdjustedVals;
+					adjusted_times[bodyName] = allAdjustedTimes;
+
+					// Activate the checkboxes for bodies that are currently loaded into the simulation
+					document.getElementById(bodyName + "-label").removeAttribute("class");
+					document.getElementById(bodyName + "-body").removeAttribute("class");
+					document.getElementById(bodyName + "-body").removeAttribute("disabled");
+				}
+				//console.log(visualizer_list);
 				
-				// push positions and their corresponding times to arrays
-				allAdjustedVals.push(vector);
-				allAdjustedTimes.push(parseFloat(data[property].times[i]));
-				i++;
-			}
-			
-			// Create object
-			var bodyName = capitalizeFirstLetter(property)
-			var radius;
-			if(bodyName == "Sun"){
-				radius = 0.17;
-				//new_viz.createLight(allAdjustedVals[cur_idx]);
-			}
-			else if(bodyName == "Moon"){
-				radius = 0.0005;
-			}
-			else{
-				radius = .08;
-			}
-
-			// Check rotation data for body
-			var is_rotating = true;
-			if(rotation_data[property.toUpperCase()].ra == null){
-				is_rotating = false; // disable the object's rotation if no rotation data
-			}
-
-			// Create a new space object
-			let body = new_viz.createAetherObject(property, {
-				//labelText: bodyName,
-				_id: cur_idx,
-				name: property,
-				textureUrl: body_textures[property],
-				currIndex: cur_idx,
-				radius: radius,//radii[property.toUpperCase()][0] * 2,
-				radius_polar: radius-.0001,//radii[property.toUpperCase()][1] * 2,
-				particleSize: -1,
-				rotation: true,
-				hideOrbit: true,
-				positionVectors: allAdjustedVals,
-				ephemUpdate: getPositionData2,
-				jdTimeData: allAdjustedTimes,
-				levelsOfDetail: [{
-					threshold: 0,
-					segments: 40,
-				}],
-				rotation: {
-					enable: is_rotating,
-				},
-				ra: rotation_data[property.toUpperCase()].ra,
-				dec: rotation_data[property.toUpperCase()].dec,
-				pm: rotation_data[property.toUpperCase()].pm,
-				ra_delta: rotation_data[property.toUpperCase()].ra_delta,
-				dec_delta: rotation_data[property.toUpperCase()].dec_delta,
-				pm_delta: rotation_data[property.toUpperCase()].pm_delta,
-				nut_prec_angles: rotation_data[property.toUpperCase()].nut_prec_angles,
-				nut_prec_ra: rotation_data[property.toUpperCase()].nut_prec_ra,
-				nut_prec_dec: rotation_data[property.toUpperCase()].nut_prec_dec,
+			})
+			.catch(error => {
+				console.error(error);
 			});
-			// if(bodyName == "Sun"){
-			// 	new_viz.createLight(body.position);
-			// 	//new_viz._lightPosition = body.position;
-			// }
-
-
-			// Update global variables
-			if(bodyName in visualizer_list){
-				visualizer_list[bodyName + '1'] = body;
-			}
-			else{
-				visualizer_list[bodyName] = body;
-			}
-			//console.log(visualizer_list);
-			adjusted_positions[bodyName] = allAdjustedVals;
-			adjusted_times[bodyName] = allAdjustedTimes;
-		}
-		initCheckboxes()
-	})
-	.catch(error => {
-		console.error(error);
+		})
+		.catch(error => {
+			console.error(error);
+	  	});
 	});
+
+	
+	// make camera controls more fine-grained
+	new_viz.tuneCameraControls(0.75, 1, 2, 14);
+	
 	new_viz.onTick = tick;
 	return new_viz;
 }
@@ -1355,7 +1549,6 @@ function runApp(){
 
 	// Main visualization object
 	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', 1, Date.now()); // todo: change last parameter to be in JD
-	//simulation_stack.push(viz);
 
 	document.getElementById('sim_time').innerHTML = viz.getDate();
 	const sim_time = document.getElementById('sim_time');
@@ -1366,7 +1559,7 @@ function runApp(){
 	var time_slider = document.getElementById("myRange");
 	time_slider.oninput = function() {
 		let speed = Math.floor(this.value / 25) + 1;
-		console.log(speed);
+		//console.log(speed);
 		if(speed == 1){
 			viz.setJdDelta(-1);
 			viz.mult = -1;
@@ -1435,17 +1628,19 @@ function runApp(){
 
 	// A button that starts and pauses the simulation
 	document.getElementById("start-button").addEventListener("click", function() {
-		togglePlay = !togglePlay;
+		//togglePlay = !togglePlay;
 		if(togglePlay){
 			viz.start();
 			if(viz1 != null){
 				viz1.start();
 			}
+			togglePlay = !togglePlay;
 		} else {
 			viz.stop();
 			if(viz1 != null){
 				viz1.stop();
 			}
+			togglePlay = !togglePlay;
 		}
 	});
 
@@ -1471,7 +1666,7 @@ function runApp(){
 
 	document.getElementById("zoomToBody").addEventListener("click" , function(){
 		let bodyName = document.getElementsByClassName("context-menu")[0].id.replace("-context-menu" , "");
-	    console.log(bodyName);
+	    //console.log(bodyName);
 	    hideContextMenu();
 	    ZoomToBody(bodyName);
 	});
@@ -1486,21 +1681,8 @@ function runApp(){
         let contextMenu = document.getElementsByClassName("context-menu")[0];
         contextMenu.style.display = "none";
     }
-	// Dropdown that lets the user zoom to a planet
-
-
-	// Resets the simulation to default state
-
-	/*Depreciated.
-	document.getElementById("reset-button").addEventListener("click", function(){
-		window.location.reload();
-	});
-	*/
-
-	// for(var i = 0; i < 10000; i++){
-	// 	console.log("waiting...");
-	// }
-	viz.start();
+	
+	//viz.start();
 
 }
 

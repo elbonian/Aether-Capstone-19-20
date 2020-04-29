@@ -6,7 +6,7 @@ body{
 }
 
 input[type="text"]::placeholder {
-  text-align: center;
+  text-align: left;
 }
 
 #main-container{
@@ -181,6 +181,13 @@ input[type="text"]::placeholder {
   background-color: #1e90ff;
 }
 
+input.readonly {
+   opacity : .50;
+   filter  : alpha(opacity=50); /* IE<9 */
+   cursor  : default;
+}
+.readonlylabel{color:#aaaaaa;}
+
 .sim-time {
   position: absolute;
   top: 0px;
@@ -296,6 +303,7 @@ input[type="text"]::placeholder {
   margin-left: 10px;
   margin-right: 10px;
   margin-top: 0px;
+  font-family: Helvetica, Arial, sans-serif;
 }
 
 /*The check-boxes in the bodies list*/
@@ -478,9 +486,10 @@ button {
   position: absolute;
   top: 2%;
   left: 0;
+  width: 100%;
 }
 
-/*The button to open the Settings menu*/
+/*The button to open the Time Controls menu*/
 .Ropenbtn {
   font-size: 20px;
   cursor: pointer;
@@ -494,7 +503,8 @@ button {
   float:  left;
   top: 50%;
   left: 0;
-  position: absolute;
+  position: relative;
+  width: 100%;
 }
 
 /*The hover behavior of the Bodies menu button*/
