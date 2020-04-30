@@ -1761,9 +1761,10 @@ function runApp(){
 	});
 
 	function ZoomToBody(body){
+		viz.getViewer().get3jsCameraControls().reset();
 		viz.getViewer().followObject(visualizer_list[body] , [0, 0, 0]);
-		viz.getViewer().get3jsCamera().zoom = 10;
-		viz.getViewer().get3jsCamera().updateProjectionMatrix();
+		viz.getViewer().get3jsCamera().position.set(0,0,1.5);//visualizer_list[body]._obj.position.x, visualizer_list[body]._obj.position.y, visualizer_list[body]._obj.position.z);
+		viz.getViewer().get3jsCameraControls().update();
 	}
 
 	function hideContextMenu() {
