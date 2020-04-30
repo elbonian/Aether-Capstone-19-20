@@ -42,10 +42,10 @@ class AetherSimulation extends Spacekit.Simulation {
           this._object3js = this.createSprite();
           if (this._simulation) {
             // Add it all to visualization.
-            this._simulation.addObject(this, true /* noUpdate */);
+            this._simulation.addObject(this, true);
           }
           this._renderMethod = 'SPRITE';
-        }
+		}
     }
 
     /*
@@ -162,9 +162,7 @@ class AetherObject extends Spacekit.SphereObject {
 		this.axis_of_rotation_vector = null;
 		this.radius_polar = 0;
 		this.colorGradient = null;
-		this.map = null;
 		this.hidden = false;
-		this.mesh = null;
 		this.sprite = null;
 		this.minSpeed = null;
 		this.maxSpeed = null;
@@ -179,7 +177,7 @@ class AetherObject extends Spacekit.SphereObject {
         if (this._options.textureUrl) {
           map = new Spacekit.THREE.TextureLoader().load(this._options.textureUrl);
 		}
-		this.map = map;
+
 		//Level of detail segments changed to (can be changed)
         const detailedObj = new Spacekit.THREE.LOD();
         const levelsOfDetail = this._options.levelsOfDetail || [
@@ -193,7 +191,7 @@ class AetherObject extends Spacekit.SphereObject {
 
          // Check if body has radius data
         if(this.radius == -1){
-
+			console.log(this.name + " here");
         	// Create a  sprite to represent the body
         	var material = new Spacekit.THREE.SpriteMaterial( { map: map, color: 0xffffff, fog: true , sizeAttenuation: false, } ); // Size attenuation set to false so that the sprite is always a constant size to the viewer
         	var sprite = new Spacekit.THREE.Sprite( material );
@@ -204,11 +202,11 @@ class AetherObject extends Spacekit.SphereObject {
 
 			this.sprite = sprite;
 			sprite.scale.set(10/1000.0, 10/1000.0, 1) // TODO: scale sprite according to simulation scale factor
-        	this._obj.add(sprite);
+			this._obj.add(sprite);
         	this._renderMethod = 'SPRITE';
         }
         else{
-
+			console.log(this.name + " here2");
         	// Create a sphere to represent the body
         	const radius = this.radius_polar * 1000.0; // TODO: replace 1000.0 with simulation scale factor
 
@@ -250,7 +248,6 @@ class AetherObject extends Spacekit.SphereObject {
 				else {
 					//mesh material changed to transparent and opacity to 0 to not see weird meshes
 					material = new Spacekit.THREE.MeshBasicMaterial({
-						map,
 						transparent: true, 
 						opacity: 0,
 					});
@@ -265,7 +262,6 @@ class AetherObject extends Spacekit.SphereObject {
 				// Change the coordinate system to have Z-axis pointed up.
 				// TODO: change mesh rotation
 				mesh.rotation.x = Math.PI / 2;
-				this.mesh = mesh;
 				// Show this number of segments at distance >= radii * level.radii.
 				detailedObj.addLevel(mesh, radius * level.radii);
 			}
@@ -358,20 +354,7 @@ class AetherObject extends Spacekit.SphereObject {
 		this.nut_prec_dec = this._options.nut_prec_dec;
 		this.axis_of_rotation_vector = new Spacekit.THREE.Vector3(0,0,1);
 		//this.radius_polar = this._options.radius_polar;
-
-
-		// Object has a radius, call superclass init function
-		if(this.radius != -1){
-        	super.init();
-        }
-        else{
-			// Object has no radius, manually create a label for it
-			var labelElt = super.createLabel();
-			this._simulation.getSimulationElement().appendChild(labelElt);
-			this._label = labelElt;
-			this._showLabel = true;
-		}
-
+		console.log(this._renderMethod);
 	}
 
 	updateColorGradient(){
@@ -836,6 +819,7 @@ function handleCheckboxClick(checkboxId, bodyName){
 	let label = visualizer_list[bodyName]._label;
 	let objs = visualizer_list[bodyName].get3jsObjects();
 	if(!checked){
+		console.log(objs);
 		if(label != null){
 			visualizer_list[bodyName].setLabelVisibility(false);
 		}
@@ -849,6 +833,7 @@ function handleCheckboxClick(checkboxId, bodyName){
 		}
 		visualizer_list[bodyName].hidden = true;
 	} else {
+		console.log(objs);
 		if(label != null){
 			visualizer_list[bodyName].setLabelVisibility(true);
 		}
@@ -1485,37 +1470,69 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					if(rotation_data[property].ra == null){
 						is_rotating = false; // disable the object's rotation if no rotation data
 					}
-					console.log(radii, property);
+					let body = null;
 					// Create a new space object
-					let body = new_viz.createAetherObject(property, {
-						labelText: bodyName,
-						name: property,
-						textureUrl: body_textures[property],
-						currIndex: cur_idx,
-						radius: radii[property][0],
-						radius_polar: radii[property][1],
-						rotation: true,
-						hideOrbit: true,
-						positionVectors: allAdjustedVals,
-						ephemUpdate: getPositionData2,
-						jdTimeData: allAdjustedTimes,
-						levelsOfDetail: [{
-							threshold: 0,
-							segments: 40,
-						}],
-						rotation: {
-							enable: is_rotating,
-						},
-						ra: rotation_data[property].ra,
-						dec: rotation_data[property].dec,
-						pm: rotation_data[property].pm,
-						ra_delta: rotation_data[property].ra_delta,
-						dec_delta: rotation_data[property].dec_delta,
-						pm_delta: rotation_data[property].pm_delta,
-						nut_prec_angles: rotation_data[property].nut_prec_angles,
-						nut_prec_ra: rotation_data[property].nut_prec_ra,
-						nut_prec_dec: rotation_data[property].nut_prec_dec,
-					});
+					if(radii[property][0] === -1){
+						body = new_viz.createAetherObject(property, {
+							labelText: bodyName,
+							name: property,
+							currIndex: cur_idx,
+							radius: 0.03,
+							particleSize: 1,
+							rotation: true,
+							hideOrbit: true,
+							positionVectors: allAdjustedVals,
+							ephemUpdate: getPositionData2,
+							jdTimeData: allAdjustedTimes,
+							levelsOfDetail: [{
+								threshold: 0,
+								segments: 40,
+							}],
+							rotation: {
+								enable: is_rotating,
+							},
+							ra: rotation_data[property].ra,
+							dec: rotation_data[property].dec,
+							pm: rotation_data[property].pm,
+							ra_delta: rotation_data[property].ra_delta,
+							dec_delta: rotation_data[property].dec_delta,
+							pm_delta: rotation_data[property].pm_delta,
+							nut_prec_angles: rotation_data[property].nut_prec_angles,
+							nut_prec_ra: rotation_data[property].nut_prec_ra,
+							nut_prec_dec: rotation_data[property].nut_prec_dec,
+						});
+					}
+					else{
+						body = new_viz.createAetherObject(property, {
+							labelText: bodyName,
+							name: property,
+							textureUrl: body_textures[property],
+							currIndex: cur_idx,
+							radius: radii[property][0],
+							radius_polar: radii[property][1],
+							rotation: true,
+							hideOrbit: true,
+							positionVectors: allAdjustedVals,
+							ephemUpdate: getPositionData2,
+							jdTimeData: allAdjustedTimes,
+							levelsOfDetail: [{
+								threshold: 0,
+								segments: 40,
+							}],
+							rotation: {
+								enable: is_rotating,
+							},
+							ra: rotation_data[property].ra,
+							dec: rotation_data[property].dec,
+							pm: rotation_data[property].pm,
+							ra_delta: rotation_data[property].ra_delta,
+							dec_delta: rotation_data[property].dec_delta,
+							pm_delta: rotation_data[property].pm_delta,
+							nut_prec_angles: rotation_data[property].nut_prec_angles,
+							nut_prec_ra: rotation_data[property].nut_prec_ra,
+							nut_prec_dec: rotation_data[property].nut_prec_dec,
+						});
+					}
 					// Update global variables
 					if(bodyName in visualizer_list){
 						visualizer_list[bodyName + '1'] = body;
@@ -1535,7 +1552,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					document.getElementById("Asteroid-label").removeAttribute("class");
 					document.getElementById("Asteroid-body").removeAttribute("class");
 					document.getElementById("Asteroid-body").removeAttribute("disabled");
-\					document.getElementById("Asteroid-body").removeAttribute("input");
+					document.getElementById("Asteroid-body").removeAttribute("input");
 					document.getElementById("Spacecraft-label").removeAttribute("class");
 					document.getElementById("Spacecraft-body").removeAttribute("class");
 					document.getElementById("Spacecraft-body").removeAttribute("disabled");
@@ -1576,8 +1593,10 @@ function runApp(){
 
 	// Main visualization object
 	//viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon+2000003+2000005+2000006+2000426', 1, Date.now()); // todo: change last parameter to be in JD
+	//viz = createNewSim('solar system barycenter', '2000003', 1, Date.now()); // todo: change last parameter to be in JD
 	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', 1, Date.now()); // todo: change last parameter to be in JD
-	
+	//saturn+titan+mimas+enceladus+tethys+dione+rhea+hyperion+iapetus+phoebe+helene+telesto+calypso+methone+polydeuces
+	//viz = createNewSim('saturn barycenter', 'saturn+titan+mimas+enceladus+tethys+dione+rhea+hyperion+iapetus+phoebe+helene+telesto+calypso+methone+polydeuces', 1, Date.now());
 	document.getElementById('sim_time').innerHTML = viz.getDate();
 	const sim_time = document.getElementById('sim_time');
 

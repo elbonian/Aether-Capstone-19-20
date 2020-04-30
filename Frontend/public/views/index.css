@@ -610,6 +610,7 @@ button {
   overflow-x: hidden;
   overflow-y: auto;
   right: 10px;
+  z-index: 2;
 }
 
 .info_panel {
