@@ -201,33 +201,37 @@ input.readonly {
 
 /* The Bodies menu */
 .sidebar {
-  height: 45%; /* 100% Full-height */
+  height: fit-content; /* 100% Full-height */
   width: 0; /* 0 width - change this with JavaScript */
-  position: fixed; /* Stay in place */
+  max-height: 48%;
+  position: relative; /* Stay in place */
   z-index: 1; /* Stay on top */
-  top: 2%;
+  top: 0;
   left: 0;
   background-color: lightgrey; /* Black*/
-  overflow-x: hidden; /* Disable horizontal scroll */
+  overflow: hidden; /* Disable horizontal scroll */
   transition: 0.5s; /* 0.5 second transition effect to slide in the sidebar */
   border-radius: 10px;
   z-index: 0;
+  margin: 2%;
 }
 
 /*The Settings Menu*/
 .Rsidebar {
-  height:43%; /* 100% Full-height */
+  height:fit-content%; /* 100% Full-height */
+  max-height: 48%;
   width: 0; /* 0 width - change this with JavaScript */
-  position: fixed; /* Stay in place */
+  position: relative; /* Stay in place */
   z-index: 1; /* Stay on top */
-  top: 50%;
+  top: 0;
   left: 0;
   background-color: lightgrey; /* Black*/
   overflow-x: hidden; /* Disable horizontal scroll */
   transition: 0.5s; /* 0.5 second transition effect to slide in the sidebar */
   border-radius: 10px;
-  float: left;
   text-align: left;
+  margin: 2%;
+  margin-top: 4%;
 }
 
 /* The sidebar links for The Bodies menu*/
@@ -320,6 +324,11 @@ input.readonly {
   margin-right: 10px;
   margin-top: 0px;
   font-family: Helvetica, Arial, sans-serif;
+  position: relative;
+  height: 72%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  width: calc(100% - 20px);
 }
 
 /*The check-boxes in the bodies list*/
@@ -493,14 +502,13 @@ button {
   background-color: lightgrey;
   color: black;
   padding: 10px 10px;
-  margin-bottom: 10px;
+  margin: 2%;
   border: none;
   border-radius: 10px;
   outline: none;
-  float:left;
   display: block;
-  position: absolute;
-  top: 2%;
+  position: relative;
+  top: 0;
   left: 0;
   width: 100%;
 }
@@ -512,12 +520,12 @@ button {
   background-color: lightgrey;
   color: black;
   padding: 10px 10px;
-  margin-bottom: 10px;
+  margin: 2%;
+  margin-top: 4%;
   border: none;
   border-radius: 10px;
   outline: none;
-  float:  left;
-  top: 50%;
+  top: 0;
   left: 0;
   position: relative;
   width: 100%;
@@ -623,4 +631,9 @@ button {
   border-radius: 10px;
   text-align: center;
   /* cursor: pointer; */
+}
+
+.button-holder {
+  height: 100%;
+  padding: 2%;
 }
