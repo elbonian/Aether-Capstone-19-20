@@ -187,11 +187,9 @@ class AetherObject extends Spacekit.SphereObject {
         this.radius = this._options.radius;
         this.radius_polar = this._options.radius_polar;
 		this.name = this._options.name;
-		console.log(this.name);
 
          // Check if body has radius data
         if(this.radius == -1){
-			console.log(this.name + " here");
         	// Create a  sprite to represent the body
         	var material = new Spacekit.THREE.SpriteMaterial( { map: map, color: 0xffffff, fog: true , sizeAttenuation: false, } ); // Size attenuation set to false so that the sprite is always a constant size to the viewer
         	var sprite = new Spacekit.THREE.Sprite( material );
@@ -206,7 +204,6 @@ class AetherObject extends Spacekit.SphereObject {
         	this._renderMethod = 'SPRITE';
         }
         else{
-			console.log(this.name + " here2");
         	// Create a sphere to represent the body
         	const radius = this.radius_polar * 1000.0; // TODO: replace 1000.0 with simulation scale factor
 
@@ -354,12 +351,10 @@ class AetherObject extends Spacekit.SphereObject {
 		this.nut_prec_dec = this._options.nut_prec_dec;
 		this.axis_of_rotation_vector = new Spacekit.THREE.Vector3(0,0,1);
 		//this.radius_polar = this._options.radius_polar;
-		console.log(this._renderMethod);
 	}
 
 	updateColorGradient(){
 		const body_data = body_meta_data.find(x => x["body name"] === this.name);
-		//console.log(body_data);
 		this.minSpeed = body_data["min speed"];
 		this.maxSpeed = body_data["max speed"];
 		this.colorGradient = new Float32Array(this.positionVectors.length * 3);
@@ -753,6 +748,9 @@ const unitsPerAu = 1000.0;
 // e.x. "body name" : body object
 var visualizer_list = {};
 
+// Dictionary of bodies in the visualization for comparison sim
+var visualizer_list2 = {};
+
 // Dictionary of ecliptic cartesian (x,y,z) coordinates in AU
 // e.x. "body name" : [[x1,y1,z1],...,[xn,yn,zn]]
 var adjusted_positions = {};
@@ -818,39 +816,75 @@ function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
 
 function handleCheckboxClick(checkboxId, bodyName){
 	let checked = document.getElementById(checkboxId).checked;
-	let label = visualizer_list[bodyName]._label;
-	let objs = visualizer_list[bodyName].get3jsObjects();
+	let label = null;
+	let objs = null;
+	if(visualizer_list[bodyName]){
+		label = visualizer_list[bodyName]._label;
+		objs = visualizer_list[bodyName].get3jsObjects();
+	}
+	let label2 = null;
+	let objs2 = null;
+	if(visualizer_list2[bodyName]){
+		label2 = visualizer_list2[bodyName]._label;
+		objs2 = visualizer_list2[bodyName].get3jsObjects();
+
+	}
 	if(!checked){
-		console.log(objs);
 		if(label != null){
 			visualizer_list[bodyName].setLabelVisibility(false);
 		}
-		visualizer_list[bodyName].material.opacity = 0;
-		visualizer_list[bodyName].material.transparent = true;
-		visualizer_list[bodyName].material.needsUpdate = true;
-		objs[0].visible = false;
-		if(viz1 != null){
-			viz1.removeObject(visualizer_list[bodyName]);
-			viz1.getScene().remove(visualizer_list[bodyName].line);
+		if(label2 != null){
+			visualizer_list2[bodyName].setLabelVisibility(false);
 		}
-		visualizer_list[bodyName].hidden = true;
+		if(visualizer_list[bodyName]){
+			visualizer_list[bodyName].material.opacity = 0;
+			visualizer_list[bodyName].material.transparent = true;
+			visualizer_list[bodyName].material.needsUpdate = true;
+			objs[0].visible = false;
+		}
+		if(viz1 != null && visualizer_list2[bodyName]){
+			visualizer_list2[bodyName].material.opacity = 0;
+			visualizer_list2[bodyName].material.transparent = true;
+			visualizer_list2[bodyName].material.needsUpdate = true;
+			objs2[0].visible = false;
+		}
+		if(visualizer_list[bodyName]){
+			visualizer_list[bodyName].hidden = true;
+		}
+		if(visualizer_list2[bodyName]){
+			visualizer_list2[bodyName].hidden = true;
+		}
 	} else {
-		console.log(objs);
 		if(label != null){
 			visualizer_list[bodyName].setLabelVisibility(true);
 		}
-		visualizer_list[bodyName].material.opacity = 1;
-		visualizer_list[bodyName].material.transparent = false;
-		visualizer_list[bodyName].material.needsUpdate = true;
-		objs[0].visible = true;
-		if(viz1 != null){
-			viz1.addObject(visualizer_list[bodyName]);
-			viz1.getScene().add(visualizer_list[bodyName].line);
+		if(label2 != null){
+			visualizer_list2[bodyName].setLabelVisibility(true);
+		}
+		if(visualizer_list[bodyName]){
+			visualizer_list[bodyName].material.opacity = 1;
+			visualizer_list[bodyName].material.transparent = false;
+			visualizer_list[bodyName].material.needsUpdate = true;
+			objs[0].visible = true;
+		}
+		if(viz1 != null && visualizer_list2[bodyName]){
+			visualizer_list2[bodyName].material.opacity = 1;
+			visualizer_list2[bodyName].material.transparent = false;
+			visualizer_list2[bodyName].material.needsUpdate = true;
+			objs2[0].visible = true;
 		}
 		if(visualizer_list[bodyName].hidden === true){
 			viz.getScene().add(visualizer_list[bodyName].line);
 		}
-		visualizer_list[bodyName].hidden = false;
+		if(visualizer_list2[bodyName] && visualizer_list2[bodyName].hidden === true){
+			viz1.getScene().add(visualizer_list2[bodyName].line);
+		}
+		if(visualizer_list[bodyName]){
+			visualizer_list[bodyName].hidden = false;
+		}
+		if(visualizer_list2[bodyName]){
+			visualizer_list2[bodyName].hidden = false;
+		}
 	}
 }
 
@@ -1376,7 +1410,6 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 
 	// Get radius info for bodys in simulation
 	getRadii(targets).then(data => {
-		console.log(data);
 		for(const property in data){
 			if(data[property] === "NO RADIUS DATA AVAILABLE"){
 				displayError(property + " HAS " + data[property]);
@@ -1544,6 +1577,12 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					else{
 						visualizer_list[bodyName] = body;
 					}
+					if(primary_sim){
+						visualizer_list[bodyName] = body;
+					}
+					else{
+						visualizer_list2[bodyName] = body;
+					}
 					initCheckboxes();
 					// Set globals
 					adjusted_positions[bodyName] = allAdjustedVals;
@@ -1566,9 +1605,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					document.getElementById("Misc-label").removeAttribute("class");
 					document.getElementById("Misc-body").removeAttribute("class");
 					document.getElementById("Misc-body").removeAttribute("disabled");
-				}
-				//console.log(visualizer_list);
-				
+				}				
 			})
 			.catch(error => {
 				console.error(error);
