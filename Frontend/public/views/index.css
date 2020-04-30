@@ -82,11 +82,12 @@ input[type="text"]::placeholder {
   font-family: Helvetica, Arial, sans-serif;
   display: none;
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 1%;
+  left: 220px;
   margin-right: -50%;
   border: 3px solid #f1f1f1;
   z-index: 9;
+  border-radius: 10px;
 }
 
 /* Add styles to the form container */
@@ -145,10 +146,18 @@ input[type="text"]::placeholder {
 #myForm {
   display:none;
   position: fixed;
-  background: white;
+  background: lightgray;
   width: inherit;
   max-height: fit-content;
   z-index: 2;
+  top: 0;
+  left: 210px;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  font-size: 21px;
+  margin: 8px;
+  font-weight: 600;
 }
 
 .selectBox {
@@ -636,4 +645,16 @@ button {
 .button-holder {
   height: 100%;
   padding: 2%;
+}
+
+.form p {
+  font-size: 15px;
+  display:inline-block;
+  font-weight: 200;
+}
+
+#cancel {
+  position: relative;
+  margin: 5px;
+  display: inline-block;
 }
