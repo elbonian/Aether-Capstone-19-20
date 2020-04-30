@@ -640,6 +640,9 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
       update(jd){
 
+      	// Update label position
+      	super.updateLabelPosition([this.positionVectors[Math.floor(this.currIndex)].x, this.positionVectors[Math.floor(this.currIndex)].y, this.positionVectors[Math.floor(this.currIndex)].z]);
+
       	////////////////////////////////////////////////////////////////////////////////////////
       	//////// DEAL WITH FETCHING NEW/OLD POSITION DATA
       	////////////////////////////////////////////////////////////////////////////////////////
@@ -706,8 +709,7 @@ class AetherObject extends Spacekit.SphereObject {
 		      	this.drawLineSegment();   	
 			}
       	}
-      	// Update label position
-      	super.updateLabelPosition([this.positionVectors[Math.floor(this.currIndex)].x, this.positionVectors[Math.floor(this.currIndex)].y, this.positionVectors[Math.floor(this.currIndex)].z]);
+      	
     }
 
 }
