@@ -1154,6 +1154,8 @@ sim_form.addEventListener('submit', function(e){
 		viz1 = null;
 	}
 
+	visualizer_list = [];
+
 	// Create a new div element
 	var div = document.createElement('div');
 	
@@ -1191,7 +1193,7 @@ compare_form.addEventListener('submit', function(e){
 		viz1 = null;
 	}
 
-
+	visualizer_list = [];
 
 	var comparison_container = document.createElement('div');
 	comparison_container.id = "comparison_container";
