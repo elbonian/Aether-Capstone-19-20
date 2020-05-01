@@ -968,19 +968,20 @@ function addClickedBody(bodyName){
 				allAdjustedTimes.push(parseFloat(data[property].times[i]));
 				i++;
 			}
-			
+			console.log(body_data);
 			// Create object
 			if(body_data.ra == null){
 				is_rotating = false; // disable the object's rotation if no rotation data
 			}
 			let body = null;
+			let radius = null;
 			// Create a new space object
 			if(!body_data["has radius data"]){
 				body = viz.createAetherObject(property, {
 					labelText: bodyName,
 					name: lowerName,
 					currIndex: cur_idx,
-					radius: -1,
+					radius: 0.03,
 					particleSize: 1,
 					rotation: true,
 					hideOrbit: true,
@@ -1006,13 +1007,19 @@ function addClickedBody(bodyName){
 				});
 			}
 			else{
+				if(body_data["radius"] === "NO RADIUS DATA AVAILABLE"){
+					radius = [0.03, 0.03];
+				}
+				else{
+					radius = [body_data["radius"].map(Spacekit.kmToAu)[0], body_data["radius"].map(Spacekit.kmToAu)[2]];
+				}
 				body = viz.createAetherObject(property, {
 					labelText: bodyName,
 					name: lowerName,
-					particleSize: -1,
+					particleSize: 1,
 					currIndex: cur_idx,
-					radius: body_data["radius"][0],
-					radius_polar: body_data["radius"][1],
+					radius: radius[0],
+					radius_polar: radius[1],
 					rotation: true,
 					hideOrbit: true,
 					positionVectors: allAdjustedVals,
@@ -1443,7 +1450,10 @@ form.addEventListener('submit', function(event){
 			return response;
 		}
 		else{
-			console.log(response);
+			alert("File uploaded!");
+			response.json().then(function(parsedJson) {
+				console.log(parsedJson);
+			})
 		}
 	})
 	.catch(error => {
@@ -1507,6 +1517,10 @@ function updateBodyChecklist(data){
 		contextMenu.name = itemID;
 		});
 	});
+
+	// SET GLOBAL VARIABLE FOR BODY METADATA
+	// i.e. body name, category, has radius data, has rotation data, is user-uploaded, spice id, range(s) of valid ephemeris times
+	body_meta_data = data;
 }
 
 /*
@@ -1528,19 +1542,6 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 	if(primary_sim){
 		getAvailableBodies2().then(data =>{
 			updateBodyChecklist(data);
-
-			// SET GLOBAL VARIABLE FOR BODY METADATA
-			// i.e. body name, category, has radius data, has rotation data, is user-uploaded, spice id, range(s) of valid ephemeris times
-			body_meta_data = data;
-
-			// Map radii in km to au
-			for(object of body_meta_data){
-				if(object["has radius data"]){
-					//console.log(object["radius"]);
-					object["radius"] = object["radius"].map(Spacekit.kmToAu);
-					//console.log(object["radius"]);
-				}
-			}
 		});
 	}
 
@@ -1675,7 +1676,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 							labelText: bodyName,
 							name: property,
 							currIndex: cur_idx,
-							radius: -1,
+							radius: 0.03,
 							particleSize: 1,
 							rotation: true,
 							hideOrbit: true,
