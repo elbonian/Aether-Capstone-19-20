@@ -201,7 +201,7 @@ input.readonly {
 .sim-time {
   position: absolute;
   top: 0px;
-  left: 39%;
+  left: 35%;
   font-family: Helvetica, Arial, sans-serif;
   color: white;
   text-align: center;
@@ -227,7 +227,7 @@ input.readonly {
 
 /*The Settings Menu*/
 .Rsidebar {
-  height:fit-content%; /* 100% Full-height */
+  height: fit-content; /* 100% Full-height */
   max-height: 48%;
   width: 0; /* 0 width - change this with JavaScript */
   position: relative; /* Stay in place */
@@ -384,7 +384,8 @@ input.readonly {
   width: 25px;
   height: 25px;
   border-radius: 50%;
-  background-image: url("mars.png");
+  /*background-image: url("mars.png");*/
+  background-color: black;
   background-size: 150%;
   background-position: 50% 50%;
   cursor: pointer;
@@ -395,7 +396,8 @@ input.readonly {
   width: 25px;
   height: 25px;
   border-radius: 50%;
-  background-image: url("mars.png");
+  /*background-image: url("mars.png");*/
+  background-color: black;
   background-size: 150%;
   background-position: 50% 50%;
   cursor: pointer;
@@ -458,7 +460,8 @@ input.readonly {
 
 /*The Start button under the Settings menu*/
 .playbtn {
-    background-image: url("earth-icon.png");
+    /*background-image: url("earth-icon.png");*/
+    background-color: black;
     background-size: 150%;
     background-position: 50% 50%;
     position: relative;
@@ -469,7 +472,7 @@ input.readonly {
     border-radius: 100%;
     border: 1px solid gray;
     outline:none;
-    font-size:20px;
+    font-size:10px;
     color:white;
     opacity: 0.7;
     transition: opacity .2s;
@@ -611,7 +614,7 @@ button {
   border-radius: inherit;
 }
 
-/*The container holding the checkbox/label combos and all sublists for bodies in the Bodies menu*/
+/*The container holding the /label combos and all sublists for bodies in the Bodies menu*/
 .body-box {
   border-radius: inherit;
 }
@@ -658,3 +661,36 @@ button {
   margin: 5px;
   display: inline-block;
 }
+.arrow {
+  border: solid black;
+  border-width: 0 3px 3px 0;
+  display: inline-block;
+  padding: 3px;
+  position: absolute;
+  top: 7px;
+  left: 160px;
+}
+
+.down {
+  transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+}
+
+.plus {
+  height: 24px;
+  width: 24px;
+  display: inline-block;
+  color: black;
+  font-size: 24px;
+  line-height: 24px;
+  position: absolute;
+  top: 0;
+  left: 110px;
+  font-style: normal;
+  cursor: pointer;
+}
+
+.plus::before {
+  content: "+";
+}
+

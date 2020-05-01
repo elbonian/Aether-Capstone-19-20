@@ -766,8 +766,9 @@ var viz1;
 
 var togglePlay = false;
 
-
 var body_meta_data = [];
+
+var comparing = false;
 
 /////////////////////////////////
 /////// Utility Functions ///////
@@ -897,9 +898,165 @@ function initCheckboxes(){
 		let checkBoxBody = checkboxes[x].id.split("-")[0];
 		if(planetKeys.includes(checkBoxBody)){
 			checkbox.checked = true;
+			checkbox.removeAttribute("disabled");
+			checkbox.removeAttribute("class");
+			let bodyLabel = document.getElementById(checkBoxBody + "-label1");
+			bodyLabel.removeAttribute("class");
 		}
 		else{
 			checkbox.disabled = true;
+		}
+	}
+	addPlusToCheckboxes();
+}
+
+function addClickedBody(bodyName){
+	let lowerName =  bodyName.charAt(0).toLowerCase() + bodyName.slice(1);
+	const body_data = body_meta_data.find(x => x["body name"] === lowerName);
+	// TODO: Make sure body is vaild in sim time
+	getPositionData2(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
+		console.log(data);
+		if(data.error){
+			console.error(data);
+			displayError(data);
+			return data;
+		}
+		// iterate over each body returned by the API call
+		for(const property in data){
+			// Array of [x,y,z] coords in AU
+			var allAdjustedVals = [];
+			// Array of Julian Dates corresponding to each position
+			var allAdjustedTimes = [];
+
+			// set tail indexes
+			var cur_idx = data[property].cur_time_idx;
+			const tail_start_idx = 0;
+			var tail_end_idx;
+			if(data[property].times.length % 2 == 0){
+				tail_end_idx = data[property].times.length / 2;
+			}
+			else {
+				tail_end_idx = Math.ceil(data[property].times.length / 2);
+			}
+
+			// iterate over the data for the current body
+			var i = 0;
+			for(pos of data[property].positions){
+				// convert coordinates in km to au
+				adjustedVals = pos.map(Spacekit.kmToAu);
+				// convert coords to ecliptic
+				adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+				let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+				
+				// push positions and their corresponding times to arrays
+				allAdjustedVals.push(vector);
+				allAdjustedTimes.push(parseFloat(data[property].times[i]));
+				i++;
+			}
+			
+			// Create object
+			if(body_data.ra == null){
+				is_rotating = false; // disable the object's rotation if no rotation data
+			}
+			let body = null;
+			// Create a new space object
+			if(!body_data["has radius data"]){
+				body = viz.createAetherObject(property, {
+					labelText: bodyName,
+					name: lowerName,
+					currIndex: cur_idx,
+					radius: 0.03,
+					particleSize: 1,
+					rotation: true,
+					hideOrbit: true,
+					positionVectors: allAdjustedVals,
+					ephemUpdate: getPositionData2,
+					jdTimeData: allAdjustedTimes,
+					levelsOfDetail: [{
+						threshold: 0,
+						segments: 40,
+					}],
+					rotation: {
+						enable: is_rotating,
+					},
+					ra: body_data.ra,
+					dec: body_data.dec,
+					pm: body_data.pm,
+					ra_delta: body_data.ra_delta,
+					dec_delta: body_data.dec_delta,
+					pm_delta: body_data.pm_delta,
+					nut_prec_angles: body_data.nut_prec_angles,
+					nut_prec_ra: body_data.nut_prec_ra,
+					nut_prec_dec: body_data.nut_prec_dec,
+				});
+			}
+			else{
+				body = viz.createAetherObject(property, {
+					labelText: bodyName,
+					name: lowerName,
+					particleSize: 1,
+					currIndex: cur_idx,
+					radius: body_data["radius"][0],
+					radius_polar: body_data["radius"][1],
+					rotation: true,
+					hideOrbit: true,
+					positionVectors: allAdjustedVals,
+					ephemUpdate: getPositionData2,
+					jdTimeData: allAdjustedTimes,
+					levelsOfDetail: [{
+						threshold: 0,
+						segments: 40,
+					}],
+					rotation: {
+						enable: is_rotating,
+					},
+					ra: body_data.ra,
+					dec: body_data.dec,
+					pm: body_data.pm,
+					ra_delta: body_data.ra_delta,
+					dec_delta: body_data.dec_delta,
+					pm_delta: body_data.pm_delta,
+					nut_prec_angles: body_data.nut_prec_angles,
+					nut_prec_ra: body_data.nut_prec_ra,
+					nut_prec_dec: body_data.nut_prec_dec,
+				});
+			}
+			visualizer_list[bodyName] = body;
+			// Set globals
+			adjusted_positions[bodyName] = allAdjustedVals;
+			adjusted_times[bodyName] = allAdjustedTimes;
+		}
+		initCheckboxes();		
+	})
+	.catch(error => {
+		console.error(error);
+	});
+}
+
+function addPlusToCheckboxes(){
+	if(!comparing){
+		let checkboxes = document.getElementById("content1").getElementsByTagName('input');
+		for(let x = 0; x < checkboxes.length; x++){
+			if(checkboxes[x].disabled){
+				let checkboxName = checkboxes[x].id.split("-")[0];
+				let labelId = checkboxName + "-label1";
+				let addButton = document.createElement("i");
+				addButton.setAttribute("class", "plus");
+				addButton.setAttribute("id", checkboxName + "-plus");
+				addButton.setAttribute("name", checkboxName);
+				addButton.setAttribute("value", checkboxName);
+				addButton.addEventListener("click", function(){
+					if(!visualizer_list[checkboxName]){
+						if(togglePlay){
+							viz.stop();
+							togglePlay = false;
+						}
+						addClickedBody(checkboxName);
+					}
+				});
+				let bodyLabel = document.getElementById(labelId);
+				bodyLabel.appendChild(addButton);
+			}
 		}
 	}
 }
@@ -1004,13 +1161,6 @@ function hideContextMenu() {
 */
 function createSubElements(lower_name, sublist){
 
-	// CHECK IF RESULTS IS A PLANET OR MOON
-	// if(results["category"] != "asteroid" && results["category"] != "comet" && results["category"] != "misc"){
-
-	// 	// CHECK IF RESULTS IS A PRIMARY BODY
-	// 	if(results["category"] == results["body name"]);{
-
-	// 	}
 	const name = capitalizeFirstLetter(lower_name);
 	// Create outermost div
 	var planet_box_div = document.createElement("div");
@@ -1022,26 +1172,19 @@ function createSubElements(lower_name, sublist){
 	var body_label_div = document.createElement("div");
 	body_label_div.setAttribute("id", name);
 	body_label_div.setAttribute("class", "checkbox_and_label");
-
-	// Create planet body input and label
-	var planet_input = document.createElement("input");
-	planet_input.setAttribute("id", name + "-body");
-	planet_input.setAttribute("type", "checkbox");
-	planet_input.setAttribute("disabled", "disabled");
-	//planet_input.setAttribute("readonly", "readonly");
-	planet_input.setAttribute("class", "readonly");
-	planet_input.setAttribute("name", name + "-body");
-	planet_input.setAttribute("value", name);
-	planet_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
-
+	
 	var planet_label = document.createElement("label");
-	planet_label.setAttribute("for", name + "-body");
-	planet_label.setAttribute("class", "readonlylabel");
+	//planet_label.setAttribute("for", name + "-body");
+	var arrownIcon = document.createElement("i");
+	arrownIcon.setAttribute("class", "arrow down");
 	planet_label.setAttribute("id", name + "-label");
+	planet_label.setAttribute("value", name);
 	planet_label.innerHTML = name;
+	planet_label.appendChild(arrownIcon);
 	var br = document.createElement("br");
+	
 	// Add input and label to innermost div
-	body_label_div.appendChild(planet_input);
+	//body_label_div.appendChild(planet_input);
 	body_label_div.appendChild(planet_label);
 	body_label_div.appendChild(br);
 
@@ -1058,11 +1201,7 @@ function createSubElements(lower_name, sublist){
 		// Add nested div to the outermost div
 		planet_box_div.appendChild(nested_div);
 
-		// Iterate over bodies in sublist
-				//console.log(sublist.values());
-
 		for(const i of sublist.values()){
-			//console.log(i)
 			const upper_name = capitalizeFirstLetter(i);
 			// Create an inner div
 			var inner_nested_div = document.createElement("div");
@@ -1087,7 +1226,7 @@ function createSubElements(lower_name, sublist){
 			var inner_label = document.createElement("label");
 			inner_label.setAttribute("for", upper_name + "-body");
 			inner_label.setAttribute("class", "readonlylabel");
-			inner_label.setAttribute("id", upper_name + "-label");
+			inner_label.setAttribute("id", upper_name + "-label1");
 			inner_label.innerHTML = upper_name;
 			var br1 = document.createElement("br");
 
@@ -1097,7 +1236,7 @@ function createSubElements(lower_name, sublist){
 			inner_nested_div.appendChild(br1);
 		}
 		
-		planet_input.addEventListener("click", function() {
+		planet_label.addEventListener("click", function() {
 			var nested = document.getElementById("nested" + name);
 			if(nested.getAttribute("style") == "display:none"){
 				nested.setAttribute("style", "display:content");
@@ -1221,6 +1360,7 @@ let compare_form = document.getElementById('comparison-form');
 */
 compare_form.addEventListener('submit', function(e){
 	e.preventDefault();
+	comparing = true;
 	const formData = new FormData(this);
 	viz.stop();
 	viz = null;
@@ -1282,6 +1422,11 @@ form.addEventListener('submit', function(event){
 			displayError("File not valid");
 			return response;
 		}
+		else if(response.status === 500){
+			console.log(response);
+			displayError("SPICE(SPKINSUFFDATA)");
+			return response;
+		}
 		else{
 			console.log(response);
 		}
@@ -1290,7 +1435,68 @@ form.addEventListener('submit', function(event){
     	console.error(error);
   	});
   	this.style.display = "none";
-})
+});
+
+function updateBodyChecklist(data){
+	console.log(data);
+	// Create new div to house nested checklist drodown menu
+	var div = document.createElement('div');
+	div.id = 'new-content1';
+
+	// Replace existing checklist dropdown with new div
+	document.getElementById("mySidebar1").replaceChild(div, document.getElementById("content1"));
+	div.id = 'content1'; // important
+	document.getElementById("content1").setAttribute("class", "content1");
+
+	// Mapping of planet bodies and their natural satellites
+	// i.e. categories["mars"] = ["deimos", "phobos"]
+	var categories = {
+		"sun" : new Set(),
+		"mercury" : new Set(),
+		"venus" : new Set(),
+		"earth" : new Set(),
+		"mars" : new Set(),
+		"jupiter" : new Set(),
+		"saturn" : new Set(),
+		"uranus" : new Set(),
+		"neptune" : new Set(),
+		"pluto" : new Set(),
+		"spacecraft": new Set(),
+		"asteroid" : new Set(),
+		"comet" : new Set(),
+		"misc" : new Set(),
+	};
+
+	// Iterate over API results in order to populate the above mapping
+	for(let index in data){
+		categories[data[index]["category"]].add(data[index]["body name"]);
+	}
+
+	// Add the html for the nested checkbox list for each overarching category of body
+	for(const primary_body in categories){
+		div.appendChild(createSubElements(primary_body, categories[primary_body]));
+	}
+		
+		// Set up the right-click context menu for the dropdown items
+	let boxes = document.querySelectorAll(".checkbox_and_label");
+	boxes.forEach(function(item){
+		let itemID = item.id;
+		// Add the event listener
+		item.addEventListener("contextmenu" , function(e){
+		e.preventDefault();
+		let contextMenu = document.getElementsByClassName("context-menu")[0];
+		contextMenu.style.top = e.clientY + "px";
+		contextMenu.style.left = e.clientX + "px";
+		contextMenu.style.display = "block";
+		contextMenu.id = itemID + "-context-menu";
+		contextMenu.name = itemID;
+		});
+	});
+
+	// SET GLOBAL VARIABLE FOR BODY METADATA
+	// i.e. body name, category, has radius data, has rotation data, is user-uploaded, spice id, range(s) of valid ephemeris times
+	body_meta_data = data;
+}
 
 /*
 	Create an AetherSimulation and add the bodies to the simulation
@@ -1310,76 +1516,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 	// Only get available body detail if this will be a primary sim, prevents two sims from issuing the API request if comparing sims
 	if(primary_sim){
 		getAvailableBodies2().then(data =>{
-			// Create new div to house nested checklist drodown menu
-		 	var div = document.createElement('div');
-			div.id = 'new-content1';
-
-			// Replace existing checklist dropdown with new div
-			document.getElementById("mySidebar1").replaceChild(div, document.getElementById("content1"));
-			div.id = 'content1'; // important
-			document.getElementById("content1").setAttribute("class", "content1");
-
-			// Mapping of planet bodies and their natural satellites
-			// i.e. categories["mars"] = ["deimos", "phobos"]
-		 	var categories = {
-		 		"sun" : new Set(),
-		 		"mercury" : new Set(),
-		 		"venus" : new Set(),
-		 		"earth" : new Set(),
-		 		"mars" : new Set(),
-		 		"jupiter" : new Set(),
-		 		"saturn" : new Set(),
-		 		"uranus" : new Set(),
-		 		"neptune" : new Set(),
-		 		"pluto" : new Set(),
-		 		"spacecraft": new Set(),
-		 		"asteroid" : new Set(),
-		 		"comet" : new Set(),
-		 		"misc" : new Set(),
-		 	};
-
-		 	// Iterate over API results in order to populate the above mapping
-		 	for(let index in data){
-		 		// Prevent a planet from adding itself to its natural satellite list
-		 		// i.e. categories["mars"] = ["mars", deimos", "phobos"] would be bad
-		 		if(!(data[index]["body name"] in categories)){
-			 		categories[data[index]["category"]].add(data[index]["body name"]);
-			 	}
-		 	}
-		 	console.log(categories);
-
-		 	// Add the html for the nested checkbox list for each overarching category of body
-		 	for(const primary_body in categories){
-
-		 		div.appendChild(createSubElements(primary_body, categories[primary_body]));
-			 }
-		 	
-		 	// Set up the right-click context menu for the dropdown items
-			let boxes = document.querySelectorAll(".checkbox_and_label");
-			boxes.forEach(function(item){
-			  let itemID = item.id;
-			  // Add the event listener
-			  item.addEventListener("contextmenu" , function(e){
-			    e.preventDefault();
-			    let contextMenu = document.getElementsByClassName("context-menu")[0];
-			    contextMenu.style.top = e.clientY + "px";
-			    contextMenu.style.left = e.clientX + "px";
-			    contextMenu.style.display = "block";
-			    contextMenu.id = itemID + "-context-menu";
-			    contextMenu.name = itemID;
-			  });
-			});
-			// Allow the context menu to be hidden
-			// TODO: Improve this behavior
-			//let checkbox = document.getElementById("toggleView");
-			//checkbox.addEventListener("change" , function(){
-			//  hideContextMenu();
-			  //Todo, add functionality to hide bodies
-			//});
-
-			// SET GLOBAL VARIABLE FOR BODY METADATA
-			// i.e. body name, category, has radius data, has rotation data, is user-uploaded, spice id, range(s) of valid ephemeris times
-			body_meta_data = data;
+			updateBodyChecklist(data);
 		});
 	}
 
@@ -1570,42 +1707,18 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 							nut_prec_dec: rotation_data[property].nut_prec_dec,
 						});
 					}
-					// Update global variables
-					if(bodyName in visualizer_list){
-						visualizer_list[bodyName + '1'] = body;
-					}
-					else{
-						visualizer_list[bodyName] = body;
-					}
 					if(primary_sim){
 						visualizer_list[bodyName] = body;
 					}
 					else{
 						visualizer_list2[bodyName] = body;
 					}
-					initCheckboxes();
 					// Set globals
 					adjusted_positions[bodyName] = allAdjustedVals;
 					adjusted_times[bodyName] = allAdjustedTimes;
 
-					// Activate the checkboxes for bodies that are currently loaded into the simulation
-					document.getElementById(bodyName + "-label").removeAttribute("class");
-					document.getElementById(bodyName + "-body").removeAttribute("class");
-					document.getElementById(bodyName + "-body").removeAttribute("disabled");
-					document.getElementById("Asteroid-label").removeAttribute("class");
-					document.getElementById("Asteroid-body").removeAttribute("class");
-					document.getElementById("Asteroid-body").removeAttribute("disabled");
-					document.getElementById("Asteroid-body").removeAttribute("input");
-					document.getElementById("Spacecraft-label").removeAttribute("class");
-					document.getElementById("Spacecraft-body").removeAttribute("class");
-					document.getElementById("Spacecraft-body").removeAttribute("disabled");
-					document.getElementById("Comet-label").removeAttribute("class");
-					document.getElementById("Comet-body").removeAttribute("class");
-					document.getElementById("Comet-body").removeAttribute("disabled");
-					document.getElementById("Misc-label").removeAttribute("class");
-					document.getElementById("Misc-body").removeAttribute("class");
-					document.getElementById("Misc-body").removeAttribute("disabled");
-				}				
+				}
+				initCheckboxes();		
 			})
 			.catch(error => {
 				console.error(error);
