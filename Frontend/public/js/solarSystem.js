@@ -874,7 +874,7 @@ function handleCheckboxClick(checkboxId, bodyName){
 			visualizer_list2[bodyName].material.needsUpdate = true;
 			objs2[0].visible = true;
 		}
-		if(visualizer_list[bodyName].hidden === true){
+		if(visualizer_list[bodyName] && visualizer_list[bodyName].hidden === true){
 			viz.getScene().add(visualizer_list[bodyName].line);
 		}
 		if(visualizer_list2[bodyName] && visualizer_list2[bodyName].hidden === true){
@@ -892,6 +892,7 @@ function handleCheckboxClick(checkboxId, bodyName){
 function initCheckboxes(){
 	let checkboxes = document.getElementById("content1").getElementsByTagName('input');
 	let planetKeys = Object.keys(visualizer_list);
+	let planetKeys2 = Object.keys(visualizer_list2);
 	for(let x = 0; x < checkboxes.length; x++){
 		let checkbox = checkboxes[x];
 		let checkBoxId = checkboxes[x].id;
@@ -905,6 +906,20 @@ function initCheckboxes(){
 		}
 		else{
 			checkbox.disabled = true;
+		}
+	}
+	if(comparing){
+		for(let x = 0; x < checkboxes.length; x++){
+			let checkbox = checkboxes[x];
+			let checkBoxId = checkboxes[x].id;
+			let checkBoxBody = checkboxes[x].id.split("-")[0];
+			if(planetKeys2.includes(checkBoxBody)){
+				checkbox.checked = true;
+				checkbox.removeAttribute("disabled");
+				checkbox.removeAttribute("class");
+				let bodyLabel = document.getElementById(checkBoxBody + "-label1");
+				bodyLabel.removeAttribute("class");
+			}
 		}
 	}
 	addPlusToCheckboxes();
