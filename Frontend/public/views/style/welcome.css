@@ -1,3 +1,7 @@
+@font-face {
+  font-family: "Nasalization";
+  src: url('nasalization-rg.ttf')
+}
 
 * {
   margin: 0;
@@ -46,6 +50,17 @@ body {
   text-transform: uppercase;
   color: #adff2f;
   opacity: 1;
+  transition: all 1s ease 2s;
+}
+
+.aether{
+  font-family: "Nasalization";
+  font-size: 80px;
+  position: absolute;
+  color: red;
+  opacity: 1;
+  top: 28%;
+  left: 36%;
   transition: all 1s ease 2s;
 }
 
@@ -106,7 +121,7 @@ body {
   width: 200%;
   height: 100%;
   animation: spin 15s linear alternate infinite;
-  background: url(https://web.opendrive.com/api/v1/download/file.json/NTlfMTQ1MTkzNDhf?inline=1);
+  background: url(https://i.pinimg.com/originals/40/be/4d/40be4d81dc0b6e62c4c2f5894efd8fcc.jpg);
   background-size: cover;
 }
 @keyframes spin {

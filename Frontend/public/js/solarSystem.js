@@ -1521,6 +1521,7 @@ function updateBodyChecklist(data){
 	// SET GLOBAL VARIABLE FOR BODY METADATA
 	// i.e. body name, category, has radius data, has rotation data, is user-uploaded, spice id, range(s) of valid ephemeris times
 	body_meta_data = data;
+	console.log(data);
 }
 
 /*
