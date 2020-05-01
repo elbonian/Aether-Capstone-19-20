@@ -4,12 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Welcome</title>
-        <link rel="stylesheet" type="text/css" href="/views/welcome.css">
+        <link rel="stylesheet" type="text/css" href="/views/style/welcome.css">
     </head>
     <body>
-
-
         <div class="welcome-section content-hidden">
+          <p class='aether'> AETHER </p>
             <div class="content-wrap">
                 <ul class="fly-in-text">
                     <li>N</li>
@@ -35,7 +34,7 @@
               <div class="star"></div>
               <div class="star"></div>
             </div>
-            
+
 
 
             <div class="border"></div>
@@ -44,10 +43,11 @@
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
         <script type="text/javascript">
+
             $(function() {
 
                 var welcomeSection = $('.welcome-section'),
-                enterButton = welcomeSection.find('.launch-button');
+                    enterButton = welcomeSection.find('.launch-button');
 
                 setTimeout(function() {
                     welcomeSection.removeClass('content-hidden');
@@ -56,6 +56,8 @@
                 enterButton.on('click', function(e) {
                     welcomeSection.addClass('content-hidden').fadeOut();
                 });
+
+
             });
         </script>
 
