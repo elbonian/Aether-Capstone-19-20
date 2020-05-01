@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Welcome</title>
+        <link rel="stylesheet" href="style/style.css">
+    </head>
+    <body>
+
+
+        <div class="welcome-section content-hidden">
+          <p class='aether'> AETHER </p>
+            <div class="content-wrap">
+                <ul class="fly-in-text">
+                    <li>N</li>
+                    <li>A</li>
+                    <li>S</li>
+                    <li>A</li>
+                    <li>/</li>
+                    <li>J</li>
+                    <li>P</li>
+                    <li>L</li>
+
+                </ul>
+
+                <a href="#" class="launch-button">Launch</a>
+            </div>
+            <div class="earth">
+              <div></div>
+            </div>
+            <div class="sky-container">
+              <div class="star"></div>
+              <div class="star"></div>
+              <div class="star"></div>
+              <div class="star"></div>
+              <div class="star"></div>
+            </div>
+
+
+
+            <div class="border"></div>
+        </div>
+
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+        <script type="text/javascript">
+
+            $(function() {
+
+                var welcomeSection = $('.welcome-section'),
+                    enterButton = welcomeSection.find('.launch-button');
+
+                setTimeout(function() {
+                    welcomeSection.removeClass('content-hidden');
+                }, 500);
+
+                enterButton.on('click', function(e) {
+                    e.preventDefault();
+                    welcomeSection.addClass('content-hidden').fadeOut();
+                });
+
+
+            })();
+        </script>
+
+    </body>
+</html>
