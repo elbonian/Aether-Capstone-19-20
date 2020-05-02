@@ -190,9 +190,10 @@ class AetherObject extends Spacekit.SphereObject {
         this.radius = this._options.radius;
         this.radius_polar = this._options.radius_polar;
 		this.name = this._options.name;
-
          // Check if body has radius data
-        if(this.radius == -1){
+        if(this.radius == -1 || this.radius < 0.000001){
+        	// console.log(this.radius);
+        	// console.log(this._options.textureUrl);
         	// Create a  sprite to represent the body
         	var material = new Spacekit.THREE.SpriteMaterial( { map: map, color: 0xffffff, fog: true , sizeAttenuation: false, } ); // Size attenuation set to false so that the sprite is always a constant size to the viewer
         	var sprite = new Spacekit.THREE.Sprite( material );
@@ -796,6 +797,8 @@ var body_meta_data = [];
 
 var comparing = false;
 
+var stars = null;
+
 /////////////////////////////////
 /////// Utility Functions ///////
 /////////////////////////////////
@@ -994,25 +997,51 @@ function addClickedBody(bodyName){
 				allAdjustedTimes.push(parseFloat(data[property].times[i]));
 				i++;
 			}
-			console.log(body_data);
+
+			let rotate;
 			// Create object
-			if(body_data.ra == null){
-				is_rotating = false; // disable the object's rotation if no rotation data
-			}
-			//let body = null;
-			let radius = null;
-			let textureUrl;
-			if(body_data["has radius data"]){
-				radii[lowerName] = body_data["radius"];
-				textureUrl = null;
+			if(!body_data["has rotation data"]){
+				rotate = {
+					"ra": null,
+					"dec": null,
+					"pm": null,
+					"ra_delta": null,
+					"dec_delta": null,
+					"pm_delta": null,
+					"nut_prec_angles": null,
+					"nut_prec_ra": null,
+					"nut_prec_dec": null,
+				};
+				displayError(lowerName + " HAS NO ROTATION DATA AVAILABLE");
 			}
 			else{
-				radii[lowerName] = [-1,-1];
-				textureUrl = '/js/textures/smallparticle.png';
+				rotate = {
+					"ra": body_data["rotation data"].ra,
+					"dec": body_data["rotation data"].dec,
+					"pm": body_data["rotation data"].pm,
+					"ra_delta": body_data["rotation data"].ra_delta,
+					"dec_delta": body_data["rotation data"].dec_delta,
+					"pm_delta": body_data["rotation data"].pm_delta,
+					"nut_prec_angles": body_data["rotation data"].nut_prec_angles,
+					"nut_prec_ra": body_data["rotation data"].nut_prec_ra,
+					"nut_prec_dec": body_data["rotation data"].nut_prec_dec,
+				};
 			}
 
+			let textureUrl;
+			if(body_data["has radius data"]){
+				radii[lowerName] = [body_data["radius"].map(Spacekit.kmToAu)[0], body_data["radius"].map(Spacekit.kmToAu)[2]];
+				//console.log(body_textures[lowerName]);
+				textureUrl = body_textures[lowerName];
+			}
+			else{
+				displayError(lowerName + " HAS NO RADIUS DATA AVAILABLE");
+				radii[lowerName] = [-1,-1];
+			}
+			if(radii[lowerName][0] < 0.000001){
+				textureUrl = '/js/textures/smallparticle.png';
+			}
 			// Create a new space object
-			console.log(lowerName + textureUrl);
 			let body = viz.createAetherObject(lowerName, {
 				labelText: bodyName,
 				name: lowerName,
@@ -1030,17 +1059,17 @@ function addClickedBody(bodyName){
 					segments: 40,
 				}],
 				rotation: {
-					enable: is_rotating,
+					enable: body_data["has rotation data"],
 				},
-				ra: body_data.ra,
-				dec: body_data.dec,
-				pm: body_data.pm,
-				ra_delta: body_data.ra_delta,
-				dec_delta: body_data.dec_delta,
-				pm_delta: body_data.pm_delta,
-				nut_prec_angles: body_data.nut_prec_angles,
-				nut_prec_ra: body_data.nut_prec_ra,
-				nut_prec_dec: body_data.nut_prec_dec,
+				ra: rotate.ra,
+				dec: rotate.dec,
+				pm: rotate.pm,
+				ra_delta: rotate.ra_delta,
+				dec_delta: rotate.dec_delta,
+				pm_delta: rotate.pm_delta,
+				nut_prec_angles: rotate.nut_prec_angles,
+				nut_prec_ra: rotate.nut_prec_ra,
+				nut_prec_dec: rotate.nut_prec_dec,
 			});
 			
 			visualizer_list[bodyName] = body;
@@ -1134,21 +1163,6 @@ async function getAvailableBodies2(){
 	return data;
 }
 
-/*
-	async function to get info for bodies
-	@return {json} data - JSON of body info such as radius, mass, etc.
-*/
-async function getRadii(targets){
-	let response = await fetch('http://0.0.0.0:5000/api/body-radius/' + targets);
-	let data = await response.json();
-	return data;
-}
-
-async function getRotationData(targets){
-	let response = await fetch('http://0.0.0.0:5000/api/rotations/' + targets );
-	let data = await response.json();
-	return data;
-}
 
 // Mapping of the Sun and the planet's texture paths
 let body_textures = {
@@ -1285,7 +1299,7 @@ function isEmpty(obj) {
 }
 
 var radii = {};
-
+var rotation_data = {};
 var expanded = false;
 
 /*
@@ -1434,7 +1448,7 @@ form.addEventListener('submit', function(event){
 	event.preventDefault();
 	const formData = new FormData(this);
 	// Call API endpoint that will submit the new file
-	fetch('http://0.0.0.0:5000/api/spk-upload', {
+	fetch('http://0.0.0.0:5000/api/spk-upload/', {
 		method: 'POST',
 		body: formData
 	})
@@ -1536,18 +1550,6 @@ function updateBodyChecklist(data){
 function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[2500,5000,5000], container='main-container', primary_sim=true){
 
 	////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////// GET AVAILABLE BODY DETAILS FROM THE BACKEND /////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////
-
-	// Only get available body detail if this will be a primary sim, prevents two sims from issuing the API request if comparing sims
-	if(primary_sim){
-		getAvailableBodies2().then(data =>{
-			updateBodyChecklist(data);
-		});
-	}
-
-
-	////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////// CREATE THE SIMULATION OBJECT /////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1566,33 +1568,34 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 
 
 	////////////////////////////////////////////////////////////////////////////////////////////
-	///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
+	////////////////////// GET AVAILABLE BODY DETAILS FROM THE BACKEND /////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////
 
-	// TODO: use body_meta_data to avoid unneccesarily passing bodies to radii and rotation endpoints
+	// Only get available body detail if this will be a primary sim, prevents two sims from issuing the API request if comparing sims
+	if(primary_sim){
+		getAvailableBodies2().then(data =>{
+			updateBodyChecklist(data);
 
-	// Get radius info for bodys in simulation
-	getRadii(targets).then(data => {
-		for(const property in data){
-			if(data[property] === "NO RADIUS DATA AVAILABLE"){
-				displayError(property + " HAS " + data[property]);
-				radii[property] = [-1, -1]; // If the call didn't return a radius, set radius to -1
-				body_textures[property] = '/js/textures/smallparticle.png';
-			}
-			else{
-				radii[property] = [data[property].map(Spacekit.kmToAu)[0], data[property].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
-			}
-		}
+			////////////////////////////////////////////////////////////////////////////////////////////
+			///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
+			////////////////////////////////////////////////////////////////////////////////////////////
 
-		// get body rotation data
-		var rotation_data = {};
-
-		getRotationData(targets).then(data => {
-			for(const property in data){
-
-				// If call didn't return rotation data for a body, set its parameters to null
-				if(data[property] == "NO ROTATION DATA AVAILABLE"){
-					rotation_data[property] = {
+			for(const body of body_meta_data){
+				const body_name = body["body name"];
+				// Check for radius
+				if(body["has radius data"]){
+					radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius		
+				}
+				else{
+					radii[body_name] = [-1, -1];
+					body_textures[body_name] = '/js/textures/smallparticle.png';
+				}
+				// Check for rotation
+				if(body["has rotation data"]){
+					rotation_data[body_name] = body["rotation data"];
+				}
+				else{
+					rotation_data[body_name] = {
 						"ra": null,
 						"dec": null,
 						"pm": null,
@@ -1603,11 +1606,8 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 						"nut_prec_ra": null,
 						"nut_prec_dec": null,
 					};
-					displayError(property + " HAS " + data[property]);
 				}
-				else{
-					rotation_data[property] = data[property]; // Keep track of rotation details
-				}
+				//console.log(body);
 			}
 
 			// Retrieve the position data with the specified parameters
@@ -1653,21 +1653,27 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					
 					// Create object
 					var bodyName = capitalizeFirstLetter(property)
-					var radius;
-					if(bodyName == "Sun"){
-						radius = 0.17;
-						//new_viz.createLight(allAdjustedVals[cur_idx]);
-					}
-					else if(bodyName == "Moon"){
-						radius = 0.0005;
-					}
-					else{
-						radius = .08;
+					// var radius;
+					// if(bodyName == "Sun"){
+					// 	radius = 0.17;
+					// 	//new_viz.createLight(allAdjustedVals[cur_idx]);
+					// }
+					// else if(bodyName == "Moon"){
+					// 	radius = 0.0005;
+					// }
+					// else{
+					// 	radius = .08;
+					// }
+
+					// Check for radius data
+					if(radii[property] == [-1, -1]){
+						displayError(property + " HAS NO RADIUS DATA AVAILABLE");
 					}
 
 					// Check rotation data for body
 					var is_rotating = true;
 					if(rotation_data[property].ra == null){
+						displayError(property + " HAS NO ROTATION DATA AVAILABLE" );
 						is_rotating = false; // disable the object's rotation if no rotation data
 					}
 
@@ -1713,7 +1719,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					adjusted_positions[bodyName] = allAdjustedVals;
 					adjusted_times[bodyName] = allAdjustedTimes;
 
-					console.log(new_viz._subscribedObjects);
+					//console.log(new_viz._subscribedObjects);
 
 				}
 				initCheckboxes();		
@@ -1721,11 +1727,9 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 			.catch(error => {
 				console.error(error);
 			});
-		})
-		.catch(error => {
-			console.error(error);
-	  	});
-	});
+
+		});
+	}
 
 	console.log(visualizer_list);
 	
@@ -1807,6 +1811,32 @@ function runApp(){
 		}
 		
 	}
+
+	// A button that will set the simulation to real time
+	document.getElementById("pretty_button").addEventListener("click", function() {
+		//if(!stars)
+		if(stars){
+			viz.removeObject(stars);
+			stars = null;
+		}
+		else{
+			stars = new Spacekit.Stars({}, viz);
+		}
+
+		console.log(visualizer_list);
+
+		if(visualizer_list.Sun){
+			console.log("hie?");
+			if(!viz.isUsingLightSources){
+
+			}
+			else{
+				viz.createLight(visualizer_list.Sun.position);
+				console.log(viz);
+			}
+		}
+		
+	});
 
 	// A slider that changes the length of the tail of a body
 	var tail_slider = document.getElementById("myRange2");
