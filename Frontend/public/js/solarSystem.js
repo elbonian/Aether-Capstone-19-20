@@ -162,20 +162,23 @@ class AetherObject extends Spacekit.SphereObject {
 		this.axis_of_rotation_vector = null;
 		this.radius_polar = 0;
 		this.colorGradient = null;
+		this.map = null;
 		this.hidden = false;
+		this.mesh = null;
 		this.sprite = null;
 		this.minSpeed = null;
 		this.maxSpeed = null;
-        this.initAetherObj();
+		this.init();
 	}
 
 	/*
 	  Initialize function. Mostly the same as SphereObject with minor changes
 	*/
-	initAetherObj(){
+	init(){
         let map;
         if (this._options.textureUrl) {
           map = new Spacekit.THREE.TextureLoader().load(this._options.textureUrl);
+          this.map = map;
 		}
 
 		//Level of detail segments changed to (can be changed)
@@ -242,6 +245,9 @@ class AetherObject extends Spacekit.SphereObject {
 					transparent: true,
 					});
 				}
+				else if(this._options.is_rotating){
+					
+				}
 				else {
 					//mesh material changed to transparent and opacity to 0 to not see weird meshes
 					material = new Spacekit.THREE.MeshBasicMaterial({
@@ -296,7 +302,7 @@ class AetherObject extends Spacekit.SphereObject {
 		//this.material = new Spacekit.THREE.LineBasicMaterial({color: new Spacekit.THREE.Color(0x6495ED)});
 		this.geometry.attributes['color'] = new Spacekit.THREE.BufferAttribute( this.colorGradient, 3);																				
 		this.material = new Spacekit.THREE.LineBasicMaterial({vertexColors: THREE.VertexColors});
-		this.material.needsUpdate = true;
+		//this.material.needsUpdate = true;
 
 		// 1D array describing the vertices of the line
 		// i.e. [x1,y1,z1,x2,y2,z2,...,xn,yn,zn]
@@ -351,6 +357,26 @@ class AetherObject extends Spacekit.SphereObject {
 		this.nut_prec_dec = this._options.nut_prec_dec;
 		this.axis_of_rotation_vector = new Spacekit.THREE.Vector3(0,0,1);
 		//this.radius_polar = this._options.radius_polar;
+
+
+		var labelElt = super.createLabel();
+		this._simulation.getSimulationElement().appendChild(labelElt);
+		this._label = labelElt;
+		this._showLabel = true;
+
+		// Object has a radius, call superclass init function
+		if(this.radius != -1){
+        	super.init();
+        }
+        else{
+			// Object has no radius, manually create a label for it
+			var labelElt = super.createLabel();
+			this._simulation.getSimulationElement().appendChild(labelElt);
+			this._label = labelElt;
+			this._showLabel = true;
+		}
+		console.log(this.name);
+
 	}
 
 	updateColorGradient(){
@@ -973,76 +999,50 @@ function addClickedBody(bodyName){
 			if(body_data.ra == null){
 				is_rotating = false; // disable the object's rotation if no rotation data
 			}
-			let body = null;
+			//let body = null;
 			let radius = null;
-			// Create a new space object
-			if(!body_data["has radius data"]){
-				body = viz.createAetherObject(property, {
-					labelText: bodyName,
-					name: lowerName,
-					currIndex: cur_idx,
-					radius: 0.03,
-					particleSize: 1,
-					rotation: true,
-					hideOrbit: true,
-					positionVectors: allAdjustedVals,
-					ephemUpdate: getPositionData2,
-					jdTimeData: allAdjustedTimes,
-					levelsOfDetail: [{
-						threshold: 0,
-						segments: 40,
-					}],
-					rotation: {
-						enable: is_rotating,
-					},
-					ra: body_data.ra,
-					dec: body_data.dec,
-					pm: body_data.pm,
-					ra_delta: body_data.ra_delta,
-					dec_delta: body_data.dec_delta,
-					pm_delta: body_data.pm_delta,
-					nut_prec_angles: body_data.nut_prec_angles,
-					nut_prec_ra: body_data.nut_prec_ra,
-					nut_prec_dec: body_data.nut_prec_dec,
-				});
+			let textureUrl;
+			if(body_data["has radius data"]){
+				radii[lowerName] = body_data["radius"];
+				textureUrl = null;
 			}
 			else{
-				if(body_data["radius"] === "NO RADIUS DATA AVAILABLE"){
-					radius = [0.03, 0.03];
-				}
-				else{
-					radius = [body_data["radius"].map(Spacekit.kmToAu)[0], body_data["radius"].map(Spacekit.kmToAu)[2]];
-				}
-				body = viz.createAetherObject(property, {
-					labelText: bodyName,
-					name: lowerName,
-					particleSize: 1,
-					currIndex: cur_idx,
-					radius: radius[0],
-					radius_polar: radius[1],
-					rotation: true,
-					hideOrbit: true,
-					positionVectors: allAdjustedVals,
-					ephemUpdate: getPositionData2,
-					jdTimeData: allAdjustedTimes,
-					levelsOfDetail: [{
-						threshold: 0,
-						segments: 40,
-					}],
-					rotation: {
-						enable: is_rotating,
-					},
-					ra: body_data.ra,
-					dec: body_data.dec,
-					pm: body_data.pm,
-					ra_delta: body_data.ra_delta,
-					dec_delta: body_data.dec_delta,
-					pm_delta: body_data.pm_delta,
-					nut_prec_angles: body_data.nut_prec_angles,
-					nut_prec_ra: body_data.nut_prec_ra,
-					nut_prec_dec: body_data.nut_prec_dec,
-				});
+				radii[lowerName] = [-1,-1];
+				textureUrl = '/js/textures/smallparticle.png';
 			}
+
+			// Create a new space object
+			console.log(lowerName + textureUrl);
+			let body = viz.createAetherObject(lowerName, {
+				labelText: bodyName,
+				name: lowerName,
+				textureUrl: textureUrl,
+				currIndex: cur_idx,
+				radius: radii[lowerName][0],
+				radius_polar: radii[lowerName][1],
+				rotation: true,
+				hideOrbit: true,
+				positionVectors: allAdjustedVals,
+				ephemUpdate: getPositionData2,
+				jdTimeData: allAdjustedTimes,
+				levelsOfDetail: [{
+					threshold: 0,
+					segments: 40,
+				}],
+				rotation: {
+					enable: is_rotating,
+				},
+				ra: body_data.ra,
+				dec: body_data.dec,
+				pm: body_data.pm,
+				ra_delta: body_data.ra_delta,
+				dec_delta: body_data.dec_delta,
+				pm_delta: body_data.pm_delta,
+				nut_prec_angles: body_data.nut_prec_angles,
+				nut_prec_ra: body_data.nut_prec_ra,
+				nut_prec_dec: body_data.nut_prec_dec,
+			});
+			
 			visualizer_list[bodyName] = body;
 			// Set globals
 			adjusted_positions[bodyName] = allAdjustedVals;
@@ -1601,7 +1601,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 			if(data[property] === "NO RADIUS DATA AVAILABLE"){
 				displayError(property + " HAS " + data[property]);
 				radii[property] = [-1, -1]; // If the call didn't return a radius, set radius to -1
-				body_textures[property.toUpperCase()] = '/js/textures/smallparticle.png';
+				body_textures[property] = '/js/textures/smallparticle.png';
 			}
 			else{
 				radii[property] = [data[property].map(Spacekit.kmToAu)[0], data[property].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
@@ -1694,69 +1694,39 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					if(rotation_data[property].ra == null){
 						is_rotating = false; // disable the object's rotation if no rotation data
 					}
-					let body = null;
+
 					// Create a new space object
-					if(radii[property][0] === -1){
-						body = new_viz.createAetherObject(property, {
-							labelText: bodyName,
-							name: property,
-							currIndex: cur_idx,
-							radius: 0.03,
-							particleSize: 1,
-							rotation: true,
-							hideOrbit: true,
-							positionVectors: allAdjustedVals,
-							ephemUpdate: getPositionData2,
-							jdTimeData: allAdjustedTimes,
-							levelsOfDetail: [{
-								threshold: 0,
-								segments: 40,
-							}],
-							rotation: {
-								enable: is_rotating,
-							},
-							ra: rotation_data[property].ra,
-							dec: rotation_data[property].dec,
-							pm: rotation_data[property].pm,
-							ra_delta: rotation_data[property].ra_delta,
-							dec_delta: rotation_data[property].dec_delta,
-							pm_delta: rotation_data[property].pm_delta,
-							nut_prec_angles: rotation_data[property].nut_prec_angles,
-							nut_prec_ra: rotation_data[property].nut_prec_ra,
-							nut_prec_dec: rotation_data[property].nut_prec_dec,
-						});
-					}
-					else{
-						body = new_viz.createAetherObject(property, {
-							labelText: bodyName,
-							name: property,
-							textureUrl: body_textures[property],
-							currIndex: cur_idx,
-							radius: radii[property][0],
-							radius_polar: radii[property][1],
-							rotation: true,
-							hideOrbit: true,
-							positionVectors: allAdjustedVals,
-							ephemUpdate: getPositionData2,
-							jdTimeData: allAdjustedTimes,
-							levelsOfDetail: [{
-								threshold: 0,
-								segments: 40,
-							}],
-							rotation: {
-								enable: is_rotating,
-							},
-							ra: rotation_data[property].ra,
-							dec: rotation_data[property].dec,
-							pm: rotation_data[property].pm,
-							ra_delta: rotation_data[property].ra_delta,
-							dec_delta: rotation_data[property].dec_delta,
-							pm_delta: rotation_data[property].pm_delta,
-							nut_prec_angles: rotation_data[property].nut_prec_angles,
-							nut_prec_ra: rotation_data[property].nut_prec_ra,
-							nut_prec_dec: rotation_data[property].nut_prec_dec,
-						});
-					}
+					let body = new_viz.createAetherObject(property, {
+						labelText: bodyName,
+						name: property,
+						textureUrl: body_textures[property],
+						currIndex: cur_idx,
+						radius: radii[property][0],
+						radius_polar: radii[property][1],
+						rotation: true,
+						hideOrbit: true,
+						positionVectors: allAdjustedVals,
+						ephemUpdate: getPositionData2,
+						jdTimeData: allAdjustedTimes,
+						levelsOfDetail: [{
+							threshold: 0,
+							segments: 40,
+						}],
+						rotation: {
+							enable: is_rotating,
+						},
+						ra: rotation_data[property].ra,
+						dec: rotation_data[property].dec,
+						pm: rotation_data[property].pm,
+						ra_delta: rotation_data[property].ra_delta,
+						dec_delta: rotation_data[property].dec_delta,
+						pm_delta: rotation_data[property].pm_delta,
+						nut_prec_angles: rotation_data[property].nut_prec_angles,
+						nut_prec_ra: rotation_data[property].nut_prec_ra,
+						nut_prec_dec: rotation_data[property].nut_prec_dec,
+					});
+
+					
 					if(primary_sim){
 						visualizer_list[bodyName] = body;
 					}
@@ -1766,6 +1736,8 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					// Set globals
 					adjusted_positions[bodyName] = allAdjustedVals;
 					adjusted_times[bodyName] = allAdjustedTimes;
+
+					console.log(new_viz._subscribedObjects);
 
 				}
 				initCheckboxes();		
@@ -1779,10 +1751,10 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 	  	});
 	});
 
+	console.log(visualizer_list);
 	
 	// make camera controls more fine-grained
 	new_viz.tuneCameraControls(0.75, 1, 2, 14);
-	
 	new_viz.onTick = tick;
 	return new_viz;
 }
@@ -1796,11 +1768,9 @@ function runApp(){
 	/////////////////////////////////
 
 	// Main visualization object
-	//viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon+2000003+2000005+2000006+2000426', 1, Date.now()); // todo: change last parameter to be in JD
-	//viz = createNewSim('solar system barycenter', '2000003', 1, Date.now()); // todo: change last parameter to be in JD
+
 	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', 1, Date.now()); // todo: change last parameter to be in JD
-	//saturn+titan+mimas+enceladus+tethys+dione+rhea+hyperion+iapetus+phoebe+helene+telesto+calypso+methone+polydeuces
-	//viz = createNewSim('saturn barycenter', 'saturn+titan+mimas+enceladus+tethys+dione+rhea+hyperion+iapetus+phoebe+helene+telesto+calypso+methone+polydeuces', 1, Date.now());
+
 	document.getElementById('sim_time').innerHTML = viz.getDate();
 	const sim_time = document.getElementById('sim_time');
 
