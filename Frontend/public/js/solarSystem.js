@@ -1867,7 +1867,9 @@ function runApp(){
 
 	function displayBodyInfo(name){
 		let info_panel = document.getElementById("info_panel1");
-		let body = visualizer_list[name];
+		let body = body_meta_data.find( x => x["body name"] === name.toLowerCase());
+		if(body == undefined) return;
+		//if(!body["is uploaded"]) return;
 		info_panel.style.display = "block";
 
 		//remove the children
@@ -1879,18 +1881,21 @@ function runApp(){
 		title.innerText = name;
 		info_panel.appendChild(title);
 
-		//Display the Equatorial radius in Km
-		let radius = Spacekit.auToKm(body.radius).toFixed(2);
-		let radiusE = document.createElement("H4");
-		radiusE.innerText = "Equatorial Radius: " + radius + " Km";
-		info_panel.appendChild(radiusE);
+		//Check for radius info, then print
+		if(body["has radius data"]){
+				//Display the Equatorial radius in Km
+			let radius = body.radius[0].toFixed(2);
+			let radiusE = document.createElement("H4");
+			radiusE.innerText = "Equatorial Radius: " + radius + " Km";
+			info_panel.appendChild(radiusE);
 
-		//Display the polar radius in Km
-		let pradius = Spacekit.auToKm(body.radius_polar).toFixed(2);
-		let pradiusE = document.createElement("H4");
-		pradiusE.innerText = "Polar Radius: " + pradius + " Km";
-		info_panel.appendChild(pradiusE);
-
+			//Display the polar radius in Km
+			let pradius = body.radius[2].toFixed(2);
+			let pradiusE = document.createElement("H4");
+			pradiusE.innerText = "Polar Radius: " + pradius + " Km";
+			info_panel.appendChild(pradiusE);
+		}
+		
 		let closebtn = document.createElement("button");
 		closebtn.id = "info_close";
 		closebtn.innerText = "\x2D";
