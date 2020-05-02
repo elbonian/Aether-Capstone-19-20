@@ -694,3 +694,19 @@ button {
   content: "+";
 }
 
+.pretty_button_holder {
+	position: relative;
+	margin: 2%;
+	top: 0;
+	left: 0;
+	width: inherit;
+	height: 4%;
+}
+
+#pretty_button {
+	position: relative;
+	margin-top: 7%;
+	width: 83%;
+	height: 100%;
+	border-radius: 10px;
+}
