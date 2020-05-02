@@ -34,7 +34,7 @@ def get_body_info(ip):
 
 def clear_upload(ip):
 
-	addr = 'http://{}:5000/api/spk-clear'.format(ip)
+	addr = 'http://{}:5000/api/spk-clear/'.format(ip)
 
 	# make the request and get the response
 	response = requests.get(addr)
@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
-	pprint("Response: {}".format(get_solar_target_positions(args.ip, ref_frame, target_list, args.start_date_time, args.end_date_time, steps_list)))
+	# pprint("Response: {}".format(get_solar_target_positions(args.ip, ref_frame, target_list, args.start_date_time, args.end_date_time, steps_list)))
 	# print('-------------------------------------------------')
 	time_start = time.time()
 

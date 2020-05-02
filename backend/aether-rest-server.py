@@ -85,6 +85,19 @@ def get_radius(bod_id):
         return "NO RADIUS DATA AVAILABLE"
 
 
+def get_mass(bod_id):
+
+    # returns the mass of a body in kg
+
+    G = 6.67430e-11
+
+    try:
+        return float(spice.bodvrd(bod_id, "GM", 1)[1][0] / (G/1000000000))
+    # This should never be hit, but just in case...
+    except:
+        return "NO MASS DATA AVAILABLE"
+
+
 def get_rotation_data(bod_id, bod_name):
 
     try:
@@ -322,11 +335,10 @@ def get_object_positions(ref_frame, targets, startDate, endDate, steps):
 
 
 @app.route('/api/available-bodies/', methods=['GET'])
-def get_available_bodies2():
+def get_available_bodies():
 
     known_bodies = aether_bodies.getBodies()
 
-    # TODO: mass
     # get rotation, mass, radius, min-max speeds for each body
     # print(len(known_bodies))
 
@@ -343,13 +355,16 @@ def get_available_bodies2():
         if bod_dict['has radius data']:
             bod_dict['radius'] = get_radius(bod_id)
 
+        if bod_dict['has mass data']:
+            bod_dict['mass'] = get_mass(bod_id)
+
         if bod_dict['has rotation data']:
             bod_dict['rotation data'] = get_rotation_data(bod_id, bod_dict['body name'])
 
     return returnResponse(known_bodies, 200)
 
 
-@app.route('/api/spk-upload', methods=['POST'])
+@app.route('/api/spk-upload/', methods=['POST'])
 def spk_upload():
     global aether_bodies
 
@@ -402,7 +417,7 @@ def spk_upload():
         return returnResponse(new_bodies, 200)
 
 
-@app.route('/api/spk-clear', methods=['GET'])
+@app.route('/api/spk-clear/', methods=['GET'])
 def clear_uploaded_kernels():
 
     global aether_bodies

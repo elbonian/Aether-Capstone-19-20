@@ -27,7 +27,7 @@ class AetherBodies:
         # key: NAIF ID <int>
         # value: data tuple
         #     ( name <str>, valid times <list of tuples> (time_start <datetime>, time_end <datetime>),
-        #       rotationData <bool>, radiusData <bool>, category <int>, uploaded <bool> )
+        #       rotationData <bool>, radiusData <bool>, massData <bool>, category <int>, uploaded <bool> )
         ##
         self.bodies = dict()
 
@@ -38,6 +38,10 @@ class AetherBodies:
 
         self.no_rotation = (607, 632, 634, 802, 902, 903, 904, 905)
         self.no_radius = (902, 903, 904, 905)
+        self.no_mass = (905, 802, 808, 514, 515, 516, 612, 613, 614, 632, 634)
+        self.asteroids_with_radius = (2000001, 2000004, 2000021, 2000433, 2000511)
+        self.asteroids_with_mass = (2000001, 2000002, 2000003, 2000004, 2000006, 2000007, 2000010, 2000015, 2000016,
+                                    2000029, 2000052, 2000065, 2000087, 2000088, 2000433, 2000511, 2000704)
 
         for root, dirs, files in walk('./SPICE/kernels/default/', topdown=True):
             for name in files:
@@ -88,7 +92,8 @@ class AetherBodies:
                             body_tuple[0].lower(),
                             [(toDatetime(bod_group['time_start']), toDatetime(bod_group['time_end']))],
                             body_id not in self.no_rotation and 9 < body_id < 1000,
-                            body_id not in self.no_radius and 9 < body_id < 1000,
+                            self.__has_radius(body_id),
+                            self.__has_mass(body_id),
                             category,
                             uploaded
                         ]
@@ -96,6 +101,7 @@ class AetherBodies:
                         self.bodies[body_id] = [
                             body_tuple[0].lower(),
                             [(toDatetime(bod_group['time_start']), toDatetime(bod_group['time_end']))],
+                            False,
                             False,
                             False,
                             category,
@@ -120,7 +126,6 @@ class AetherBodies:
 
     def isValidName(self, bod_name):
 
-        # TODO: check for duplicates?
         names = [tupe[0] for tupe in self.bodies.values()]
 
         return bod_name in names
@@ -156,7 +161,7 @@ class AetherBodies:
                     remove(kern_path)
 
         for bod_id in self.bodies.keys():
-            if self.bodies[bod_id][5]:
+            if self.bodies[bod_id][6]:
                 removed_body_list.append((self.bodies[bod_id][0], bod_id))
 
         for body_to_remove in removed_body_list:
@@ -171,6 +176,10 @@ class AetherBodies:
     def hasRadiusData(self, bod_id):
         # python short-circuits by default so this works even if the ID isn't valid
         return self.isValidID(bod_id) and self.bodies[bod_id][3]
+
+    def hasMassData(self, bod_id):
+        # python short-circuits by default so this works even if the ID isn't valid
+        return self.isValidID(bod_id) and self.bodies[bod_id][4]
 
     def getBodies(self, specific_ids=[]):
         if not specific_ids:
@@ -189,9 +198,10 @@ class AetherBodies:
                 'body name': value[0],
                 'has rotation data': value[2],
                 'has radius data': value[3],
-                'category': self.__categoryToString(value[4], key),
+                'has mass data': value[4],
+                'category': self.__categoryToString(value[5], key),
                 'valid times': [[fromDatetime(dtime) for dtime in list(tupe)] for tupe in value[1]],
-                'is uploaded': value[5]
+                'is uploaded': value[6]
             })
 
         return ret_list
@@ -202,7 +212,7 @@ class AetherBodies:
             if cat_int == 10:
                 return self.bodies[bod_id][0]
             else:
-                return self.bodies[self.bodies[bod_id][4]][0]
+                return self.bodies[self.bodies[bod_id][5]][0]
         elif cat_int == -1:
             return 'spacecraft'
         elif cat_int == -2:
@@ -217,7 +227,7 @@ class AetherBodies:
         # Adapted from original code by Thirumalai Srinivasan
         # https://www.geeksforgeeks.org/merging-intervals/
 
-        # return immediately -- put this in the other function?
+        # return immediately -- this should never happen, but just in case
         if len(time_intervals) == 1:
             return time_intervals
 
@@ -242,15 +252,26 @@ class AetherBodies:
                 if interval[1] >= max_val:
                     max_val = interval[1]
 
-        #'max' value gives the last point of
-        # that particular interval
-        # 's' gives the starting point of that interval
-        # 'm' array contains the list of all merged intervals
-
         if max_val != datetime.min and [start, max_val] not in merged:
             merged.append([start, max_val])
 
         return merged
+
+    def __has_mass(self, bod_id):
+        if 9 < bod_id < 1000:
+            return bod_id not in self.no_mass
+        elif bod_id > 2000000:
+            return bod_id in self.asteroids_with_mass
+        else:
+            return False
+
+    def __has_radius(self, bod_id):
+        if 9 < bod_id < 1000:
+            return bod_id not in self.no_radius
+        elif bod_id > 2000000:
+            return bod_id in self.asteroids_with_radius
+        else:
+            return False
 
     def debugPrint(self):
         pprint(self.bodies)
