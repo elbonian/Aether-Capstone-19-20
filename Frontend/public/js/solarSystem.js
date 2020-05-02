@@ -1885,9 +1885,11 @@ function runApp(){
 		if(stars){
 			viz.removeObject(stars);
 			stars = null;
+			viz.showGrid();
 		}
 		else{
 			stars = new Spacekit.Stars({}, viz);
+			viz.hideGrid();
 		}
 
 		console.log(visualizer_list);
