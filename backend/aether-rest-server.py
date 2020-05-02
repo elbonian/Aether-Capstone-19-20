@@ -383,7 +383,7 @@ def spk_upload():
 
     if not filename.endswith(spk_extension):
 
-        return returnResponse({'error': 'Only .bsp files are allowed.'})
+        return returnResponse({'error': 'Only .bsp files are allowed.'}, 400)
 
     else:
 
@@ -428,106 +428,6 @@ def clear_uploaded_kernels():
     removed_bod_names = aether_bodies.removeUploadedKernels()
 
     return returnResponse(removed_bod_names, 200)
-
-
-# TODO: remove these two endpoints
-@app.route('/api/body-radius/<string:targets>', methods=['GET'])
-def get_body_info(targets):
-
-    # valid_targets = ('SUN','MERCURY','VENUS','MOON','EARTH','IO','EUROPA','GANYMEDE','CALLISTO','AMALTHEA','THEBE',
-    #                  'ADRASTEA','METIS','JUPITER','PHOBOS','DEIMOS','MARS','TRITON','NEREID','PROTEUS','NEPTUNE','CHARON',
-    #                  'PLUTO','MIMAS','ENCELADUS','TETHYS','DIONE','RHEA','TITAN','HYPERION','IAPETUS','PHOEBE','HELENE',
-    #                  'TELESTO','CALYPSO','METHONE','POLYDEUCES','SATURN','ARIEL','UMBRIEL','TITANIA','OBERON','MIRANDA','URANUS')
-
-    targets_list = [target.lower() for target in targets.split('+')]
-
-    response_data = dict()
-
-    for target in targets_list:
-
-        # TODO: remove when all calls are based on key
-        target_id = aether_bodies.getBodyID(target)
-
-        if not aether_bodies.hasRadiusData(target_id): #target not in valid_targets:
-            response_data[target] = "NO RADIUS DATA AVAILABLE"
-
-        else:
-            try:
-                response_data[target] = spice.bodvrd(target, "RADII", 3)[1].tolist()
-            except:
-                response_data[target] = "NO RADIUS DATA AVAILABLE"
-
-    # print(type(response_data[target][0]))
-    return returnResponse(response_data, '200')
-
-
-@app.route('/api/rotations/<string:targets>', methods=['GET'])
-def get_object_rotation(targets):
-
-    # valid_targets = ('SUN', 'MERCURY', 'VENUS', 'MOON', 'EARTH', 'IO', 'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA',
-    #                  'THEBE', 'ADRASTEA', 'METIS', 'JUPITER', 'PHOBOS', 'DEIMOS', 'MARS', 'TRITON', 'PROTEUS', 'NEPTUNE',
-    #                  'CHARON', 'PLUTO', 'MIMAS', 'ENCELADUS', 'TETHYS', 'DIONE', 'RHEA', 'TITAN', 'IAPETUS', 'PHOEBE',
-    #                  'HELENE', 'TELESTO', 'CALYPSO', 'SATURN', 'ARIEL', 'UMBRIEL', 'TITANIA', 'OBERON', 'MIRANDA', 'URANUS')
-
-    targets_list = [target.lower() for target in targets.split('+')]
-
-    response_data = dict()
-
-    for target in targets_list:
-
-        # TODO: remove when all calls are based on key
-        target_id = aether_bodies.getBodyID(target)
-
-        if not aether_bodies.hasRotationData(target_id): #target not in valid_targets:
-            response_data[target] = "NO ROTATION DATA AVAILABLE"
-        else:
-            try:
-                target_RA_all = spice.bodvrd(target, "POLE_RA", 3)[1].tolist()
-                target_DEC_all = spice.bodvrd(target, "POLE_DEC", 3)[1].tolist()
-                target_PM_all = spice.bodvrd(target, "PM", 3)[1].tolist()
-
-                target_RA_j2000 = target_RA_all[0]
-                target_DEC_j2000 = target_DEC_all[0]
-                target_PM_j2000 = target_PM_all[0]
-
-                # Get right ascension and declination polynomial coefficients
-                target_RA_delta = target_RA_all[1]
-                target_DEC_delta = target_DEC_all[1]
-                target_PM_delta = target_PM_all[1]
-
-                response_data[target] = {
-                    "ra": target_RA_j2000,
-                    "ra_delta": target_RA_delta,
-                    "dec": target_DEC_j2000,
-                    "dec_delta": target_DEC_delta,
-                    "pm": target_PM_j2000,
-                    "pm_delta": target_PM_delta
-                }
-            # this except should never be hit, but just in case...
-            except:
-                response_data[target] = "NO ROTATION DATA AVAILABLE"
-                continue
-
-            # get NUT_PREC_RA, NUT_PREC_DEC and NUT_PREC_ANGLES
-            try:
-                target_NUT_PREC_RA = spice.bodvrd(target, "NUT_PREC_RA", 20)
-                target_NUT_PREC_DEC = spice.bodvrd(target, "NUT_PREC_DEC", 20)
-
-                response_data[target]["nut_prec_ra"] = target_NUT_PREC_RA[1].tolist()[:target_NUT_PREC_RA[0]]
-                response_data[target]["nut_prec_dec"] = target_NUT_PREC_DEC[1].tolist()[:target_NUT_PREC_DEC[0]]
-            # the case where there is no nutation-precession info for the body -- go on to the next loop iteration
-            except:
-                continue
-
-            try:
-                target_NUT_PREC_ANGLES = spice.bodvrd(target + " BARYCENTER", "NUT_PREC_ANGLES", 72)
-                response_data[target]["nut_prec_angles"] = target_NUT_PREC_ANGLES[1].tolist()[:target_NUT_PREC_ANGLES[0]]
-            # the case where there are no nutation-precession angles for the body
-            except:
-                continue
-
-    return returnResponse(response_data, 200)
-
 
 
 if __name__ == '__main__':
