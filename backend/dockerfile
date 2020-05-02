@@ -16,7 +16,7 @@ RUN wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/latest_leapsecon
 RUN wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/asteroids/codes_300ast_20100725.tf -P /Aether/SPICE/kernels/default
 RUN wget http://naif.jpl.nasa.gov/pub/naif/utilities/PC_Linux_64bit/brief -P /Aether/SPICE/tools
 RUN cd SPICE/tools && chmod a+x brief
-COPY aether-rest-server.py db_connect.py SPKParser.py MetakernelWriter.py AetherBodies.py create_sql.py db_populate.xlsx ./
-RUN python3 create_sql.py
+COPY aether-rest-server.py SPKParser.py MetakernelWriter.py AetherBodies.py ./
+# RUN python3 create_sql.py
 EXPOSE 5000
 #CMD python3 aether-rest-server.py

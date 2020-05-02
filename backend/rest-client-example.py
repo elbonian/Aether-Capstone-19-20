@@ -31,6 +31,17 @@ def get_body_info(ip):
 	# decode response
 	return response, json.loads(response.text)
 
+
+def clear_upload(ip):
+
+	addr = 'http://{}:5000/api/spk-clear'.format(ip)
+
+	# make the request and get the response
+	response = requests.get(addr)
+
+	# decode response
+	return response, json.loads(response.text)
+
 def get_rotation_info(ip, targets):
 
 	all_targets = '+'.join(targets)
@@ -86,6 +97,10 @@ if __name__ == '__main__':
 	pprint(bod_info_resp[1])
 
 	print("Time taken:", time_end - time_start)
+
+	clear_upload_resp = clear_upload(args.ip)
+	print("Response:", clear_upload_resp[0])
+	pprint(clear_upload_resp[1])
 	#
 	# valid_targets = ['SUN', 'MERCURY', 'VENUS', 'MOON', 'EARTH', 'IO', 'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA',
 	# 				 'THEBE', 'ADRASTEA', 'METIS', 'JUPITER', 'PHOBOS', 'DEIMOS', 'MARS', 'TRITON', 'NEREID', 'PROTEUS',

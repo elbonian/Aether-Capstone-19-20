@@ -39,7 +39,7 @@ def get_min_max_speed(bod_id, time_range_list):
     speed_list = list()
 
     # TODO: change this to iterate over each time range once time range merging is implemented
-    for time_tupe in time_range_list[0:1]:
+    for time_tupe in time_range_list:
         # start - end results in a timedelta object
         try:
             t_start = datetime.strptime(time_tupe[0], "%Y-%m-%d %H:%M:%S.%f")
@@ -376,27 +376,7 @@ def spk_upload():
 
         file.save(file_path)
 
-        # spk_parser = SPKParser()
-        #
-        # # TODO: wrap this in a try-except and have the parser class raise an exception if the file is bad
-        # uploaded_spk_info = spk_parser.parse(file_path)
-        # # keys: bodies -> [(body name, wrt, naif id)], start_date, end_date
-        #
-        # spk_size_bytes = stat(file_path).st_size
-        #
-        # db = Database('aether_backend_data.db')
-        #
-        # sql = "INSERT INTO Kernel (path, start_date, end_date, size) VALUES (?, ?, ?, ?)"
-        #
-        # db.executeNonQuery(sql, variables=[file_path, uploaded_spk_info['time_start'], uploaded_spk_info['time_end'],
-        #                                    spk_size_bytes])
-        #
-        # for body_tuple in uploaded_spk_info['bodies']:
-        #     sql = "INSERT INTO Body (path, name, wrt, naif_id) VALUES (?, ?, ?, ?)"
-        #
-        #     db.executeNonQuery(sql, variables=[file_path, body_tuple[0], body_tuple[1], body_tuple[2]])
-        #
-        # db.closeDatabase()
+        spice.furnsh(file_path)
 
         new_bodies = aether_bodies.addFromKernel(file_path, returnNewBodies=True)
 
@@ -420,6 +400,16 @@ def spk_upload():
         spice.furnsh(file_path)
 
         return returnResponse(new_bodies, 200)
+
+
+@app.route('/api/spk-clear', methods=['GET'])
+def clear_uploaded_kernels():
+
+    global aether_bodies
+
+    removed_bod_names = aether_bodies.removeUploadedKernels()
+
+    return returnResponse(removed_bod_names, 200)
 
 
 # TODO: remove these two endpoints

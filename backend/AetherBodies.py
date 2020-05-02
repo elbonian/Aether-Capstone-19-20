@@ -3,7 +3,7 @@
 # Maintainer: Aether
 
 
-from os import walk, path
+from os import walk, path, remove
 from datetime import datetime
 from SPKParser import SPKParser
 
@@ -22,58 +22,6 @@ class AetherBodies:
     def __init__(self):
 
         self.spk_parser = SPKParser()
-
-        # name, id, [(time_start, time_end)...], rotation_data, radius_data, orbiting_body
-        # default_bodies_test = {
-        #     10: ("sun", [("1549 DEC 31 00:00:00.000", "2650 JAN 25 00:00:00.000")], True, True, None),
-        #     199: ("mercury", [("1549 DEC 31 00:00:00.000", "2650 JAN 25 00:00:00.000")], True, True, 10),
-        #     299: ("venus", [("1549 DEC 31 00:00:00.000", "2650 JAN 25 00:00:00.000")], True, True, 10),
-        #     399: ("earth", [("1549 DEC 31 00:00:00.000", "2650 JAN 25 00:00:00.000")], True, True, 10),
-        #     301: ("moon", [("1549 DEC 31 00:00:00.000", "2650 JAN 25 00:00:00.000")], True, True, 399),
-        #     499: ("mars", [("1900 JAN 04 00:00:41.184", "2100 JAN 01 00:01:07.183")], True, True, 10),
-        #     401: ("phobos", [("1900 JAN 04 00:00:41.184", "2100 JAN 01 00:01:07.183")], True, True, 499),
-        #     402: ("deimos", [("1900 JAN 04 00:00:41.184", "2100 JAN 01 00:01:07.183")], True, True, 499),
-        #     599: ("jupiter", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 10),
-        #     501: ("io", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 599),
-        #     502: ("europa", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 599),
-        #     503: ("ganymede", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 599),
-        #     504: ("callisto", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 599),
-        #     505: ("amalthea", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 599),
-        #     514: ("thebe", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 599),
-        #     515: ("adrastea", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 599),
-        #     516: ("metis", [("1850 JAN 01 00:00:41.183", "2100 JAN 01 00:01:09.183")], True, True, 599),
-        #     699: ("saturn", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 10),
-        #     601: ("mimas", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     602: ("enceladus", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     603: ("tethys", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     604: ("dione", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     605: ("rhea", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     606: ("titan", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     607: ("hyperion", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], False, True, 699),
-        #     608: ("iapetus", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     609: ("phoebe", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     612: ("helene", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     613: ("telesto", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     614: ("calypso", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], True, True, 699),
-        #     632: ("methone", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], False, True, 699),
-        #     634: ("polydeuces", [("1950 JAN 01 00:00:41.183", "2050 JAN 01 00:01:09.183")], False, True, 699),
-        #     799: ("uranus", [("1900 JAN 01 00:00:41.183", "2099 DEC 24 00:01:07.183")], True, True, 10),
-        #     701: ("ariel", [("1900 JAN 01 00:00:41.183", "2099 DEC 24 00:01:07.183")], True, True, 799),
-        #     702: ("umbriel", [("1900 JAN 01 00:00:41.183", "2099 DEC 24 00:01:07.183")], True, True, 799),
-        #     703: ("titania", [("1900 JAN 01 00:00:41.183", "2099 DEC 24 00:01:07.183")], True, True, 799),
-        #     704: ("oberon", [("1900 JAN 01 00:00:41.183", "2099 DEC 24 00:01:07.183")], True, True, 799),
-        #     705: ("miranda", [("1900 JAN 01 00:00:41.183", "2099 DEC 24 00:01:07.183")], True, True, 799),
-        #     899: ("neptune", [("1900 JAN 01 00:00:41.183", "2100 JAN 01 00:01:07.183")], True, True, 10),
-        #     801: ("triton", [("1900 JAN 01 00:00:41.183", "2100 JAN 01 00:01:07.183")], True, True, 899),
-        #     802: ("nereid", [("1900 JAN 01 00:00:41.183", "2100 JAN 01 00:01:07.183")], False, True, 899),
-        #     808: ("proteus", [("1900 JAN 01 00:00:41.183", "2100 JAN 01 00:01:07.183")], True, True, 899),
-        #     999: ("pluto", [("1900 JAN 08 00:00:41.184", "2100 JAN 01 00:01:08.183")], True, True, 10),
-        #     901: ("charon", [("1900 JAN 08 00:00:41.184", "2100 JAN 01 00:01:08.183")], True, True, 999),
-        #     902: ("nix", [("1900 JAN 08 00:00:41.184", "2100 JAN 01 00:01:08.183")], False, False, 999),
-        #     903: ("hydra", [("1900 JAN 08 00:00:41.184", "2100 JAN 01 00:01:08.183")], False, False, 999),
-        #     904: ("kerberos", [("1900 JAN 08 00:00:41.184", "2100 JAN 01 00:01:08.183")], False, False, 999),
-        #     905: ("styx", [("1900 JAN 08 00:00:41.184", "2100 JAN 01 00:01:08.183")], False, False, 999)
-        # }
 
         ########## FORMAT OF BODIES DICTIONARY ##########
         # key: NAIF ID <int>
@@ -107,7 +55,7 @@ class AetherBodies:
 
         newly_added_bodies = list()
 
-        merge_time_ids = list()
+        merge_time_ids = set()
 
         uploaded = False
 
@@ -157,16 +105,11 @@ class AetherBodies:
                 else:
                     self.bodies[body_id][1].append((toDatetime(bod_group['time_start']),
                                                     toDatetime(bod_group['time_end'])))
-                    merge_time_ids.append(body_id)
+                    merge_time_ids.add(body_id)
 
-        # # TODO: merge times here
-        # time_start = toDatetime(bod_group['time_start'])
-        # time_end = bod_group['time_end']
-        # if time_start < self.default_bodies[body_id][1][0]:
-        #     if time_end > self.default_bodies[body_id][1][1]:
-        #         self.default_bodies[body_id][1] = [(time_start, time_end)]
-        #     elif time_end < self.default_bodies[body_id][1][0]:
-        #         self.default_bodies[body_id][1].append()
+        for body_id in merge_time_ids:
+            merged_times = self.__mergeTimeIntervals(self.bodies[body_id][1])
+            self.bodies[body_id][1] = merged_times
 
         if returnNewBodies:
             return self.getBodies(specific_ids=newly_added_bodies)
@@ -201,6 +144,25 @@ class AetherBodies:
             return ref_frame in [tupe[1] for tupe in self.barycenters] or self.isValidName(ref_frame)
         else:
             raise TypeError("Method only accepts int or str.")
+
+    def removeUploadedKernels(self):
+
+        removed_body_list = list()
+
+        for root, dirs, files in walk('./SPICE/kernels/user_uploaded/', topdown=True):
+            for name in files:
+                kern_path = path.join(root, name)
+                if kern_path.endswith('.bsp'):
+                    remove(kern_path)
+
+        for bod_id in self.bodies.keys():
+            if self.bodies[bod_id][5]:
+                removed_body_list.append((self.bodies[bod_id][0], bod_id))
+
+        for body_to_remove in removed_body_list:
+            del self.bodies[body_to_remove[1]]
+
+        return [bod[0] for bod in removed_body_list]
 
     def hasRotationData(self, bod_id):
         # python short-circuits by default so this works even if the ID isn't valid
@@ -249,6 +211,46 @@ class AetherBodies:
             return 'comet'
         else:
             return 'misc'
+
+    def __mergeTimeIntervals(self, time_intervals):
+
+        # Adapted from original code by Thirumalai Srinivasan
+        # https://www.geeksforgeeks.org/merging-intervals/
+
+        # return immediately -- put this in the other function?
+        if len(time_intervals) == 1:
+            return time_intervals
+
+        # Sorting based on the increasing order
+        # of the start intervals
+        time_intervals.sort(key=lambda x: x[0])
+
+        # list to hold the merged intervals
+        merged = list()
+
+        start = datetime.min
+        max_val = datetime.min
+
+        for i in range(len(time_intervals)):
+            interval = time_intervals[i]
+            if interval[0] > max_val:
+                if i != 0:
+                    merged.append([start, max_val])
+                max_val = interval[1]
+                start = interval[0]
+            else:
+                if interval[1] >= max_val:
+                    max_val = interval[1]
+
+        #'max' value gives the last point of
+        # that particular interval
+        # 's' gives the starting point of that interval
+        # 'm' array contains the list of all merged intervals
+
+        if max_val != datetime.min and [start, max_val] not in merged:
+            merged.append([start, max_val])
+
+        return merged
 
     def debugPrint(self):
         pprint(self.bodies)
