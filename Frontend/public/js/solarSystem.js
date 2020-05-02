@@ -2006,7 +2006,9 @@ function runApp(){
 		//Display valid time range
 		let time_range = body["valid times"];
 		let time_rangeE = document.createElement("H4");
-		time_rangeE.innerText = "Start Time: " + time_range[0][0].replace("\.*" , "") + "\n\nEnd Time: " + time_range[0][1].replace("\.*" , "");
+		let start_time = time_range[0][0].split(".");
+		let end_time = time_range[0][1].split(".");
+		time_rangeE.innerText = "Start Time: " + start_time[0] + "\n\nEnd Time: " + end_time[0];
 		info_panel.appendChild(time_rangeE);
 		
 		let closebtn = document.createElement("button");
