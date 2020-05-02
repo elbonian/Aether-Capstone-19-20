@@ -1048,7 +1048,9 @@ function addClickedBody(bodyName){
 			adjusted_positions[bodyName] = allAdjustedVals;
 			adjusted_times[bodyName] = allAdjustedTimes;
 		}
-		initCheckboxes();		
+		initCheckboxes();
+		let plus = document.getElementById(bodyName + "-plus");
+		plus.remove();
 	})
 	.catch(error => {
 		console.error(error);
@@ -1222,7 +1224,7 @@ function createSubElements(lower_name, sublist){
 
 		// Add nested div to the outermost div
 		planet_box_div.appendChild(nested_div);
-
+		console.log(planet_box_div);
 		for(const i of sublist.values()){
 			const upper_name = capitalizeFirstLetter(i);
 			// Create an inner div
@@ -1306,23 +1308,43 @@ function appendCheckboxElement(parent_element , child_element_name){
 	element.checked = true;
 }
 
-/*
-	Toggles the checkbox menu when the menu is clicked
-*/
+function addCheckboxFromUpload(newData){
+	for(let index in newData){
+		let catergory = newData[index]["category"];
+		catergory = capitalizeFirstLetter(catergory);
+		console.log("nested" + catergory);
+		let nested_div = document.getElementById("nested" + catergory);
+		console.log(nested_div);
+		let upper_name = capitalizeFirstLetter(newData[index]["body name"]);
+		var inner_nested_div = document.createElement("div");
+		inner_nested_div.setAttribute("id", upper_name);
+		inner_nested_div.setAttribute("class", "checkbox_and_label");
+		nested_div.appendChild(inner_nested_div);
+		// Create an input and label
+		var inner_input = document.createElement("input");
+		inner_input.setAttribute("id", upper_name + "-body");
+		inner_input.setAttribute("type", "checkbox");
+		inner_input.setAttribute("disabled", "disabled");
+		inner_input.setAttribute("class", "readonly");
+		//inner_input.setAttribute("readonly", "readonly");
+		inner_input.setAttribute("name", upper_name + "-body");
+		inner_input.setAttribute("value", upper_name);
+		inner_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
 
-//Either Unneccessary or need to be updated
-/*
-function showCheckboxes() {
-	var checkboxes = document.getElementById("checkboxes");
-	if (!expanded) {
-		checkboxes.style.display = "block";
-		expanded = true;
-	} else {
-		checkboxes.style.display = "none";
-		expanded = false;
-  	}
+		var inner_label = document.createElement("label");
+		inner_label.setAttribute("for", upper_name + "-body");
+		inner_label.setAttribute("class", "readonlylabel");
+		inner_label.setAttribute("id", upper_name + "-label1");
+		inner_label.innerHTML = upper_name;
+		var br1 = document.createElement("br");
+
+		// Add input and label to inner nested div
+		inner_nested_div.appendChild(inner_input);
+		inner_nested_div.appendChild(inner_label);
+		inner_nested_div.appendChild(br1);
+	}
+	addPlusToCheckboxes();
 }
-*/
 
 /*
 	Sets the date of the visualization
@@ -1342,6 +1364,7 @@ let sim_form = document.getElementById('newSimForm');
 */
 sim_form.addEventListener('submit', function(e){
 	e.preventDefault();
+	comparing = false;
 	// Data user entered in form
 	const formData = new FormData(this);
 	viz.stop();
@@ -1453,7 +1476,8 @@ form.addEventListener('submit', function(event){
 			alert("File uploaded!");
 			response.json().then(function(parsedJson) {
 				console.log(parsedJson);
-			})
+				addCheckboxFromUpload(parsedJson);
+			});
 		}
 	})
 	.catch(error => {

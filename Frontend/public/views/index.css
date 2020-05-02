@@ -668,7 +668,7 @@ button {
   padding: 3px;
   position: absolute;
   top: 7px;
-  left: 160px;
+  left: 150px;
 }
 
 .down {
@@ -685,7 +685,7 @@ button {
   line-height: 24px;
   position: absolute;
   top: 0;
-  left: 110px;
+  left: 90px;
   font-style: normal;
   cursor: pointer;
 }
