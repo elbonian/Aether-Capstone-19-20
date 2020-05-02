@@ -704,9 +704,22 @@ button {
 }
 
 #pretty_button {
-	position: relative;
-	margin-top: 7%;
-	width: 83%;
+	position: absolute;
+	margin-top: 5%;
+	width: 48%;
 	height: 100%;
 	border-radius: 10px;
+	float: left;
+	cursor: pointer;
+}
+
+#grid_button {
+	position: absolute;
+	margin-top: 5%;
+	width: 48%;
+	height: 100%;
+	border-radius: 10px;
+	float: right;
+	right: -8%;
+	cursor: pointer;
 }

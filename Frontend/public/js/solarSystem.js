@@ -798,6 +798,8 @@ var comparing = false;
 
 var stars = null;
 
+var grid_visible = true;
+
 /////////////////////////////////
 /////// Utility Functions ///////
 /////////////////////////////////
@@ -1885,11 +1887,9 @@ function runApp(){
 		if(stars){
 			viz.removeObject(stars);
 			stars = null;
-			viz.showGrid();
 		}
 		else{
 			stars = new Spacekit.Stars({}, viz);
-			viz.hideGrid();
 		}
 
 		console.log(visualizer_list);
@@ -1905,6 +1905,16 @@ function runApp(){
 			}
 		}
 		
+	});
+
+	document.getElementById("grid_button").addEventListener("click" , function() {
+		if(grid_visible){
+			viz.hideGrid();
+			grid_visible = false;
+		} else {
+			viz.showGrid();
+			grid_visible = true;
+		}
 	});
 
 	// A slider that changes the length of the tail of a body
