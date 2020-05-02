@@ -245,6 +245,9 @@ class AetherObject extends Spacekit.SphereObject {
 					transparent: true,
 					});
 				}
+				else if(this._options.is_rotating){
+					
+				}
 				else {
 					//mesh material changed to transparent and opacity to 0 to not see weird meshes
 					material = new Spacekit.THREE.MeshBasicMaterial({
