@@ -406,6 +406,9 @@ def spk_upload():
             if bod_dict['has radius data']:
                 bod_dict['radius'] = get_radius(bod_id)
 
+            if bod_dict['has mass data']:
+                bod_dict['mass'] = get_mass(bod_id)
+
             if bod_dict['has rotation data']:
                 bod_dict['rotation data'] = get_rotation_data(bod_id, bod_dict['body name'])
 
