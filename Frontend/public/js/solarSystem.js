@@ -1965,6 +1965,7 @@ function runApp(){
 	function displayBodyInfo(name){
 		let info_panel = document.getElementById("info_panel1");
 		let body = body_meta_data.find( x => x["body name"] === name.toLowerCase());
+		console.log(body);
 		if(body == undefined) return;
 		//if(!body["is uploaded"]) return;
 		info_panel.style.display = "block";
@@ -1978,20 +1979,33 @@ function runApp(){
 		title.innerText = name;
 		info_panel.appendChild(title);
 
+		if(body["has mass data"]){
+			let mass = body["mass"].toExponential(3);
+			let massE = document.createElement("H4");
+			massE.innerText = "Mass: " + mass + " Kg";
+			info_panel.appendChild(massE);
+		}
+
 		//Check for radius info, then print
 		if(body["has radius data"]){
 				//Display the Equatorial radius in Km
-			let radius = body.radius[0].toFixed(2);
+			let radius = body.radius[0].toExponential(3);
 			let radiusE = document.createElement("H4");
 			radiusE.innerText = "Equatorial Radius: " + radius + " Km";
 			info_panel.appendChild(radiusE);
 
 			//Display the polar radius in Km
-			let pradius = body.radius[2].toFixed(2);
+			let pradius = body.radius[2].toExponential(3);
 			let pradiusE = document.createElement("H4");
 			pradiusE.innerText = "Polar Radius: " + pradius + " Km";
 			info_panel.appendChild(pradiusE);
 		}
+
+		//Display valid time range
+		let time_range = body["valid times"];
+		let time_rangeE = document.createElement("H4");
+		time_rangeE.innerText = "Start Time: " + time_range[0][0].replace("\.*" , "") + "\n\nEnd Time: " + time_range[0][1].replace("\.*" , "");
+		info_panel.appendChild(time_rangeE);
 		
 		let closebtn = document.createElement("button");
 		closebtn.id = "info_close";
@@ -2002,7 +2016,6 @@ function runApp(){
 			document.getElementById("info_panel1").style.display = "none";
 		})
 		info_panel.appendChild(closebtn);
-		console.log(body);
 	}
 
 	document.getElementById("zoomToBody").addEventListener("click" , function(){
