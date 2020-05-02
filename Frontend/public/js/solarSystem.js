@@ -209,7 +209,6 @@ class AetherObject extends Spacekit.SphereObject {
         else{
         	// Create a sphere to represent the body
         	const radius = this.radius_polar * 1000.0; // TODO: replace 1000.0 with simulation scale factor
-
         	// Create multiple spheres for the object, each of differing level of detail
 			for (let i = 0; i < levelsOfDetail.length; i += 1) {
 				const level = levelsOfDetail[i];
@@ -954,7 +953,17 @@ function initCheckboxes(){
 function addClickedBody(bodyName){
 	let lowerName =  bodyName.charAt(0).toLowerCase() + bodyName.slice(1);
 	const body_data = body_meta_data.find(x => x["body name"] === lowerName);
-	// TODO: Make sure body is vaild in sim time
+	const validTimes = body_data["valid times"];
+	let currSimDate = viz.getDate();
+	for(let index in validTimes){
+		let date1 = new Date(validTimes[index][0]);
+		let date2 = new Date(validTimes[index][1]);
+		if(date1 > currSimDate || currSimDate > date2){
+			alert("Simulation time not valid to display " + bodyName);
+			displayError("Simulation time not valid to display " + bodyName);
+			return;
+		}
+	}
 	getPositionData2(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
 		console.log(data);
 		if(data.error){
@@ -968,7 +977,6 @@ function addClickedBody(bodyName){
 			var allAdjustedVals = [];
 			// Array of Julian Dates corresponding to each position
 			var allAdjustedTimes = [];
-
 			// set tail indexes
 			var cur_idx = data[property].cur_time_idx;
 			const tail_start_idx = 0;
@@ -979,7 +987,6 @@ function addClickedBody(bodyName){
 			else {
 				tail_end_idx = Math.ceil(data[property].times.length / 2);
 			}
-
 			// iterate over the data for the current body
 			var i = 0;
 			for(pos of data[property].positions){
@@ -988,31 +995,53 @@ function addClickedBody(bodyName){
 				// convert coords to ecliptic
 				adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
 				let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
-				
 				// push positions and their corresponding times to arrays
 				allAdjustedVals.push(vector);
 				allAdjustedTimes.push(parseFloat(data[property].times[i]));
 				i++;
 			}
-			console.log(body_data);
+			let rotate;
 			// Create object
-			if(body_data.ra == null){
-				is_rotating = false; // disable the object's rotation if no rotation data
-			}
-			//let body = null;
-			let radius = null;
-			let textureUrl;
-			if(body_data["has radius data"]){
-				radii[lowerName] = body_data["radius"];
-				textureUrl = null;
+			if(!body_data["has rotation data"]){
+				rotate = {
+					"ra": null,
+					"dec": null,
+					"pm": null,
+					"ra_delta": null,
+					"dec_delta": null,
+					"pm_delta": null,
+					"nut_prec_angles": null,
+					"nut_prec_ra": null,
+					"nut_prec_dec": null,
+				};
+				displayError(lowerName + " HAS NO ROTATION DATA AVAILABLE");
 			}
 			else{
+				rotate = {
+					"ra": body_data["rotation data"].ra,
+					"dec": body_data["rotation data"].dec,
+					"pm": body_data["rotation data"].pm,
+					"ra_delta": body_data["rotation data"].ra_delta,
+					"dec_delta": body_data["rotation data"].dec_delta,
+					"pm_delta": body_data["rotation data"].pm_delta,
+					"nut_prec_angles": body_data["rotation data"].nut_prec_angles,
+					"nut_prec_ra": body_data["rotation data"].nut_prec_ra,
+					"nut_prec_dec": body_data["rotation data"].nut_prec_dec,
+				};
+			}
+			let textureUrl;
+			if(body_data["has radius data"]){
+				radii[lowerName] = [body_data["radius"].map(Spacekit.kmToAu)[0], body_data["radius"].map(Spacekit.kmToAu)[2]];
+				console.log(body_textures[lowerName]);
+				textureUrl = body_textures[lowerName];
+			}
+			else{
+				displayError(lowerName + " HAS NO RADIUS DATA AVAILABLE");
 				radii[lowerName] = [-1,-1];
 				textureUrl = '/js/textures/smallparticle.png';
 			}
-
+			console.log(radii[lowerName]);
 			// Create a new space object
-			console.log(lowerName + textureUrl);
 			let body = viz.createAetherObject(lowerName, {
 				labelText: bodyName,
 				name: lowerName,
@@ -1030,19 +1059,18 @@ function addClickedBody(bodyName){
 					segments: 40,
 				}],
 				rotation: {
-					enable: is_rotating,
+					enable: body_data["has rotation data"],
 				},
-				ra: body_data.ra,
-				dec: body_data.dec,
-				pm: body_data.pm,
-				ra_delta: body_data.ra_delta,
-				dec_delta: body_data.dec_delta,
-				pm_delta: body_data.pm_delta,
-				nut_prec_angles: body_data.nut_prec_angles,
-				nut_prec_ra: body_data.nut_prec_ra,
-				nut_prec_dec: body_data.nut_prec_dec,
+				ra: rotate.ra,
+				dec: rotate.dec,
+				pm: rotate.pm,
+				ra_delta: rotate.ra_delta,
+				dec_delta: rotate.dec_delta,
+				pm_delta: rotate.pm_delta,
+				nut_prec_angles: rotate.nut_prec_angles,
+				nut_prec_ra: rotate.nut_prec_ra,
+				nut_prec_dec: rotate.nut_prec_dec,
 			});
-			
 			visualizer_list[bodyName] = body;
 			// Set globals
 			adjusted_positions[bodyName] = allAdjustedVals;
@@ -1050,7 +1078,7 @@ function addClickedBody(bodyName){
 		}
 		initCheckboxes();
 		let plus = document.getElementById(bodyName + "-plus");
-		plus.remove();
+		plus.remove();		
 	})
 	.catch(error => {
 		console.error(error);
@@ -1063,6 +1091,10 @@ function addPlusToCheckboxes(){
 		for(let x = 0; x < checkboxes.length; x++){
 			if(checkboxes[x].disabled){
 				let checkboxName = checkboxes[x].id.split("-")[0];
+				//check to see if plus exists so we dont add it again
+				if(document.getElementById(checkboxName + "-plus")){
+					return;
+				}
 				let labelId = checkboxName + "-label1";
 				let addButton = document.createElement("i");
 				addButton.setAttribute("class", "plus");
@@ -1224,7 +1256,6 @@ function createSubElements(lower_name, sublist){
 
 		// Add nested div to the outermost div
 		planet_box_div.appendChild(nested_div);
-		console.log(planet_box_div);
 		for(const i of sublist.values()){
 			const upper_name = capitalizeFirstLetter(i);
 			// Create an inner div
@@ -1312,38 +1343,68 @@ function addCheckboxFromUpload(newData){
 	for(let index in newData){
 		let catergory = newData[index]["category"];
 		catergory = capitalizeFirstLetter(catergory);
-		console.log("nested" + catergory);
 		let nested_div = document.getElementById("nested" + catergory);
-		console.log(nested_div);
+		if(nested_div == null){
+			let name = capitalizeFirstLetter(newData[index]["body name"]);
+			nested_div = document.createElement("div");
+			nested_div.setAttribute("id", "nested" + name);
+			nested_div.setAttribute("style", "display:none");
+			nested_div.setAttribute("class", "nested_list");
+			let planet_box_div = document.getElementById(catergory + "-box");
+			planet_box_div.appendChild(nested_div);
+			let planet_label = document.getElementById(catergory + "-label");
+			planet_label.addEventListener("click", function() {
+				if(nested_div.getAttribute("style") == "display:none"){
+					nested_div.setAttribute("style", "display:content");
+				}
+				else{
+					nested_div.setAttribute("style", "display:none");
+				}
+			});
+		}
 		let upper_name = capitalizeFirstLetter(newData[index]["body name"]);
-		var inner_nested_div = document.createElement("div");
+		let inner_nested_div = document.createElement("div");
 		inner_nested_div.setAttribute("id", upper_name);
 		inner_nested_div.setAttribute("class", "checkbox_and_label");
 		nested_div.appendChild(inner_nested_div);
 		// Create an input and label
-		var inner_input = document.createElement("input");
+		let inner_input = document.createElement("input");
 		inner_input.setAttribute("id", upper_name + "-body");
 		inner_input.setAttribute("type", "checkbox");
 		inner_input.setAttribute("disabled", "disabled");
 		inner_input.setAttribute("class", "readonly");
-		//inner_input.setAttribute("readonly", "readonly");
 		inner_input.setAttribute("name", upper_name + "-body");
 		inner_input.setAttribute("value", upper_name);
 		inner_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
 
-		var inner_label = document.createElement("label");
+		let inner_label = document.createElement("label");
 		inner_label.setAttribute("for", upper_name + "-body");
 		inner_label.setAttribute("class", "readonlylabel");
 		inner_label.setAttribute("id", upper_name + "-label1");
 		inner_label.innerHTML = upper_name;
-		var br1 = document.createElement("br");
+		let br1 = document.createElement("br");
 
 		// Add input and label to inner nested div
 		inner_nested_div.appendChild(inner_input);
 		inner_nested_div.appendChild(inner_label);
 		inner_nested_div.appendChild(br1);
+		let addButton = document.createElement("i");
+		addButton.setAttribute("class", "plus");
+		addButton.setAttribute("id", upper_name + "-plus");
+		addButton.setAttribute("name", upper_name);
+		addButton.setAttribute("value", upper_name);
+		addButton.addEventListener("click", function(){
+			if(!visualizer_list[upper_name]){
+				if(togglePlay){
+					viz.stop();
+					togglePlay = false;
+				}
+				addClickedBody(upper_name);
+			}
+		});
+		inner_label.appendChild(addButton);
+		body_meta_data.push(newData[index]);
 	}
-	addPlusToCheckboxes();
 }
 
 /*
@@ -1473,7 +1534,7 @@ form.addEventListener('submit', function(event){
 			return response;
 		}
 		else{
-			alert("File uploaded!");
+			alert("File uploaded successfully!");
 			response.json().then(function(parsedJson) {
 				console.log(parsedJson);
 				addCheckboxFromUpload(parsedJson);
@@ -1758,6 +1819,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 	new_viz.onTick = tick;
 	return new_viz;
 }
+
 
 /*
 	Main function to begin the application
