@@ -1499,11 +1499,10 @@ compare_form.addEventListener('submit', function(e){
 // Form to submit a new spk kernel
 let form = document.getElementById('myForm');
 let form_submit = document.getElementById("submit_SPK");
+
 /*
 	Calls API endpoint to upload a kernel
 */
-
-
 form.addEventListener('submit', function(event){
 	event.preventDefault();
 	const formData = new FormData(this);
@@ -1513,23 +1512,29 @@ form.addEventListener('submit', function(event){
 		body: formData
 	})
 	.then(response => {
-		if(response.status === 400){
-			console.log(response);
-			displayError("File not valid");
-			return response;
-		}
-		else if(response.status === 500){
-			console.log(response);
-			displayError("SPICE(SPKINSUFFDATA)");
-			return response;
-		}
-		else{
-			alert("File uploaded successfully!");
-			response.json().then(function(parsedJson) {
+		response.json().then(function(parsedJson) {
+			console.log(parsedJson);
+			if(response.status === 400){
+				alert(parsedJson.error);
+				displayError(parsedJson.error);
+				return response;
+			}
+			else if(response.status === 404){
+				alert("404, Endpoint not found!");
+				displayError("404, Endpoint not found!");
+				return response;
+			}
+			else if(response.status === 500){
+				alert("Server Error");
+				displayError("Server Error");
+				return response;
+			}
+			else{
+				alert("File uploaded successfully!");
 				console.log(parsedJson);
 				addCheckboxFromUpload(parsedJson);
-			});
-		}
+			}
+		});
 	})
 	.catch(error => {
     	console.error(error);
