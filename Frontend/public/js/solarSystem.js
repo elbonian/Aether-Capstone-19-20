@@ -81,6 +81,7 @@ class AetherSimulation extends Spacekit.Simulation {
 	Animates the simulation
     */
 	animate() {
+		console.log(this.getJdDelta())
 		if (!this._renderEnabled) {
 		return;
 		}
@@ -94,7 +95,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		// CHANGED FROM DEFAULT SPACEKIT FUNCTION
 		if (!this._isPaused) {
 		if (this._jdDelta) {
-			this._jd += this._jdDelta;
+			this._jd += this.mult / this.getJdDelta() / 12;
 		} else {
 			console.log("jd delta is undefined");
 		}
@@ -375,7 +376,7 @@ class AetherObject extends Spacekit.SphereObject {
 			this._label = labelElt;
 			this._showLabel = true;
 		}
-		console.log(this.name);
+		//console.log(this.name);
 
 	}
 
@@ -391,7 +392,7 @@ class AetherObject extends Spacekit.SphereObject {
 		let adjKmPerSec = [];
 		//get max and min kmpersec and scale them between the max and min
 		for(let i = 0; i < kmPosX.length-1; i++){
-			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / secondsPerDay / unitsPerAu;
+			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / 7200 / unitsPerAu;
 			kmPerSecList.push(kmPerSec);
 		}
 		for (var i = 0; i < kmPerSecList.length; i++) {
@@ -472,9 +473,9 @@ class AetherObject extends Spacekit.SphereObject {
 	  	Rotates the object about its axis of rotation according to its prime meridian delta angle
 		No date is needed because the object's pm delta angle is for a change in time of one day, simply rotates the object according to its simulation's rate
 	  */
-	  rotate(jd){
+	 rotate(jd){
 	  	const angle_of_rotation = Spacekit.rad(this.pm_delta);
-	  	this._obj.rotateOnWorldAxis(this.axis_of_rotation_vector, angle_of_rotation * this._simulation.mult);
+	  	this._obj.rotateOnWorldAxis(this.axis_of_rotation_vector, (angle_of_rotation) *  (this._simulation.mult));
 	  	
 	  }
 
@@ -507,7 +508,7 @@ class AetherObject extends Spacekit.SphereObject {
 		  Sets next position of where body will be and updates index
 	  */
 	  setNextPos(){
-		  this.currIndex += this._simulation.mult * 1;
+		  this.currIndex += this._simulation.mult / this._simulation.getJdDelta();
 		  const currPos = this.positionVectors[Math.floor(this.currIndex)];
 		  this._obj.position.set(currPos.x, currPos.y, currPos.z);
 	  }
@@ -520,7 +521,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  	this.tailStartIndex = this.currIndex - Math.floor(this._simulation.tail_length * this.tail_length) + 1;
 	  	if(!this._simulation._isPaused){
 	  		// if not paused, then add a multiple of the simulation's rate of time
-	  		this.tailStartIndex += 1 * this._simulation.mult;
+	  		this.tailStartIndex += this._simulation.mult / this._simulation.getJdDelta();
 	  	}
 	  }
 
@@ -638,7 +639,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  	@param {string} [valid_time_seconds="10"] - The length of time in seconds the object will be able to animate from the data returned
 	  	@param {boolean} [old_data=false] - flag indicating whether the data returned is old or not
 	  */
-	  positionGetRequest(wrt = this._simulation.wrt, obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = 1, tail_length_jd = "0", valid_time_seconds = "10", old_data = false){
+	  positionGetRequest(wrt = this._simulation.wrt, obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = this._simulation.getJdDelta(), tail_length_jd = "0", valid_time_seconds = "10", old_data = false){
 	  	this.ephemUpdate(wrt, obj_name, start_date_jd, jd_delta, tail_length_jd, valid_time_seconds).then(data => {  
 			// adjust results to be in km and in ecliptic plane
       			var position_vectors = data[this.name].positions.map(function(pos){
@@ -678,8 +679,8 @@ class AetherObject extends Spacekit.SphereObject {
 	      	//		3. tune the parameters of the rest call to be optimally performant
 	      	//		4. choose something better than 2/3 the positionVectors.length
 	      	//      5. balance frequency and size of rest call
-	      	const need_new_data = (this.currIndex >= this.positionVectors.length * (2/3)) && positive_rate_of_time; // simulation rate of time is positive and object is near the end of its pos list
-	      	const need_old_data = (this.tailStartIndex <= this.positionVectors.length * (1/3)) && !positive_rate_of_time // simulation rate of time is negative and object is near beginning of pos list	
+	      	const need_new_data = (this.currIndex >= this.positionVectors.length * (3/4)) && positive_rate_of_time; // simulation rate of time is positive and object is near the end of its pos list
+	      	const need_old_data = (this.tailStartIndex <= this.positionVectors.length * (1/4)) && !positive_rate_of_time // simulation rate of time is negative and object is near beginning of pos list	
       		
       		if(need_new_data){
       			// console.log("newdata");
@@ -688,7 +689,7 @@ class AetherObject extends Spacekit.SphereObject {
       		}
       		else if(need_old_data){
       			this.isUpdating = true;
-      			this.positionGetRequest( this._simulation.wrt, this.name, this.jdTimeData[0].toString(), 1, (1*60*10).toString(), "0", true);
+      			this.positionGetRequest( this._simulation.wrt, this.name, this.jdTimeData[0].toString(), this._simulation.getJdDelta(), (1*60*10).toString(), "0", true);
 			  }
 			  
       	}
@@ -819,7 +820,7 @@ function tick(){
 		sim_rate.innerHTML = "JD/Sec: " + 0;
 	}
 	else{
-		const rate = "JD/Sec: " + this.getJdDelta()*60;
+		const rate = "JD/Sec: " + 60*this.mult;
 		sim_rate.innerHTML = rate;
 	}
 }
@@ -970,7 +971,7 @@ function addClickedBody(bodyName){
 		}
 	}
 	getPositionData2(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
-		console.log(data);
+		//console.log(data);
 		if(data.error){
 			console.error(data);
 			displayError(data);
@@ -1027,7 +1028,7 @@ function addClickedBody(bodyName){
 				rotate = {
 					"ra": body_data["rotation data"].ra,
 					"dec": body_data["rotation data"].dec,
-					"pm": body_data["rotation data"].pm,
+					"pm": body_data["rotation data"].pm + 180,
 					"ra_delta": body_data["rotation data"].ra_delta,
 					"dec_delta": body_data["rotation data"].dec_delta,
 					"pm_delta": body_data["rotation data"].pm_delta,
@@ -1081,7 +1082,7 @@ function addClickedBody(bodyName){
 				nut_prec_ra: rotate.nut_prec_ra,
 				nut_prec_dec: rotate.nut_prec_dec,
 			});
-			console.log(body);
+			//console.log(body);
 			visualizer_list[bodyName] = body;
 			// Set globals
 			adjusted_positions[bodyName] = allAdjustedVals;
@@ -1173,8 +1174,8 @@ async function getAvailableBodies(){
 	async function to get which bodies are in the db
 	@return {json} data - JSON of available bodies
 */
-async function getAvailableBodies2(){
-	let response = await fetch('http://0.0.0.0:5000/api/available-bodies/');
+async function getAvailableBodies2(wrt){
+	let response = await fetch('http://0.0.0.0:5000/api/available-bodies/' + wrt);
 	let data = await response.json();
 	return data;
 }
@@ -1444,14 +1445,14 @@ sim_form.addEventListener('submit', function(e){
 	const start_time =  Date.parse(formData.get('jd_start')) ;
 
 	// Creates the new simulation from data entered
-	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu]);
+	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1/12, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu]);
 
 	// Push the simulation on the stack
 	simulation_stack.push[new_viz];
 	viz = new_viz;
 	// console.log(viz);
 	// viz.start();
-	console.log(document.getElementById('main-container').children);
+	//console.log(document.getElementById('main-container').children);
 });
 
 // Form for trajectory comparison
@@ -1491,8 +1492,8 @@ compare_form.addEventListener('submit', function(e){
 	//		 if not, display two separate times on each mini div
 	
 	// Create two new simulations that will be compared side by side
-	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison1");
-	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison2", false);
+	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1/12, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison1");
+	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1/12, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison2", false);
 	new_viz2._camera = new_viz1._camera;
 	
 	viz = new_viz1;
@@ -1549,7 +1550,7 @@ form.addEventListener('submit', function(event){
 });
 
 function updateBodyChecklist(data){
-	console.log(data);
+	//console.log(data);
 	// Create new div to house nested checklist drodown menu
 	var div = document.createElement('div');
 	div.id = 'new-content1';
@@ -1607,7 +1608,7 @@ function updateBodyChecklist(data){
 	// SET GLOBAL VARIABLE FOR BODY METADATA
 	// i.e. body name, category, has radius data, has rotation data, is user-uploaded, spice id, range(s) of valid ephemeris times
 	body_meta_data = data;
-	console.log(data);
+	//console.log(data);
 }
 
 /*
@@ -1619,7 +1620,7 @@ function updateBodyChecklist(data){
 	@param {array[Number]} camera_start - Position for the camera to start, default=[2500,5000,5000]
 	@param {string} container - div to place the simulation in, default=main-container
 */
-function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[250000,500000,500000], container='main-container', primary_sim=true){
+function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_start=[250000,500000,500000], container='main-container', primary_sim=true){
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////// CREATE THE SIMULATION OBJECT /////////////////////////////////////
@@ -1645,13 +1646,13 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 
 	// Only get available body detail if this will be a primary sim, prevents two sims from issuing the API request if comparing sims
 	if(primary_sim){
-		getAvailableBodies2().then(data =>{
+		getAvailableBodies2(wrt).then(data =>{
 			updateBodyChecklist(data);
 
 			
 
 			// Retrieve the position data with the specified parameters
-			getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10).toString(), "10").then(data => {
+			getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
 				if(data.error){
 					displayError(data);
 					return data;
@@ -1731,17 +1732,17 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					
 					// Create object
 					var bodyName = capitalizeFirstLetter(property)
-					// var radius;
-					// if(bodyName == "Sun"){
-					// 	radius = 0.17;
-					// 	//new_viz.createLight(allAdjustedVals[cur_idx]);
-					// }
-					// else if(bodyName == "Moon"){
-					// 	radius = 0.0005;
-					// }
-					// else{
-					// 	radius = .08;
-					// }
+					var radius;
+					if(bodyName == "Sun"){
+						radius = 0.17;
+						//new_viz.createLight(allAdjustedVals[cur_idx]);
+					}
+					else if(bodyName == "Moon"){
+						radius = 0.0005;
+					}
+					else{
+						radius = .08;
+					}
 
 					// Check for radius data
 					if(radii[property] == [-1, -1]){
@@ -1777,7 +1778,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 						},
 						ra: rotation_data[property].ra,
 						dec: rotation_data[property].dec,
-						pm: rotation_data[property].pm,
+						pm: rotation_data[property].pm + 180,
 						ra_delta: rotation_data[property].ra_delta,
 						dec_delta: rotation_data[property].dec_delta,
 						pm_delta: rotation_data[property].pm_delta,
@@ -1786,7 +1787,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 						nut_prec_dec: rotation_data[property].nut_prec_dec,
 					});
 
-					console.log(body);
+					//console.log(body);
 					if(primary_sim){
 						visualizer_list[bodyName] = body;
 					}
@@ -1809,7 +1810,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 		});
 	}
 
-	console.log(visualizer_list);
+	//console.log(visualizer_list);
 	
 	// make camera controls more fine-grained
 	new_viz.tuneCameraControls(0.75, 1, 2, 14);
@@ -1828,7 +1829,7 @@ function runApp(){
 
 	// Main visualization object
 
-	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', 1, Date.now()); // todo: change last parameter to be in JD
+	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', 1/12, Date.now()); // todo: change last parameter to be in JD
 
 	document.getElementById('sim_time').innerHTML = viz.getDate();
 	const sim_time = document.getElementById('sim_time');
@@ -1841,50 +1842,50 @@ function runApp(){
 		let speed = Math.floor(this.value / 25) + 1;
 		//console.log(speed);
 		if(speed == 1){
-			viz.setJdDelta(-1);
+			//viz.setJdDelta(-1);
 			viz.mult = -1;
 			if(viz1 != null){
-				viz1.setJdDelta(-1);
+				//viz1.setJdDelta(-1);
 				viz1.mult = -1;
 			}
 		}
 		else if(speed == 2){
-			viz.setJdDelta(1.0/60);
+			//viz.setJdDelta(1.0/60);
 			viz.mult = 1.0/60;
 			if(viz1 != null){
-				viz1.setJdDelta(1.0/60);
+				//viz1.setJdDelta(1.0/60);
 				viz1.mult = 1.0/60;
 			}
 		}
 		else if(speed == 3){
-			viz.setJdDelta(1);
+			//viz.setJdDelta(1);
 			viz.mult = 1;
 			if(viz1 != null){
-				viz1.setJdDelta(1);
+				//viz1.setJdDelta(1);
 				viz1.mult = 1;
 			}
 		}
 		else if(speed == 4){
-			viz.setJdDelta(2);
+			//viz.setJdDelta(2);
 			viz.mult = 2;
 			if(viz1 != null){
-				viz1.setJdDelta(2);
+				//viz1.setJdDelta(2);
 				viz1.mult = 2;
 			}
 		}
 		else if(speed == 5){
-			viz.setJdDelta(4);
+			//viz.setJdDelta(4);
 			viz.mult = 4;
 			if(viz1 != null){
-				viz1.setJdDelta(4);
+				//viz1.setJdDelta(4);
 				viz1.mult = 4;
 			}
 		}
 		else{
-			viz.setJdDelta(1);
+			//viz.setJdDelta(1);
 			viz.mult = 1;
 			if(viz1 != null){
-				viz1.setJdDelta(1);
+				//viz1.setJdDelta(1);
 				viz1.mult = 1;
 			}
 		}
@@ -1902,16 +1903,16 @@ function runApp(){
 			stars = new Spacekit.Stars({}, viz);
 		}
 
-		console.log(visualizer_list);
+		//console.log(visualizer_list);
 
 		if(visualizer_list.Sun){
-			console.log("hie?");
+			//console.log("hie?");
 			if(!viz.isUsingLightSources){
 
 			}
 			else{
 				viz.createLight(visualizer_list.Sun.position);
-				console.log(viz);
+				//console.log(viz);
 			}
 		}
 		
@@ -1987,7 +1988,7 @@ function runApp(){
 	function displayBodyInfo(name){
 		let info_panel = document.getElementById("info_panel1");
 		let body = body_meta_data.find( x => x["body name"] === name.toLowerCase());
-		console.log(body);
+		//console.log(body);
 		if(body == undefined) return;
 		//if(!body["is uploaded"]) return;
 		info_panel.style.display = "block";
@@ -2052,7 +2053,7 @@ function runApp(){
 	function ZoomToBody(body){
 		viz.getViewer().get3jsCameraControls().reset();
 		viz.getViewer().followObject(visualizer_list[body] , [0, 0, 0]);
-		viz.getViewer().get3jsCamera().position.set(0,0,1.5);//visualizer_list[body]._obj.position.x, visualizer_list[body]._obj.position.y, visualizer_list[body]._obj.position.z);
+		viz.getViewer().get3jsCamera().position.set(0,0,(unitsPerAu / 150));//visualizer_list[body]._obj.position.x, visualizer_list[body]._obj.position.y, visualizer_list[body]._obj.position.z);
 		viz.getViewer().get3jsCameraControls().update();
 	}
 
