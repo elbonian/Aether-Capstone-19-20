@@ -21,9 +21,9 @@ def get_solar_target_positions(ip, ref_frame, target_list, startDate, endDate, s
 	return response, json.loads(response.text)
 
 
-def get_body_info(ip):
+def get_body_info(ip, ref_frame):
 
-	addr = 'http://{}:5000/api/available-bodies/'.format(ip)
+	addr = 'http://{}:5000/api/available-bodies/{}'.format(ip, ref_frame)
 
 	# make the request and get the response
 	response = requests.get(addr)
@@ -90,13 +90,24 @@ if __name__ == '__main__':
 	# print('-------------------------------------------------')
 	time_start = time.time()
 
-	bod_info_resp = get_body_info(args.ip)
+	bod_info_resp = get_body_info(args.ip, 'solar system barycenter')
 
 	time_end = time.time()
 	print("Response:", bod_info_resp[0])
 	pprint(bod_info_resp[1])
 
 	print("Time taken:", time_end - time_start)
+
+	time_start = time.time()
+
+	bod_info_resp = get_body_info(args.ip, 'neptune barycenter')
+
+	time_end = time.time()
+	print("Response:", bod_info_resp[0])
+	pprint(bod_info_resp[1])
+
+	print("Time taken:", time_end - time_start)
+
 
 	clear_upload_resp = clear_upload(args.ip)
 	print("Response:", clear_upload_resp[0])

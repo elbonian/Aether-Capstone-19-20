@@ -27,7 +27,7 @@ def exitNicely(sig, frame):
     exit(0)
 
 
-def get_min_max_speed(bod_id, time_range_list):
+def get_min_max_speed(bod_id, time_range_list, wrt):
 
     #   For each body
     #       For each time range
@@ -38,7 +38,6 @@ def get_min_max_speed(bod_id, time_range_list):
 
     speed_list = list()
 
-    # TODO: change this to iterate over each time range once time range merging is implemented
     for time_tupe in time_range_list:
         # start - end results in a timedelta object
         try:
@@ -62,7 +61,7 @@ def get_min_max_speed(bod_id, time_range_list):
             # generate an end time that is 1 minute after the start
             etEnd = spice.datetime2et(t_start + timedelta(seconds=offset + 60))
 
-            target_positions, _ = spice.spkpos(bod_id, [etStart, etEnd], 'J2000', 'NONE', 'solar system barycenter')
+            target_positions, _ = spice.spkpos(bod_id, [etStart, etEnd], 'J2000', 'NONE', wrt)
 
             # logic from: https://stackoverflow.com/questions/20184992/
             squared_dist = np.sum((target_positions[1] - target_positions[0]) ** 2, axis=0)
@@ -334,8 +333,14 @@ def get_object_positions(ref_frame, targets, startDate, endDate, steps):
     return returnResponse(response_data, 200)
 
 
-@app.route('/api/available-bodies/', methods=['GET'])
-def get_available_bodies():
+@app.route('/api/available-bodies/<string:ref_frame>', methods=['GET'])
+def get_available_bodies(ref_frame):
+
+    ref_frame = ref_frame.lower()
+
+    # check to make sure the reference frame is valid
+    if not aether_bodies.isValidRefFrame(ref_frame):
+        return returnResponse({'error': '{} is not a valid reference frame.'.format(ref_frame)}, 400)
 
     known_bodies = aether_bodies.getBodies()
 
@@ -348,7 +353,7 @@ def get_available_bodies():
 
         bod_id = str(bod_dict['spice id'])
 
-        min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'])
+        min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'], ref_frame)
         bod_dict['min speed'] = min_max_speeds[0]
         bod_dict['max speed'] = min_max_speeds[1]
 
