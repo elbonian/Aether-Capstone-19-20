@@ -369,9 +369,13 @@ def get_available_bodies(ref_frame):
     return returnResponse(known_bodies, 200)
 
 
-@app.route('/api/spk-upload/', methods=['POST'])
-def spk_upload():
+@app.route('/api/spk-upload/<string:ref_frame>', methods=['POST'])
+def spk_upload(ref_frame):
     global aether_bodies
+
+    # check to make sure the reference frame is valid
+    if not aether_bodies.isValidRefFrame(ref_frame):
+        return returnResponse({'error': '{} is not a valid reference frame.'.format(ref_frame)}, 400)
 
     spk_extension = '.bsp'
 
@@ -404,7 +408,7 @@ def spk_upload():
 
             bod_id = str(bod_dict['spice id'])
 
-            min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'])
+            min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'], ref_frame)
             bod_dict['min speed'] = min_max_speeds[0]
             bod_dict['max speed'] = min_max_speeds[1]
 
