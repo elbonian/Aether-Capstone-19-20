@@ -1795,7 +1795,6 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 			.catch(error => {
 				console.error(error);
 			});
-
 		});
 	}
 
