@@ -42,20 +42,20 @@ class SPKParser:
                 #Bodies have both name and naif_id
                 if '(' in name_str:
                     naif_id=int(name_str[name_str.find('(')+1:name_str.find(')')])
-                    name=''.join(e for e in name_str[:name_str.find('(')] if e.isalnum() or e==' ').strip()
+                    name=''.join(e for e in name_str[:name_str.find('(')] if e.isalnum() or e==' ' or e=='-').strip()
                 
                 #Bodies have only naif_id
                 else:
-                    name = ''.join(e for e in name_str if e.isalnum() or e==' ').strip()
+                    name = ''.join(e for e in name_str if e.isalnum() or e==' ' or e=='-').strip()
                     naif_id = int(name)
                 
                 #get w.r.t. of the body
                 #w.r.t. has both name and naif_id
                 if '(' in wrt_str:
-                    wrt = ''.join(e for e in wrt_str[:wrt_str.find('(')] if e.isalnum() or e==' ').strip()
+                    wrt = ''.join(e for e in wrt_str[:wrt_str.find('(')] if e.isalnum() or e==' ' or e=='-').strip()
                 #w.r.t. has only naif_id
                 else:
-                    wrt = ''.join(e for e in wrt_str if e.isalnum() or e==' ').strip()
+                    wrt = ''.join(e for e in wrt_str if e.isalnum() or e==' ' or e=='-').strip()
 
                 bodies.append((name,wrt,naif_id)) 
                 
