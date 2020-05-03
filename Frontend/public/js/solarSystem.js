@@ -8,7 +8,7 @@ class AetherSimulation extends Spacekit.Simulation {
         super(simulationElt, options);
         this.mult = options.mult || 1;
         this.tail_length = options.tail_length || 1;
-		this.wrt = options.wrt || "solar system baryncenter";
+		this.wrt = options.wrt || "solar system barycenter";
 		this.xy_grid = this.createGrid(); // TODO: bad to do this inside constructor
 	}
 
