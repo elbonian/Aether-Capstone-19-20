@@ -25,7 +25,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		Creates a grid on the xy plane that represents the ecliptic plane
 	*/
 	createGrid(){
-		var grid = new Spacekit.THREE.GridHelper(1000.0 * 60, 60, 0x040404, 0x040404);
+		var grid = new Spacekit.THREE.GridHelper(unitsPerAu * 60, 60, 0x040404, 0x040404);
 		grid.rotation.x = Math.PI/2;
 		//grid.setColors( new Spacekit.THREE.Color(0x808080), new Spacekit.THREE.Color(0x808080) );
 		this.getScene().add(grid);
@@ -191,7 +191,7 @@ class AetherObject extends Spacekit.SphereObject {
         this.radius_polar = this._options.radius_polar;
 		this.name = this._options.name;
          // Check if body has radius data
-        if(this.radius == -1 || this.radius < 0.000001){
+        if(this.radius == -1){// || this.radius < 0.00001){
         	// console.log(this.radius);
         	// console.log(this._options.textureUrl);
         	// Create a  sprite to represent the body
@@ -203,13 +203,13 @@ class AetherObject extends Spacekit.SphereObject {
 			});
 
 			this.sprite = sprite;
-			sprite.scale.set(10/1000.0, 10/1000.0, 1) // TODO: scale sprite according to simulation scale factor
+			sprite.scale.set(1000/unitsPerAu, 1000/unitsPerAu, 1) // TODO: scale sprite according to simulation scale factor
 			this._obj.add(sprite);
         	this._renderMethod = 'SPRITE';
         }
         else{
         	// Create a sphere to represent the body
-        	const radius = this.radius_polar * 1000.0; // TODO: replace 1000.0 with simulation scale factor
+        	const radius = this.radius_polar * unitsPerAu; // TODO: replace unitsPerAu with simulation scale factor
         	// Create multiple spheres for the object, each of differing level of detail
 			for (let i = 0; i < levelsOfDetail.length; i += 1) {
 				const level = levelsOfDetail[i];
@@ -644,7 +644,7 @@ class AetherObject extends Spacekit.SphereObject {
       			var position_vectors = data[this.name].positions.map(function(pos){
 			  		var adjusted_val = pos.map(Spacekit.kmToAu);//[Spacekit.kmToAu(pos[0]), Spacekit.kmToAu(pos[1]), Spacekit.kmToAu(pos[2])];
 			  		var adjusted_val2 = Spacekit.equatorialToEcliptic_Cartesian(adjusted_val[0], adjusted_val[1], adjusted_val[2], Spacekit.getObliquity());
-			  		return new Spacekit.THREE.Vector3(adjusted_val2[0] * 1000, adjusted_val2[1] * 1000, adjusted_val2[2] * 1000);
+			  		return new Spacekit.THREE.Vector3(adjusted_val2[0] * unitsPerAu, adjusted_val2[1] * unitsPerAu, adjusted_val2[2] * unitsPerAu);
 			  	});
 				
 			  	// update position list, time list, and line
@@ -767,7 +767,7 @@ const weekPerSecond = 7;
 const monthPerSecond = 30;
 
 
-const unitsPerAu = 1000.0;
+const unitsPerAu = 100000.0;
 
 
 // Dictionary of bodies in the visualization
@@ -1006,6 +1006,7 @@ function addClickedBody(bodyName){
 				i++;
 			}
 			let rotate;
+			let textureUrl;
 			// Create object
 			if(!body_data["has rotation data"]){
 				rotate = {
@@ -1020,6 +1021,7 @@ function addClickedBody(bodyName){
 					"nut_prec_dec": null,
 				};
 				displayError(lowerName + " HAS NO ROTATION DATA AVAILABLE");
+				textureUrl = '/js/textures/smallparticle.png';
 			}
 			else{
 				rotate = {
@@ -1035,7 +1037,7 @@ function addClickedBody(bodyName){
 				};
 			}
 
-			let textureUrl;
+			
 			if(body_data["has radius data"]){
 				radii[lowerName] = [body_data["radius"].map(Spacekit.kmToAu)[0], body_data["radius"].map(Spacekit.kmToAu)[2]];
 				//console.log(body_textures[lowerName]);
@@ -1044,10 +1046,11 @@ function addClickedBody(bodyName){
 			else{
 				displayError(lowerName + " HAS NO RADIUS DATA AVAILABLE");
 				radii[lowerName] = [-1,-1];
-			}
-			if(radii[lowerName][0] < 0.000001){
 				textureUrl = '/js/textures/smallparticle.png';
 			}
+			// if(radii[lowerName][0] < 0.00001){
+			// 	
+			// }
 			// Create a new space object
 			let body = viz.createAetherObject(lowerName, {
 				labelText: bodyName,
@@ -1078,6 +1081,7 @@ function addClickedBody(bodyName){
 				nut_prec_ra: rotate.nut_prec_ra,
 				nut_prec_dec: rotate.nut_prec_dec,
 			});
+			console.log(body);
 			visualizer_list[bodyName] = body;
 			// Set globals
 			adjusted_positions[bodyName] = allAdjustedVals;
@@ -1440,7 +1444,7 @@ sim_form.addEventListener('submit', function(e){
 	const start_time =  Date.parse(formData.get('jd_start')) ;
 
 	// Creates the new simulation from data entered
-	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu]);
+	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu]);
 
 	// Push the simulation on the stack
 	simulation_stack.push[new_viz];
@@ -1487,8 +1491,8 @@ compare_form.addEventListener('submit', function(e){
 	//		 if not, display two separate times on each mini div
 	
 	// Create two new simulations that will be compared side by side
-	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison1");
-	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, start_time, [2500 / unitsPerAu, 5000 / unitsPerAu, 5000 / unitsPerAu], "comparison2", false);
+	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison1");
+	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison2", false);
 	new_viz2._camera = new_viz1._camera;
 	
 	viz = new_viz1;
@@ -1615,7 +1619,7 @@ function updateBodyChecklist(data){
 	@param {array[Number]} camera_start - Position for the camera to start, default=[2500,5000,5000]
 	@param {string} container - div to place the simulation in, default=main-container
 */
-function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[2500,5000,5000], container='main-container', primary_sim=true){
+function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[250000,500000,500000], container='main-container', primary_sim=true){
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	///////////////////////// CREATE THE SIMULATION OBJECT /////////////////////////////////////
@@ -1644,39 +1648,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 		getAvailableBodies2().then(data =>{
 			updateBodyChecklist(data);
 
-			////////////////////////////////////////////////////////////////////////////////////////////
-			///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
-			////////////////////////////////////////////////////////////////////////////////////////////
-
-			for(const body of body_meta_data){
-				const body_name = body["body name"];
-				// Check for radius
-				if(body["has radius data"]){
-					radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius		
-				}
-				else{
-					radii[body_name] = [-1, -1];
-					body_textures[body_name] = '/js/textures/smallparticle.png';
-				}
-				// Check for rotation
-				if(body["has rotation data"]){
-					rotation_data[body_name] = body["rotation data"];
-				}
-				else{
-					rotation_data[body_name] = {
-						"ra": null,
-						"dec": null,
-						"pm": null,
-						"ra_delta": null,
-						"dec_delta": null,
-						"pm_delta": null,
-						"nut_prec_angles": null,
-						"nut_prec_ra": null,
-						"nut_prec_dec": null,
-					};
-				}
-				//console.log(body);
-			}
+			
 
 			// Retrieve the position data with the specified parameters
 			getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10).toString(), "10").then(data => {
@@ -1684,6 +1656,44 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 					displayError(data);
 					return data;
 				}
+
+				////////////////////////////////////////////////////////////////////////////////////////////
+				///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
+				////////////////////////////////////////////////////////////////////////////////////////////
+
+				for(const body of body_meta_data){
+					const body_name = body["body name"];
+					// Check for radius
+					if(body["has radius data"]){
+						radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius		
+						// if(radii[body_name][0] < 0.00001){
+						// 	body_textures[body_name] = '/js/textures/smallparticle.png';
+						// }
+					}
+					else{
+						radii[body_name] = [-1, -1];
+						body_textures[body_name] = '/js/textures/smallparticle.png';
+					}
+					// Check for rotation
+					if(body["has rotation data"]){
+						rotation_data[body_name] = body["rotation data"];
+					}
+					else{
+						rotation_data[body_name] = {
+							"ra": null,
+							"dec": null,
+							"pm": null,
+							"ra_delta": null,
+							"dec_delta": null,
+							"pm_delta": null,
+							"nut_prec_angles": null,
+							"nut_prec_ra": null,
+							"nut_prec_dec": null,
+						};
+					}
+					//console.log(body);
+				}
+
 				// iterate over each body returned by the API call
 				for(const property in data){
 					// Array of [x,y,z] coords in AU
@@ -1753,7 +1763,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 						currIndex: cur_idx,
 						radius: radii[property][0],
 						radius_polar: radii[property][1],
-						rotation: true,
+						rotation: is_rotating,
 						hideOrbit: true,
 						positionVectors: allAdjustedVals,
 						ephemUpdate: getPositionData2,
@@ -1776,7 +1786,7 @@ function createNewSim(wrt, targets, jd_delta=1, unix_epoch_start, camera_start=[
 						nut_prec_dec: rotation_data[property].nut_prec_dec,
 					});
 
-					
+					console.log(body);
 					if(primary_sim){
 						visualizer_list[bodyName] = body;
 					}
