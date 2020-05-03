@@ -391,7 +391,7 @@ class AetherObject extends Spacekit.SphereObject {
 		let adjKmPerSec = [];
 		//get max and min kmpersec and scale them between the max and min
 		for(let i = 0; i < kmPosX.length-1; i++){
-			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / secondsPerDay / 1000;
+			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / secondsPerDay / unitsPerAu;
 			kmPerSecList.push(kmPerSec);
 		}
 		for (var i = 0; i < kmPerSecList.length; i++) {
