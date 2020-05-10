@@ -259,7 +259,7 @@ def returnResponse(response, status):
 @app.route('/api/positions/<string:ref_frame>/<string:targets>/<string:curVizJd>/<string:curVizJdDelta>/<string:tailLenJd>/<int:validSeconds>', methods=['GET'])
 def get_object_positions(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd, validSeconds):
     """
-    aether-rest-server.py -- get_rotation_data
+    aether-rest-server.py -- get_object_positions
         This function serves position and time data to the frontend for visualization. It is called when the frontend
         makes a GET request to the above URL using specified params. This function can return data for either a single
         body/target or multiple. In the case of multiple targets, they should be passed as either names or NAIF IDs
@@ -295,8 +295,8 @@ def get_object_positions(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd,
             validSeconds <int> -- the amount of position data to gather past curVizJd. Higher values provide more future
                 data, so the frontend won't need to update as much, and vice versa. See Main idea above for more detail.
 
-    Returns: <dict> -- a dictionary containing position lists (x, y, z) w.r.t. the specified observer, times
-        corresponding to each position, and the current index (index of lists for curVizJd) for each target.
+    Returns: Flask Response object with a dictionary containing position lists (x, y, z) w.r.t. the specified observer,
+        times corresponding to each position, and the current index (index of lists for curVizJd) for each target.
     """
 
     # convert string of targets into a list -- ensure lower case for consistency
@@ -476,6 +476,45 @@ def get_object_positions(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd,
 
 @app.route('/api/available-bodies/<string:ref_frame>', methods=['GET'])
 def get_available_bodies(ref_frame):
+    """
+    aether-rest-server.py -- get_available_bodies
+        This function serves metadata about the bodies that the backend has loaded. It is called when the frontend makes
+        a GET request to the above URL with the specified param. This endpoint is called by the frontend whenever a new
+        simulation is created. It returns a list of dictionaries (one for each body). Each dictionary specifies the body
+        name, NAIF ID, valid time ranges, whether or not it is default or uploaded by the user and the body's approx
+        minimum and maximum speeds. Along with that data it also specifies whether or not the body has mass, rotation
+        and radius data. If any of these are true for a body, the dictionary contains keys for each.
+
+    Params: ref_frame <str> -- the name or NAIF ID of the observing body for which min and max speeds for each object
+        are calculated against. This determines the range of speeds which the frontend uses for trajectory gradients. It
+        is necessary because the min and max speeds of an object are different for different observers.
+
+    Returns: a Flask response object with a list of dictionaries. Each dictionary in the list provides metadata for a
+        single body that the backend has loaded in it's SPICE kernel set. See the above description for more info. Below
+        is an example of a single dictionary in the list for reference...
+
+    {
+    'body name': 'mars',
+    'category': 'mars',
+    'has mass data': True,
+    'has radius data': True,
+    'has rotation data': True,
+    'is uploaded': False,
+    'mass': 6.416908682663215e+23,
+    'max speed': 26.409686994581353,
+    'min speed': 21.974733146673085,
+    'radius': [3396.19, 3396.19, 3376.2],
+    'rotation data': {'dec': 52.8865,
+                      'dec_delta': -0.0609,
+                      'pm': 176.63,
+                      'pm_delta': 350.89198226,
+                      'ra': 317.68143,
+                      'ra_delta': -0.1061},
+    'spice id': 499,
+    'valid times': [['1900-01-04 00:00:41.184000',
+                     '2100-01-01 00:01:07.183000']]
+    }
+    """
 
     ref_frame = ref_frame.lower()
 
@@ -510,9 +549,16 @@ def get_available_bodies(ref_frame):
     return returnResponse(known_bodies, 200)
 
 
-@app.route('/api/spk-upload/', methods=['POST'])
-def spk_upload():
+@app.route('/api/spk-upload/<string:ref_frame>', methods=['POST'])
+def spk_upload(ref_frame):
+
     global aether_bodies
+
+    ref_frame = ref_frame.lower()
+
+    # check to make sure the reference frame is valid
+    if not aether_bodies.isValidRefFrame(ref_frame):
+        return returnResponse({'error': '{} is not a valid reference frame.'.format(ref_frame)}, 400)
 
     spk_extension = '.bsp'
 
@@ -541,11 +587,14 @@ def spk_upload():
 
         new_bodies = aether_bodies.addFromKernel(file_path, returnNewBodies=True)
 
+        if not new_bodies:
+            return returnResponse([], 409)
+
         for bod_dict in new_bodies:
 
             bod_id = str(bod_dict['spice id'])
 
-            min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'], "SOLAR SYSTEM BARYCENTER")
+            min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'], ref_frame)
             bod_dict['min speed'] = min_max_speeds[0]
             bod_dict['max speed'] = min_max_speeds[1]
 

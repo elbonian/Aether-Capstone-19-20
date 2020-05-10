@@ -118,7 +118,10 @@ class AetherBodies:
             self.bodies[body_id][1] = merged_times
 
         if returnNewBodies:
-            return self.getBodies(specific_ids=newly_added_bodies)
+            if newly_added_bodies:
+                return self.getBodies(specific_ids=newly_added_bodies)
+            else:
+                return list()
 
     def isValidID(self, bod_id):
 
