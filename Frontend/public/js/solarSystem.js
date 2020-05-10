@@ -81,7 +81,7 @@ class AetherSimulation extends Spacekit.Simulation {
 	Animates the simulation
     */
 	animate() {
-		console.log(this.getJdDelta())
+		//console.log(this.getJdDelta())
 		if (!this._renderEnabled) {
 		return;
 		}
@@ -95,7 +95,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		// CHANGED FROM DEFAULT SPACEKIT FUNCTION
 		if (!this._isPaused) {
 		if (this._jdDelta) {
-			this._jd += this.mult / this.getJdDelta() / 12;
+			this._jd += this.mult * this.getJdDelta();
 		} else {
 			console.log("jd delta is undefined");
 		}
@@ -376,6 +376,9 @@ class AetherObject extends Spacekit.SphereObject {
 			this._label = labelElt;
 			this._showLabel = true;
 		}
+
+		const angle_of_rotation = Spacekit.rad(this.pm);
+	  	this._obj.rotateOnWorldAxis(this.axis_of_rotation_vector, (angle_of_rotation));
 		//console.log(this.name);
 
 	}
@@ -475,7 +478,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  */
 	 rotate(jd){
 	  	const angle_of_rotation = Spacekit.rad(this.pm_delta);
-	  	this._obj.rotateOnWorldAxis(this.axis_of_rotation_vector, (angle_of_rotation) *  (this._simulation.mult));
+	  	this._obj.rotateOnWorldAxis(this.axis_of_rotation_vector, (angle_of_rotation) * (this._simulation.mult * this._simulation.getJdDelta()));
 	  	
 	  }
 
@@ -508,7 +511,7 @@ class AetherObject extends Spacekit.SphereObject {
 		  Sets next position of where body will be and updates index
 	  */
 	  setNextPos(){
-		  this.currIndex += this._simulation.mult / this._simulation.getJdDelta();
+		  this.currIndex += this._simulation.mult;
 		  const currPos = this.positionVectors[Math.floor(this.currIndex)];
 		  this._obj.position.set(currPos.x, currPos.y, currPos.z);
 	  }
@@ -521,7 +524,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  	this.tailStartIndex = this.currIndex - Math.floor(this._simulation.tail_length * this.tail_length) + 1;
 	  	if(!this._simulation._isPaused){
 	  		// if not paused, then add a multiple of the simulation's rate of time
-	  		this.tailStartIndex += this._simulation.mult / this._simulation.getJdDelta();
+	  		this.tailStartIndex += this._simulation.mult;
 	  	}
 	  }
 
@@ -820,7 +823,7 @@ function tick(){
 		sim_rate.innerHTML = "JD/Sec: " + 0;
 	}
 	else{
-		const rate = "JD/Sec: " + 60*this.mult;
+		const rate = "JD/Sec: " + 60 * this.mult * this.getJdDelta();
 		sim_rate.innerHTML = rate;
 	}
 }
@@ -1028,7 +1031,7 @@ function addClickedBody(bodyName){
 				rotate = {
 					"ra": body_data["rotation data"].ra,
 					"dec": body_data["rotation data"].dec,
-					"pm": body_data["rotation data"].pm + 180,
+					"pm": body_data["rotation data"].pm,
 					"ra_delta": body_data["rotation data"].ra_delta,
 					"dec_delta": body_data["rotation data"].dec_delta,
 					"pm_delta": body_data["rotation data"].pm_delta,
@@ -1194,6 +1197,89 @@ let body_textures = {
 	"neptune" : '/js/textures/2k_neptune.jpg',
 	"pluto" : '/js/textures/plutomap2k.jpg',
 	"moon" : '/js/textures/2k_moon.jpg',
+};
+
+// Author: Jared Goodwin
+// showLoading() - Display loading wheel.
+// removeLoading() - Remove loading wheel.
+// Requires ECMAScript 6 (any modern browser).
+function showLoading() {
+    if (document.getElementById("divLoadingFrame") != null) {
+        return;
+    }
+    var style = document.createElement("style");
+    style.id = "styleLoadingWindow";
+    style.innerHTML = `
+        .loading-frame {
+            position: fixed;
+            background-color: rgba(0, 0, 0, 0.8);
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 4;
+        }
+
+        .loading-track {
+            height: 50px;
+            display: inline-block;
+            position: absolute;
+            top: calc(50% - 50px);
+            left: 50%;
+        }
+
+        .loading-dot {
+            height: 5px;
+            width: 5px;
+            background-color: white;
+            border-radius: 100%;
+            opacity: 0;
+        }
+
+        .loading-dot-animated {
+            animation-name: loading-dot-animated;
+            animation-direction: alternate;
+            animation-duration: .75s;
+            animation-iteration-count: infinite;
+            animation-timing-function: ease-in-out;
+        }
+
+        @keyframes loading-dot-animated {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    `
+    document.body.appendChild(style);
+    var frame = document.createElement("div");
+    frame.id = "divLoadingFrame";
+    frame.classList.add("loading-frame");
+    for (var i = 0; i < 10; i++) {
+        var track = document.createElement("div");
+        track.classList.add("loading-track");
+        var dot = document.createElement("div");
+        dot.classList.add("loading-dot");
+        track.style.transform = "rotate(" + String(i * 36) + "deg)";
+        track.appendChild(dot);
+        frame.appendChild(track);
+    }
+    document.body.appendChild(frame);
+    var wait = 0;
+    var dots = document.getElementsByClassName("loading-dot");
+    for (var i = 0; i < dots.length; i++){
+        window.setTimeout(function (dot) {
+            dot.classList.add("loading-dot-animated");
+        }, wait, dots[i]);
+        wait += 150;
+    }
+};
+function removeLoading() {
+    document.body.removeChild(document.getElementById("divLoadingFrame"));
+    document.body.removeChild(document.getElementById("styleLoadingWindow"));
 };
 
 
@@ -1646,6 +1732,7 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 
 	// Only get available body detail if this will be a primary sim, prevents two sims from issuing the API request if comparing sims
 	if(primary_sim){
+		showLoading();
 		getAvailableBodies2(wrt).then(data =>{
 			updateBodyChecklist(data);
 
@@ -1778,7 +1865,167 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 						},
 						ra: rotation_data[property].ra,
 						dec: rotation_data[property].dec,
-						pm: rotation_data[property].pm + 180,
+						pm: rotation_data[property].pm,
+						ra_delta: rotation_data[property].ra_delta,
+						dec_delta: rotation_data[property].dec_delta,
+						pm_delta: rotation_data[property].pm_delta,
+						nut_prec_angles: rotation_data[property].nut_prec_angles,
+						nut_prec_ra: rotation_data[property].nut_prec_ra,
+						nut_prec_dec: rotation_data[property].nut_prec_dec,
+					});
+
+					//console.log(body);
+					if(primary_sim){
+						visualizer_list[bodyName] = body;
+					}
+					else{
+						visualizer_list2[bodyName] = body;
+					}
+					// Set globals
+					adjusted_positions[bodyName] = allAdjustedVals;
+					adjusted_times[bodyName] = allAdjustedTimes;
+
+					//console.log(new_viz._subscribedObjects);
+
+				}
+				initCheckboxes();
+				removeLoading();	
+			})
+			.catch(error => {
+				console.error(error);
+			});
+
+		});
+	}
+	else{
+		// Retrieve the position data with the specified parameters
+			getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
+				if(data.error){
+					displayError(data);
+					return data;
+				}
+
+				////////////////////////////////////////////////////////////////////////////////////////////
+				///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
+				////////////////////////////////////////////////////////////////////////////////////////////
+
+				for(const body of body_meta_data){
+					const body_name = body["body name"];
+					// Check for radius
+					if(body["has radius data"]){
+						radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius		
+						// if(radii[body_name][0] < 0.00001){
+						// 	body_textures[body_name] = '/js/textures/smallparticle.png';
+						// }
+					}
+					else{
+						radii[body_name] = [-1, -1];
+						body_textures[body_name] = '/js/textures/smallparticle.png';
+					}
+					// Check for rotation
+					if(body["has rotation data"]){
+						rotation_data[body_name] = body["rotation data"];
+					}
+					else{
+						rotation_data[body_name] = {
+							"ra": null,
+							"dec": null,
+							"pm": null,
+							"ra_delta": null,
+							"dec_delta": null,
+							"pm_delta": null,
+							"nut_prec_angles": null,
+							"nut_prec_ra": null,
+							"nut_prec_dec": null,
+						};
+					}
+					//console.log(body);
+				}
+
+				// iterate over each body returned by the API call
+				for(const property in data){
+					// Array of [x,y,z] coords in AU
+					var allAdjustedVals = [];
+					// Array of Julian Dates corresponding to each position
+					var allAdjustedTimes = [];
+					// Current Julian Date
+					var cur_jd = new_viz.getJd();
+
+					// set tail indexes
+					var cur_idx = data[property].cur_time_idx;
+					const tail_start_idx = 0;
+					var tail_end_idx;
+					if(data[property].times.length % 2 == 0){
+						tail_end_idx = data[property].times.length / 2;
+					}
+					else {
+						tail_end_idx = Math.ceil(data[property].times.length / 2);
+					}
+
+					// iterate over the data for the current body
+					var i = 0;
+					for(pos of data[property].positions){
+						// convert coordinates in km to au
+						adjustedVals = pos.map(Spacekit.kmToAu);
+						// convert coords to ecliptic
+						adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+						let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+						
+						// push positions and their corresponding times to arrays
+						allAdjustedVals.push(vector);
+						allAdjustedTimes.push(parseFloat(data[property].times[i]));
+						i++;
+					}
+					
+					// Create object
+					var bodyName = capitalizeFirstLetter(property)
+					var radius;
+					if(bodyName == "Sun"){
+						radius = 0.17;
+						//new_viz.createLight(allAdjustedVals[cur_idx]);
+					}
+					else if(bodyName == "Moon"){
+						radius = 0.0005;
+					}
+					else{
+						radius = .08;
+					}
+
+					// Check for radius data
+					if(radii[property] == [-1, -1]){
+						displayError(property + " HAS NO RADIUS DATA AVAILABLE");
+					}
+
+					// Check rotation data for body
+					var is_rotating = true;
+					if(rotation_data[property].ra == null){
+						displayError(property + " HAS NO ROTATION DATA AVAILABLE" );
+						is_rotating = false; // disable the object's rotation if no rotation data
+					}
+
+					// Create a new space object
+					let body = new_viz.createAetherObject(property, {
+						labelText: bodyName,
+						name: property,
+						textureUrl: body_textures[property],
+						currIndex: cur_idx,
+						radius: radii[property][0],
+						radius_polar: radii[property][1],
+						rotation: is_rotating,
+						hideOrbit: true,
+						positionVectors: allAdjustedVals,
+						ephemUpdate: getPositionData2,
+						jdTimeData: allAdjustedTimes,
+						levelsOfDetail: [{
+							threshold: 0,
+							segments: 40,
+						}],
+						rotation: {
+							enable: is_rotating,
+						},
+						ra: rotation_data[property].ra,
+						dec: rotation_data[property].dec,
+						pm: rotation_data[property].pm,
 						ra_delta: rotation_data[property].ra_delta,
 						dec_delta: rotation_data[property].dec_delta,
 						pm_delta: rotation_data[property].pm_delta,
@@ -1807,7 +2054,6 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 				console.error(error);
 			});
 
-		});
 	}
 
 	//console.log(visualizer_list);
