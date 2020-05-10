@@ -11,10 +11,7 @@ class SPKParser:
         #Output: Dictionary of bodies infomation, start time nd end time of the time interval of the kernel.
         #Output formate: {'bodies':[(body_name:str, wrt:str, naif_id:int),...], 'time_start': %Y-%m-%d %H:%M:%S.%f, 'time_end': %Y-%m-%d %H:%M:%S.%f}
         
-        
-        
-        
-        
+
         #Stdout of brief
         output = os.popen("./SPICE/tools/brief -c " + path_to_kernel).read()
         
