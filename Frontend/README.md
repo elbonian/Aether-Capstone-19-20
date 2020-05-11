@@ -9,4 +9,4 @@
 
 4. Navigate to localhost:8080 in your browser.
 
-# Code documentation can be found by opening the index.html file located in the /Documentation directory
+# Code documentation can be found by opening the index.html file located in the /Documentation directory in your browser
