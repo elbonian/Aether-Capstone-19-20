@@ -2324,14 +2324,14 @@ function runApp(){
 		//This pulls the value input from the time set field
 
 		if(isNaN(input)){
-			displayError("Must enter a valid number");
+			displayError("Must enter a number");
 		}
 		else{
 			if(input > 50){
 				displayError("Rate of time must be no more than 50 days per second");
 			}
-			else if(input > -0.0000001 && input < 0.0000001){
-				displayError("Rate of time must be no more precise than 1e-7");
+			else if(input == 0){
+				displayError("Rate of time cannot be 0");
 			}
 			else if(input < -10){
 				displayError("Rate of time must be greater than -10 days per second");
@@ -2348,13 +2348,20 @@ function runApp(){
 	document.getElementById("input_length_set").addEventListener("click" , function(){
 		let input = document.getElementById("input_length").value;
 		//This pulls the value input from the time set field
-
-		//Todo, do something with this
-		viz.tail_length = input / 100;
-		if(viz1 != null){
-			viz1.tail_length = input / 100;
+		
+		if(Number.isInteger(input)){
+			displayError("Must enter an integer");
 		}
-		console.log(input);
+		else if(input < 0){
+			displayError("Tail length cannot be negative")
+		}
+		else{
+			document.getElementById("myRange2").setAttribute("max", input);
+			viz.tail_length = input / 100;
+			if(viz1 != null){
+				viz1.tail_length = input / 100;
+			}
+		}
 	});
 
 	document.getElementById("infoButton").addEventListener("click", function(){
