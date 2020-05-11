@@ -2313,7 +2313,7 @@ function runApp(){
 			else if(input > -0.0000001 && input < 0.0000001){
 				displayError("Rate of time must be no more precise than 1e-7");
 			}
-			else if(inpute < -10){
+			else if(input < -10){
 				displayError("Rate of time must be greater than -10 days per second");
 			}
 			else{
