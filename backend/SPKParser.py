@@ -1,6 +1,6 @@
-import os
-import re
-from datetime import datetime
+from os import popen
+# import re
+# from datetime import datetime
 
 class SPKParser:
     
@@ -13,7 +13,7 @@ class SPKParser:
         
 
         #Stdout of brief
-        output = os.popen("./SPICE/tools/brief -c " + path_to_kernel).read()
+        output = popen("./SPICE/tools/brief -c " + path_to_kernel).read()
         
         
         lines=output.split('\n')

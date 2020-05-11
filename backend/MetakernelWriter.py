@@ -6,11 +6,28 @@ import os
 
 
 class MetakernelWriter:
+    """
+    MetakernelWriter class
+
+    Purpose: This class handles creation of a metakernel file. It simply traverses the default and user_uploaded
+        directories of SPICE kernels and adds each path to the metakernel file. This class is created and run once
+        when the REST server starts.
+    """
 
     def write(self):
+        """
+        MetakernelWriter -- write
+            Create a new metakernel file based on the SPICE kernels present.
 
+        Params: None
+
+        Returns: None. Side effect of writing a file called "cumulative_metakernel.tm" in backend/SPICE/kernels
+        """
+
+        # list to hold kernel paths to write into the metakernel
         kernel_paths_to_write = list()
 
+        # set of valid kernel extensions.
         valid_kernel_extensions = ('bsp', 'bpc', 'tls', 'tpc', 'tf')
 
         # traverse default kernels directory and add each path to the list
