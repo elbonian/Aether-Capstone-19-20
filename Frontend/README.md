@@ -8,3 +8,5 @@
 3. Run the command 'node server.js' in the /Frontend directory where server.js is located to start the server.
 
 4. Navigate to localhost:8080 in your browser.
+
+# Code documentaon can be found by opening the index.html file located in the /Documentation directory
