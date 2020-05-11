@@ -1,4 +1,4 @@
-/*
+/** 
 	Custom simulation object to allow for creation of AetherObjects
 	Inherits: Simulation
 */
@@ -12,7 +12,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		this.xy_grid = this.createGrid(); // TODO: bad to do this inside constructor
 	}
 
-	/*
+	/**
 		Creates new AetherObject
 		@param optional parameters for AetherObject
 		@return AetherObject
@@ -21,7 +21,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		return new AetherObject(...args, this);
 	}
 
-	/*
+	/**
 		Creates a grid on the xy plane that represents the ecliptic plane
 	*/
 	createGrid(){
@@ -32,7 +32,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		return grid;
 	}
 
-	/*
+	/**
 		Adds a new object to the simulation
 	*/
 	renderObject() {
@@ -48,7 +48,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		}
     }
 
-    /*
+    /**
     	Removes the simulation's xy grid from the scene
     */
     hideGrid(){
@@ -57,7 +57,7 @@ class AetherSimulation extends Spacekit.Simulation {
     	}
     }
 
-    /*
+    /**
     	Adds the simulation's xy grid back to the scene
     */
     showGrid(){
@@ -66,7 +66,7 @@ class AetherSimulation extends Spacekit.Simulation {
     	}
     }
 
-    /*
+    /**
     	Tune camera control speed
     */
     tuneCameraControls(rotate_speed, zoom_speed, pan_speed, key_pan_speed){
@@ -76,7 +76,7 @@ class AetherSimulation extends Spacekit.Simulation {
 		this.getViewer().get3jsCameraControls().keyPanSpeed = key_pan_speed;
     }
 
-	/*
+	/**
 		Animates the simulation
     */
 	animate() {
@@ -125,7 +125,7 @@ class AetherSimulation extends Spacekit.Simulation {
 	}
 }
 
-/*
+/**
 	Custom AetherObject that changes some parameters for SphereObject
 	Inherits: SphereObject
 */
@@ -170,7 +170,7 @@ class AetherObject extends Spacekit.SphereObject {
 		this.init();
 	}
 
-	/*
+	/**
 	  Initialize function. Mostly the same as SphereObject with minor changes
 	*/
 	init(){
@@ -378,7 +378,7 @@ class AetherObject extends Spacekit.SphereObject {
 
 	}
 
-	/*
+	/**
 		Updates the color gradient tail of objects
 		Uses function scaleBetween
 	*/
@@ -472,7 +472,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  	this._obj.applyQuaternion(quaternion);
 	  }
 
-	  /*
+	  /**
 	  	Rotates the object about its axis of rotation according to its prime meridian delta angle
 		No date is needed because the object's pm delta angle is for a change in time of one day, simply rotates the object according to its simulation's rate
 	  */
@@ -483,7 +483,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  }
 
 
-	  /*
+	  /**
 		  Sets class position variable
 		  @param adjusted_positions Position data from API
 	  */
@@ -491,7 +491,7 @@ class AetherObject extends Spacekit.SphereObject {
 		  this.positionVectors = adjusted_positions;
 		}
 
-	  /*
+	  /**
 		  Sets class time variable
 		  @param adjusted_times List of JDs corresponding to each position
 	  */
@@ -499,7 +499,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  	this.jdTimeData = adjusted_times;
 	  }
 	  
-	  /*
+	  /**
 		  Returns current position for a body
 		  @return this.currPos current position of body
 	  */
@@ -507,7 +507,7 @@ class AetherObject extends Spacekit.SphereObject {
 		  return this.positionVectors[this.currIndex];
 	  }
 
-	  /*
+	  /**
 		  Sets next position of where body will be and updates index
 	  */
 	  setNextPos(){
@@ -517,7 +517,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  }
 
 
-	  /*
+	  /**
 		  Updates the object's tail's starting index
 	  */
 	  setNextTailStart(){
@@ -528,14 +528,14 @@ class AetherObject extends Spacekit.SphereObject {
 	  	}
 	  }
 
-	  /*
+	  /**
 		  Updates the length of the object's tail according to its indexes
 	  */
 	  updateTailLength(){
 	  	this.tail_length = this.currIndex - this.tailStartIndex + 1;
 	  }
  	  
-	  /*
+	  /**
 		  Update the object's line object according to its position indexes
 	  */
 	  drawLineSegment(){ // todo: consider renaming
@@ -550,7 +550,7 @@ class AetherObject extends Spacekit.SphereObject {
 		}
 	  }
 
-	  /*
+	  /**
 		Add more position data to the object's position list
 		@param positions List of Spacekit.THREE.Vector3() objects representing new (or old) position coordinates
 		@param prepend Boolean indicating whether the positions need to be prepended or put on the end
@@ -567,7 +567,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  }
 
 
-	  /*
+	  /**
 		Add more time data to the object's jd time list
 		@param times List of jd times (string) representing new (or old) jd times
 		@param prepend Boolean indicating whether the times need to be prepended or put on the end
@@ -588,7 +588,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  //	2. Modify updateLineData() to update values in this.line.geometry.position.array 
 	  //	   instead of creating a new line every time
 
-	  /*
+	  /**
 		Update object's internal Spacekit.THREE.Line object that displays its trajectory
 		Uses this.positionVectors, this.currentIndex, and this.tailStartIndex to determine line vertices and drawRange
 	  */
@@ -632,7 +632,7 @@ class AetherObject extends Spacekit.SphereObject {
 		this.previousLineId = line.id;
 	  }
 
-	  /*
+	  /**
 	  	Perform an API Get request for new positions and times. Default params return 10 simulation seconds worth of position data with no tail. Updates object's positionVectors, jdTimeData, and line.
 	  	@param {string} [wrt="solar system barycenter"] - (With Respect To) The object from which the positions are computed in reference to
 	  	@param {string} [obj_name=this.name] - This object's name
@@ -660,7 +660,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  }
 
 
-	  /*
+	  /**
 		  Updates the position of the body according to postionVectors
 	  */
       update(jd){
@@ -817,7 +817,7 @@ function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-/*
+/**
 	Updates the html displaying the rate of the primary simulation
 */
 function tick(){
@@ -833,7 +833,7 @@ function tick(){
 	}
 }
 
-/*
+/**
 	Updates the html displaying the rate of the secondary simulation
 */
 function tick1(){
@@ -848,7 +848,8 @@ function tick1(){
 		sim_rate1.innerHTML = rate;
 	}
 }
-/*
+
+/**
 	Displays error in error log
 	@param {string} error - Error message to be displayed
 */
@@ -869,7 +870,7 @@ function displayError(error){
 	}
 }
 
-/*
+/**
 	Scales a number between minAllowed and maxAllowed not less than the min or greater than the max
 	@param {float} unscaledNum - Float to be scaled
 	@param {float} minAllowed - Minimum float that can be returned
@@ -882,7 +883,7 @@ function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
 	return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
 } 
 
-/*
+/**
 	Changes visibility of a body when the clickbox is clicked
 	@param {string} checkboxId - HTML id of clicked checkbox
 	@param {string} bodyName - Name of body for which checkbox was clicked
@@ -961,7 +962,7 @@ function handleCheckboxClick(checkboxId, bodyName){
 	}
 }
 
-/*
+/**
 	Initialized checkbox dropdown with boxes enabled for elements in the sim
 */
 function initCheckboxes(){
@@ -1000,7 +1001,7 @@ function initCheckboxes(){
 	addPlusToCheckboxes();
 }
 
-/*
+/**
 	Add a clicked plus sign of a body to the current sim
 	@param {string} bodyName - name of body to add to the sim
 */
@@ -1142,7 +1143,7 @@ function addClickedBody(bodyName){
 	});
 }
 
-/*
+/**
 	Add plus sign to add elements not in current sim
 */
 function addPlusToCheckboxes(){
@@ -1178,7 +1179,7 @@ function addPlusToCheckboxes(){
 }
 
 
-/*
+/**
 	async function to get body data from API
 	@param {string} ref_frame - Reference from to retrieve the data from
 	@param {string} targets - Target bodies in which to retrieve data
@@ -1194,7 +1195,7 @@ async function getPositionData(ref_frame, targets, cur_jd, jd_rate, tail_length,
 	return data;
 }
 
-/*
+/**
 	async function to get which bodies are in the db
 	@return {json} data - JSON of available bodies
 */
@@ -1204,7 +1205,7 @@ async function getAvailableBodies(){
 	return data;
 }
 
-/*
+/**
 	async function to get which bodies are in the db
 	@return {json} data - JSON of available bodies
 */
@@ -1314,7 +1315,7 @@ function removeLoading() {
 };
 
 
-/*
+/**
 	Hides the right-click menu in the bodies menu
 */
 function hideContextMenu() {
@@ -1323,7 +1324,7 @@ function hideContextMenu() {
 }
 
 
-/*
+/**
 	Creates a child elements in nested checkbox for bodies
 	@param {string} name - Name of the body
 	@param {array} sublist - List of bodies that are 'sub-bodies' of the added body e.g Earth -> Moon
@@ -1418,7 +1419,7 @@ function createSubElements(lower_name, sublist){
 	return planet_box_div;
 }
 
-/*
+/**
 	Check if object has any properties
 	@param {Object} obj - Javascript object
 	@return {Boolean} true/false - whether the object has a property
@@ -1435,7 +1436,7 @@ var radii = {};
 var rotation_data = {};
 var expanded = false;
 
-/*
+/**
 	This function is used to append a checkbox element to a checkbox menu
 	@param parent_element - This is the checkbox menu that we want to add the new checkbox element to
 	@param child_element_name - This is the name of the checkbox element that we want to create
@@ -1453,7 +1454,7 @@ function appendCheckboxElement(parent_element , child_element_name){
 	element.checked = true;
 }
 
-/*
+/**
 	Adds a new checkbox for bodies within uploaded file
 	@param {Object} newData - Body data from uploaded bsp file
 */
@@ -1526,7 +1527,7 @@ function addCheckboxFromUpload(newData){
 	}
 }
 
-/*
+/**
 	Sets the date of the visualization
 */
 document.querySelectorAll('.vis-controls__set-date').forEach(
@@ -1539,7 +1540,7 @@ document.querySelectorAll('.vis-controls__set-date').forEach(
 // Form for a new simulation
 let sim_form = document.getElementById('newSimForm');
 
-/*
+/**
 	Creates a new simulation with the form data when the user selects submit
 */
 sim_form.addEventListener('submit', function(e){
@@ -1590,7 +1591,7 @@ sim_form.addEventListener('submit', function(e){
 // Form for trajectory comparison
 let compare_form = document.getElementById('comparison-form');
 
-/*
+/**
 	Creates a split-scrren view comparing the simulations
 */
 compare_form.addEventListener('submit', function(e){
@@ -1689,7 +1690,7 @@ compare_form.addEventListener('submit', function(e){
 let form = document.getElementById('myForm');
 let form_submit = document.getElementById("submit_SPK");
 
-/*
+/**
 	Calls API endpoint to upload a kernel
 */
 form.addEventListener('submit', function(event){
@@ -1796,13 +1797,13 @@ function updateBodyChecklist(data){
 	//console.log(data);
 }
 
-/*
+/**
 	Create an AetherSimulation and add the bodies to the simulation
 	@param {string} wrt - (With Respect To) The object from which the positions are computed in reference to
 	@param {string} targets - Target bodies that will be simulated
 	@param {Number} jd_delta - The rate the jd for simulation to change
 	@param {float} jd_start - Jd for simulation to start
-	@param {array[Number]} camera_start - Position for the camera to start, default=[2500,5000,5000]
+	@param {Array} camera_start - Position for the camera to start, default=[2500,5000,5000]
 	@param {string} container - div to place the simulation in, default=main-container
 */
 function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_start=[250000,500000,500000], container='main-container', primary_sim=true){
@@ -2163,7 +2164,7 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 }
 
 
-/*
+/**
 	Main function to begin the application
 */
 function runApp(){
