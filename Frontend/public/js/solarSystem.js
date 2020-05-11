@@ -77,11 +77,9 @@ class AetherSimulation extends Spacekit.Simulation {
     }
 
 	/*
-	@private
-	Animates the simulation
+		Animates the simulation
     */
 	animate() {
-		//console.log(this.getJdDelta())
 		if (!this._renderEnabled) {
 		return;
 		}
@@ -193,8 +191,6 @@ class AetherObject extends Spacekit.SphereObject {
 		this.name = this._options.name;
          // Check if body has radius data
         if(this.radius == -1){// || this.radius < 0.00001){
-        	// console.log(this.radius);
-        	// console.log(this._options.textureUrl);
         	// Create a  sprite to represent the body
         	var material = new Spacekit.THREE.SpriteMaterial( { map: map, color: 0xffffff, fog: true , sizeAttenuation: false, } ); // Size attenuation set to false so that the sprite is always a constant size to the viewer
         	var sprite = new Spacekit.THREE.Sprite( material );
@@ -379,10 +375,13 @@ class AetherObject extends Spacekit.SphereObject {
 
 		const angle_of_rotation = Spacekit.rad(this.pm);
 	  	this._obj.rotateOnWorldAxis(this.axis_of_rotation_vector, (angle_of_rotation));
-		//console.log(this.name);
 
 	}
 
+	/*
+		Updates the color gradient tail of objects
+		Uses function scaleBetween
+	*/
 	updateColorGradient(){
 		const body_data = body_meta_data.find(x => x["body name"] === this.name);
 		this.minSpeed = body_data["min speed"];
@@ -398,9 +397,9 @@ class AetherObject extends Spacekit.SphereObject {
 			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / 7200 / unitsPerAu;
 			kmPerSecList.push(kmPerSec);
 		}
-		for (var i = 0; i < kmPerSecList.length; i++) {
-			var unscaled = kmPerSecList[i];
-			var scaled = 0;
+		for (let i = 0; i < kmPerSecList.length; i++) {
+			let unscaled = kmPerSecList[i];
+			let scaled = 0;
 			// Bodies with larger orbit will have less accurate max and min, so +/- 0.5 on scaled speed 
 			if(this.name === "saturn" || this.name === "jupiter" || this.name === "neptune" || this.name === "pluto" || this.name === "uranus"){
 				scaled = scaleBetween(unscaled, 0.0, 1.0, this.minSpeed-0.5, this.maxSpeed+0.5);
@@ -411,6 +410,7 @@ class AetherObject extends Spacekit.SphereObject {
 			
 			adjKmPerSec.push(parseFloat(scaled.toFixed(2)));
 		}
+		// Create the colors based on scaled numbers
 		for(let i = 0; i < adjKmPerSec.length; i++){
 			if(adjKmPerSec[i] >= 0.75){
 				this.colorGradient[ i * 3 ] = adjKmPerSec[i];
@@ -848,7 +848,10 @@ function tick1(){
 		sim_rate1.innerHTML = rate;
 	}
 }
-
+/*
+	Displays error in error log
+	@param {string} error - Error message to be displayed
+*/
 function displayError(error){
 	if(error.error){
 		let li = document.createElement("LI"); 
@@ -866,10 +869,24 @@ function displayError(error){
 	}
 }
 
+/*
+	Scales a number between minAllowed and maxAllowed not less than the min or greater than the max
+	@param {float} unscaledNum - Float to be scaled
+	@param {float} minAllowed - Minimum float that can be returned
+	@param {float} maxAllowed - Maximum float that can be returned
+	@param {float} min - Minimum float in the list of uncaled numbers
+	@param {float} max - Maximum float in the list of uncaled numbers
+	@return {float} newly calculated float
+*/
 function scaleBetween(unscaledNum, minAllowed, maxAllowed, min, max) {
 	return (maxAllowed - minAllowed) * (unscaledNum - min) / (max - min) + minAllowed;
 } 
 
+/*
+	Changes visibility of a body when the clickbox is clicked
+	@param {string} checkboxId - HTML id of clicked checkbox
+	@param {string} bodyName - Name of body for which checkbox was clicked
+*/
 function handleCheckboxClick(checkboxId, bodyName){
 	let checked = document.getElementById(checkboxId).checked;
 	let label = null;
@@ -944,6 +961,9 @@ function handleCheckboxClick(checkboxId, bodyName){
 	}
 }
 
+/*
+	Initialized checkbox dropdown with boxes enabled for elements in the sim
+*/
 function initCheckboxes(){
 	let checkboxes = document.getElementById("content1").getElementsByTagName('input');
 	let planetKeys = Object.keys(visualizer_list);
@@ -980,6 +1000,10 @@ function initCheckboxes(){
 	addPlusToCheckboxes();
 }
 
+/*
+	Add a clicked plus sign of a body to the current sim
+	@param {string} bodyName - name of body to add to the sim
+*/
 function addClickedBody(bodyName){
 	let lowerName =  bodyName.charAt(0).toLowerCase() + bodyName.slice(1);
 	const body_data = body_meta_data.find(x => x["body name"] === lowerName);
@@ -1073,9 +1097,7 @@ function addClickedBody(bodyName){
 				radii[lowerName] = [-1,-1];
 				textureUrl = '/js/textures/smallparticle.png';
 			}
-			// if(radii[lowerName][0] < 0.00001){
-			// 	
-			// }
+			
 			// Create a new space object
 			let body = viz.createAetherObject(lowerName, {
 				labelText: bodyName,
@@ -1106,7 +1128,6 @@ function addClickedBody(bodyName){
 				nut_prec_ra: rotate.nut_prec_ra,
 				nut_prec_dec: rotate.nut_prec_dec,
 			});
-			//console.log(body);
 			visualizer_list[bodyName] = body;
 			// Set globals
 			adjusted_positions[bodyName] = allAdjustedVals;
@@ -1121,6 +1142,9 @@ function addClickedBody(bodyName){
 	});
 }
 
+/*
+	Add plus sign to add elements not in current sim
+*/
 function addPlusToCheckboxes(){
 	if(!comparing){
 		let checkboxes = document.getElementById("content1").getElementsByTagName('input');
@@ -1429,75 +1453,76 @@ function appendCheckboxElement(parent_element , child_element_name){
 	element.checked = true;
 }
 
+/*
+	Adds a new checkbox for bodies within uploaded file
+	@param {Object} newData - Body data from uploaded bsp file
+*/
 function addCheckboxFromUpload(newData){
 	for(let index in newData){
 		const need_to_add = visualizer_list[newData[index]["body_name"]];
-		//console.log(visualizer_list);
-		//if(need_to_add){
-			let catergory = newData[index]["category"];
-			catergory = capitalizeFirstLetter(catergory);
-			let nested_div = document.getElementById("nested" + catergory);
-			if(nested_div == null){
-				let name = capitalizeFirstLetter(newData[index]["body name"]);
-				nested_div = document.createElement("div");
-				nested_div.setAttribute("id", "nested" + name);
-				nested_div.setAttribute("style", "display:none");
-				nested_div.setAttribute("class", "nested_list");
-				let planet_box_div = document.getElementById(catergory + "-box");
-				planet_box_div.appendChild(nested_div);
-				let planet_label = document.getElementById(catergory + "-label");
-				planet_label.addEventListener("click", function() {
-					if(nested_div.getAttribute("style") == "display:none"){
-						nested_div.setAttribute("style", "display:content");
-					}
-					else{
-						nested_div.setAttribute("style", "display:none");
-					}
-				});
-			}
-			let upper_name = capitalizeFirstLetter(newData[index]["body name"]);
-			let inner_nested_div = document.createElement("div");
-			inner_nested_div.setAttribute("id", upper_name);
-			inner_nested_div.setAttribute("class", "checkbox_and_label");
-			nested_div.appendChild(inner_nested_div);
-			// Create an input and label
-			let inner_input = document.createElement("input");
-			inner_input.setAttribute("id", upper_name + "-body");
-			inner_input.setAttribute("type", "checkbox");
-			inner_input.setAttribute("disabled", "disabled");
-			inner_input.setAttribute("class", "readonly");
-			inner_input.setAttribute("name", upper_name + "-body");
-			inner_input.setAttribute("value", upper_name);
-			inner_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
-
-			let inner_label = document.createElement("label");
-			inner_label.setAttribute("for", upper_name + "-body");
-			inner_label.setAttribute("class", "readonlylabel");
-			inner_label.setAttribute("id", upper_name + "-label1");
-			inner_label.innerHTML = upper_name;
-			let br1 = document.createElement("br");
-
-			// Add input and label to inner nested div
-			inner_nested_div.appendChild(inner_input);
-			inner_nested_div.appendChild(inner_label);
-			inner_nested_div.appendChild(br1);
-			let addButton = document.createElement("i");
-			addButton.setAttribute("class", "plus");
-			addButton.setAttribute("id", upper_name + "-plus");
-			addButton.setAttribute("name", upper_name);
-			addButton.setAttribute("value", upper_name);
-			addButton.addEventListener("click", function(){
-				if(!visualizer_list[upper_name]){
-					if(togglePlay){
-						viz.stop();
-						togglePlay = false;
-					}
-					addClickedBody(upper_name);
+		let catergory = newData[index]["category"];
+		catergory = capitalizeFirstLetter(catergory);
+		let nested_div = document.getElementById("nested" + catergory);
+		if(nested_div == null){
+			let name = capitalizeFirstLetter(newData[index]["body name"]);
+			nested_div = document.createElement("div");
+			nested_div.setAttribute("id", "nested" + name);
+			nested_div.setAttribute("style", "display:none");
+			nested_div.setAttribute("class", "nested_list");
+			let planet_box_div = document.getElementById(catergory + "-box");
+			planet_box_div.appendChild(nested_div);
+			let planet_label = document.getElementById(catergory + "-label");
+			planet_label.addEventListener("click", function() {
+				if(nested_div.getAttribute("style") == "display:none"){
+					nested_div.setAttribute("style", "display:content");
+				}
+				else{
+					nested_div.setAttribute("style", "display:none");
 				}
 			});
-			inner_label.appendChild(addButton);
-			body_meta_data.push(newData[index]);
-		//}
+		}
+		let upper_name = capitalizeFirstLetter(newData[index]["body name"]);
+		let inner_nested_div = document.createElement("div");
+		inner_nested_div.setAttribute("id", upper_name);
+		inner_nested_div.setAttribute("class", "checkbox_and_label");
+		nested_div.appendChild(inner_nested_div);
+		// Create an input and label
+		let inner_input = document.createElement("input");
+		inner_input.setAttribute("id", upper_name + "-body");
+		inner_input.setAttribute("type", "checkbox");
+		inner_input.setAttribute("disabled", "disabled");
+		inner_input.setAttribute("class", "readonly");
+		inner_input.setAttribute("name", upper_name + "-body");
+		inner_input.setAttribute("value", upper_name);
+		inner_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
+
+		let inner_label = document.createElement("label");
+		inner_label.setAttribute("for", upper_name + "-body");
+		inner_label.setAttribute("class", "readonlylabel");
+		inner_label.setAttribute("id", upper_name + "-label1");
+		inner_label.innerHTML = upper_name;
+		let br1 = document.createElement("br");
+
+		// Add input and label to inner nested div
+		inner_nested_div.appendChild(inner_input);
+		inner_nested_div.appendChild(inner_label);
+		inner_nested_div.appendChild(br1);
+		let addButton = document.createElement("i");
+		addButton.setAttribute("class", "plus");
+		addButton.setAttribute("id", upper_name + "-plus");
+		addButton.setAttribute("name", upper_name);
+		addButton.setAttribute("value", upper_name);
+		addButton.addEventListener("click", function(){
+			if(!visualizer_list[upper_name]){
+				if(togglePlay){
+					viz.stop();
+					togglePlay = false;
+				}
+				addClickedBody(upper_name);
+			}
+		});
+		inner_label.appendChild(addButton);
+		body_meta_data.push(newData[index]);
 	}
 }
 
@@ -1560,9 +1585,6 @@ sim_form.addEventListener('submit', function(e){
 	time_div.setAttribute("id", "time-container");
 	
 	viz = new_viz;
-	// console.log(viz);
-	// viz.start();
-	//console.log(document.getElementById('main-container').children);
 });
 
 // Form for trajectory comparison
@@ -1599,8 +1621,7 @@ compare_form.addEventListener('submit', function(e){
 	// convert time entered entered into milliseconds passed UNIX epoch
 	const start_time1 =  Date.parse(formData.get('jd_start'));
 	const start_time2 =  Date.parse(formData.get('jd_start2'));
-	console.log(start_time1);
-	console.log(start_time2);
+	
 	// TODO: check if both start times are the same
 	//		 if both times are identical, display the simulation time once on the top of the page
 	//		 if not, display two separate times on each mini div
