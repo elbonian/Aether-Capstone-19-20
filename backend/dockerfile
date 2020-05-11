@@ -15,5 +15,5 @@ RUN wget http://naif.jpl.nasa.gov/pub/naif/utilities/PC_Linux_64bit/brief -P /Ae
 RUN cd SPICE/tools && chmod a+x brief
 COPY aether-rest-server.py SPKParser.py MetakernelWriter.py AetherBodies.py ./
 EXPOSE 5000
-# auto run the REST server using a production-ready WSGI HTTP server -- spins up 3 processes by default
-CMD gunicorn -w 3 --bind 0.0.0.0:5000 aether-rest-server:app
+# auto run the REST server using a production-ready WSGI HTTP server -- spins up 1 process by default
+CMD gunicorn -w 1 --bind 0.0.0.0:5000 aether-rest-server:app
