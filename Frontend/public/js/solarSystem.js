@@ -546,7 +546,7 @@ class AetherObject extends Spacekit.SphereObject {
 		// ensure object has a line object
 		if(this.line != null){
 			// update the line's draw range to only display from the end of the tail to the object's position
-			this.line.geometry.setDrawRange(this.tailStartIndex, this.currIndex - this.tailStartIndex + 1);
+			this.line.geometry.setDrawRange(this.tailStartIndex, Math.ceil(this.currIndex) - this.tailStartIndex + 1);
 		}
 	  }
 
@@ -994,7 +994,7 @@ function addClickedBody(bodyName){
 			return;
 		}
 	}
-	getPositionData(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*4).toString(), "20").then(data => {
+	getPositionData(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
 		//console.log(data);
 		if(data.error){
 			console.error(data);
@@ -1433,7 +1433,7 @@ function addCheckboxFromUpload(newData){
 	for(let index in newData){
 		const need_to_add = visualizer_list[newData[index]["body_name"]];
 		//console.log(visualizer_list);
-		if(need_to_add){
+		//if(need_to_add){
 			let catergory = newData[index]["category"];
 			catergory = capitalizeFirstLetter(catergory);
 			let nested_div = document.getElementById("nested" + catergory);
@@ -1497,7 +1497,7 @@ function addCheckboxFromUpload(newData){
 			});
 			inner_label.appendChild(addButton);
 			body_meta_data.push(newData[index]);
-		}
+		//}
 	}
 }
 
@@ -2278,8 +2278,9 @@ function runApp(){
 
 	// A button that will set the simulation to real time
 	document.getElementById("real_time").addEventListener("click", function() {
-		viz.setDate(Date.now());
-		viz.setJdPerSecond(realTimeRate);
+		//viz.setDate(Date.now());
+		//viz.setJdPerSecond(realTimeRate);
+		viz.mult = (1 / 86400) / 60 / viz.getJdDelta();
 	});
 
 	// A button that starts and pauses the simulation
@@ -2302,12 +2303,26 @@ function runApp(){
 		let input = document.getElementById("input_time").value;
 		//This pulls the value input from the time set field
 
-		//Todo, do something with this
-		viz.mult = input / 60 / viz.getJdDelta();
-		if(viz1){
-			viz1.mult = input / 60 / viz1.getJdDelta();
+		if(isNaN(input)){
+			displayError("Must enter a valid number");
 		}
-		//console.log(input);
+		else{
+			if(input > 50){
+				displayError("Rate of time must be no more than 50 days per second");
+			}
+			else if(input > -0.0000001 && input < 0.0000001){
+				displayError("Rate of time must be no more precise than 1e-7");
+			}
+			else if(inpute < -10){
+				displayError("Rate of time must be greater than -10 days per second");
+			}
+			else{
+				viz.mult = input / 60 / viz.getJdDelta();
+				if(viz1){
+					viz1.mult = input / 60 / viz1.getJdDelta();
+				}
+			}
+		}
 	});
 
 	document.getElementById("input_length_set").addEventListener("click" , function(){
