@@ -4,19 +4,16 @@ WORKDIR /
 RUN apt-get update
 RUN apt-get install -y build-essential python3-pip wget
 RUN pip3 install setuptools wheel
-RUN pip3 install spiceypy Flask flask-cors jsonpickle xlrd
+RUN pip3 install spiceypy Flask flask-cors jsonpickle gunicorn
 RUN mkdir Aether
 WORKDIR /Aether
 RUN mkdir SPICE
 RUN cd SPICE && mkdir kernels && mkdir tools
 RUN cd SPICE/kernels && mkdir default && mkdir user_uploaded
-RUN wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/latest_leapseconds.tls https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de435.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/jup310.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/mar097.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/nep081.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/plu055.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/sat427.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/asteroids/codes_300ast_20100725.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/ura111.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc -P /Aether/SPICE/kernels/default
-# TODO -- merge the line below with the line above
-# RUN wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/comets/c2013a1_s105_merged.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/asteroids/codes_300ast_20100725.tf -P /Aether/SPICE/kernels/default
-RUN wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/asteroids/codes_300ast_20100725.tf https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/gm_de431.tpc -P /Aether/SPICE/kernels/default
+RUN wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/latest_leapseconds.tls https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de435.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/jup310.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/mar097.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/nep081.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/plu055.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/sat427.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/asteroids/codes_300ast_20100725.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/satellites/ura111.bsp https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/asteroids/codes_300ast_20100725.tf https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/gm_de431.tpc -P /Aether/SPICE/kernels/default
 RUN wget http://naif.jpl.nasa.gov/pub/naif/utilities/PC_Linux_64bit/brief -P /Aether/SPICE/tools
 RUN cd SPICE/tools && chmod a+x brief
 COPY aether-rest-server.py SPKParser.py MetakernelWriter.py AetherBodies.py ./
-# RUN python3 create_sql.py
 EXPOSE 5000
-#CMD python3 aether-rest-server.py
+# auto run the REST server using a production-ready WSGI HTTP server -- spins up 3 processes by default
+CMD gunicorn -w 3 --bind 0.0.0.0:5000 aether-rest-server:app
