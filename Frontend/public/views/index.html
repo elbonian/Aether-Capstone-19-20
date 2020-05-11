@@ -21,50 +21,62 @@
          <script>
             function openForm() {
               document.getElementById("form-container1").style.display = "block";
-              viz.stop();
-              if(viz1){
-                  viz1.stop();
+              if(togglePlay){
+                  viz.stop();
+                  if(viz1){
+                      viz1.stop();
+                  }
               }
             }
 
             function closeForm() {
               document.getElementById("form-container1").style.display = "none";
-                viz.start();
-                if(viz1){
-                    viz1.start();
+                if(togglePlay){
+                    viz.start();
+                    if(viz1){
+                        viz1.start();
+                    }
                 }
             }
 
             function openForm2() {
                 document.getElementById("form-container2").style.display = "block";
-                viz.stop();
-                if(viz1){
-                    viz1.stop();
+                if(togglePlay){
+                    viz.stop();
+                    if(viz1){
+                        viz1.stop();
+                    }
                 }
             }
 
             function closeForm2() {
                 document.getElementById("form-container2").style.display = "none";
-                viz.start();
-                if(viz1){
-                    viz1.start();
+                if(togglePlay){
+                    viz.start();
+                    if(viz1){
+                        viz1.start();
+                    }
                 }
             } 
 
             function openForm3() {
               console.log(document.getElementById("myForm"));
               document.getElementById("myForm").style.display = "block";
-              viz.stop();
-              if(viz1){
-                  viz1.stop();
+              if(togglePlay){
+                  viz.stop();
+                  if(viz1){
+                      viz1.stop();
+                  }
               }
             }
 
             function closeForm3() {
               document.getElementById("myForm").style.display = "none";
-                viz.start();
-                if(viz1){
-                    viz1.start();
+                if(togglePlay){
+                    viz.start();
+                    if(viz1){
+                        viz1.start();
+                    }
                 }
             }
         </script>
@@ -169,10 +181,10 @@
         <div id="main-container">
         </div>
         <!-- <div id="active_sim"></div> -->
-        <div class='sim-time'>
+        <!-- <div class='sim-time'>
             <h3 id="sim_time"></h3>
             <h4 id="sim_rate"></h4>
-        </div> 
+        </div>  -->
 
         <!--Form for resetting the sim(hidden by default) -->
         <div class="form-popup" id="form-container1">

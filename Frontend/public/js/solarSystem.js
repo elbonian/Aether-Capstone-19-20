@@ -145,7 +145,7 @@ class AetherObject extends Spacekit.SphereObject {
 		this.material = null;
 		this.line = null;
 		this.previousLineId = null;
-		this.ephemUpdate = null; // function reference to the getPositions2 request
+		this.ephemUpdate = null; // function reference to the getpositions request
 		this.isUpdating = false;
 		this.name = "newBody";
 		this.update_threshold = 0;
@@ -204,7 +204,7 @@ class AetherObject extends Spacekit.SphereObject {
 			});
 
 			this.sprite = sprite;
-			sprite.scale.set(1000/unitsPerAu, 1000/unitsPerAu, 1) // TODO: scale sprite according to simulation scale factor
+			sprite.scale.set(500/unitsPerAu, 500/unitsPerAu, 1) // TODO: scale sprite according to simulation scale factor
 			this._obj.add(sprite);
         	this._renderMethod = 'SPRITE';
         }
@@ -344,7 +344,7 @@ class AetherObject extends Spacekit.SphereObject {
 		this.name = this._options.name;
 		this.ephemUpdate = this._options.ephemUpdate;
 
-		this.update_threshold = Math.ceil(this.positionVectors.length * (2/3));
+		this.update_threshold = Math.ceil(this.positionVectors.length * (1/2));
 		this.update_threshold2 = this.positionVectors.length - this.update_threshold;
 
 		this.ra = this._options.ra;
@@ -558,7 +558,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  addPositionData(positions, prepend=false){
 	  	if(prepend){
 	  		this.currIndex += positions.length;
-	  		this.tailStartIndex += positions.length
+	  		this.tailStartIndex += positions.length;
 	  		this.positionVectors = positions.concat(this.positionVectors.slice(1, this.positionVectors.length));
 	  	}
 	  	else{
@@ -642,7 +642,7 @@ class AetherObject extends Spacekit.SphereObject {
 	  	@param {string} [valid_time_seconds="10"] - The length of time in seconds the object will be able to animate from the data returned
 	  	@param {boolean} [old_data=false] - flag indicating whether the data returned is old or not
 	  */
-	  positionGetRequest(wrt = this._simulation.wrt, obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = this._simulation.getJdDelta(), tail_length_jd = "0", valid_time_seconds = "10", old_data = false){
+	  positionGetRequest(wrt = this._simulation.wrt, obj_name = this.name, start_date_jd = (this.jdTimeData[this.jdTimeData.length - 1]).toString(), jd_delta = this._simulation.getJdDelta(), tail_length_jd = "0", valid_time_seconds = "5", old_data = false){
 	  	this.ephemUpdate(wrt, obj_name, start_date_jd, jd_delta, tail_length_jd, valid_time_seconds).then(data => {  
 			// adjust results to be in km and in ecliptic plane
       			var position_vectors = data[this.name].positions.map(function(pos){
@@ -682,8 +682,8 @@ class AetherObject extends Spacekit.SphereObject {
 	      	//		3. tune the parameters of the rest call to be optimally performant
 	      	//		4. choose something better than 2/3 the positionVectors.length
 	      	//      5. balance frequency and size of rest call
-	      	const need_new_data = (this.currIndex >= this.positionVectors.length * (3/4)) && positive_rate_of_time; // simulation rate of time is positive and object is near the end of its pos list
-	      	const need_old_data = (this.tailStartIndex <= this.positionVectors.length * (1/4)) && !positive_rate_of_time // simulation rate of time is negative and object is near beginning of pos list	
+	      	const need_new_data = (this.positionVectors.length - this.currIndex <= this.update_threshold) && positive_rate_of_time; // simulation rate of time is positive and object is near the end of its pos list
+	      	const need_old_data = (this.tailStartIndex <= this.update_threshold2) && !positive_rate_of_time // simulation rate of time is negative and object is near beginning of pos list	
       		
       		if(need_new_data){
       			// console.log("newdata");
@@ -692,7 +692,7 @@ class AetherObject extends Spacekit.SphereObject {
       		}
       		else if(need_old_data){
       			this.isUpdating = true;
-      			this.positionGetRequest( this._simulation.wrt, this.name, this.jdTimeData[0].toString(), this._simulation.getJdDelta(), (1*60*10).toString(), "0", true);
+      			this.positionGetRequest( this._simulation.wrt, this.name, this.jdTimeData[0].toString(), this._simulation.getJdDelta(), (1*60*5).toString(), "0", true);
 			  }
 			  
       	}
@@ -708,8 +708,9 @@ class AetherObject extends Spacekit.SphereObject {
 
 
 			if(this._simulation._isPaused){// update the object's tail beginning, regardless of whether sim is paused
-	      		this.setNextTailStart();
 	      		this.drawLineSegment();
+	      		this.setNextTailStart();
+	      		
 	      	}  	
 	      	
 			// only update object position if not paused
@@ -730,8 +731,9 @@ class AetherObject extends Spacekit.SphereObject {
       			// update object's location
       			this.setNextPos()
       			// update the object's tail beginning after updating the object's position
+		      	this.drawLineSegment();  
 		      	this.setNextTailStart();
-		      	this.drawLineSegment();   	
+		      	 	
 			}
       	}
       	
@@ -804,6 +806,9 @@ var stars = null;
 
 var grid_visible = true;
 
+var sim_time1 = null;
+var sim_rate1 = null;
+
 /////////////////////////////////
 /////// Utility Functions ///////
 /////////////////////////////////
@@ -813,7 +818,7 @@ function capitalizeFirstLetter(string) {
 }
 
 /*
-	Sets the rate of the simulation
+	Updates the html displaying the rate of the primary simulation
 */
 function tick(){
 	const date = this.getDate().toString();
@@ -825,6 +830,22 @@ function tick(){
 	else{
 		const rate = "JD/Sec: " + 60 * this.mult * this.getJdDelta();
 		sim_rate.innerHTML = rate;
+	}
+}
+
+/*
+	Updates the html displaying the rate of the secondary simulation
+*/
+function tick1(){
+	const date = this.getDate().toString();
+	sim_time1.innerHTML = date.slice(4, date.length);
+
+	if(this._isPaused){
+		sim_rate1.innerHTML = "JD/Sec: " + 0;
+	}
+	else{
+		const rate = "JD/Sec: " + 60 * this.mult * this.getJdDelta();
+		sim_rate1.innerHTML = rate;
 	}
 }
 
@@ -973,7 +994,7 @@ function addClickedBody(bodyName){
 			return;
 		}
 	}
-	getPositionData2(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10).toString(), "10").then(data => {
+	getPositionData(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*4).toString(), "20").then(data => {
 		//console.log(data);
 		if(data.error){
 			console.error(data);
@@ -1066,7 +1087,7 @@ function addClickedBody(bodyName){
 				rotation: true,
 				hideOrbit: true,
 				positionVectors: allAdjustedVals,
-				ephemUpdate: getPositionData2,
+				ephemUpdate: getPositionData,
 				jdTimeData: allAdjustedTimes,
 				levelsOfDetail: [{
 					threshold: 0,
@@ -1132,20 +1153,6 @@ function addPlusToCheckboxes(){
 	}
 }
 
-/*
-	async function to get data from API
-	@param {string} ref_frame - Reference from to retrieve the data from
-	@param {string} targets - Target bodies in which to retrieve data
-	@param {string} start_date - Beginning date for data
-	@param {string} end_date - End date for data
-	@param {string} steps - Number of postions to be retrieved in the time frame
-*/
-async function getPositionData(ref_frame, targets, start_date, end_date, steps){
-	//returns a promise containing the response from server
-	let response = await fetch('http://0.0.0.0:5000/api/positions/' + ref_frame + '/' + targets + '/' + start_date + '/' + end_date + '/' + steps);
-	let data = await response.json();
-	return data;
-}
 
 /*
 	async function to get body data from API
@@ -1157,8 +1164,8 @@ async function getPositionData(ref_frame, targets, start_date, end_date, steps){
 	@param {string} valid_time - The length of time in seconds the object will be able to animate from the data returned
 	@return {json} data - JSON of body data
 */
-async function getPositionData2(ref_frame, targets, cur_jd, jd_rate, tail_length, valid_time){
-	let response = await fetch('http://0.0.0.0:5000/api/positions2/' + ref_frame + '/' + targets + '/' + cur_jd + '/' + jd_rate + '/' + tail_length + '/' + valid_time);
+async function getPositionData(ref_frame, targets, cur_jd, jd_rate, tail_length, valid_time){
+	let response = await fetch('http://0.0.0.0:5000/api/positions/' + ref_frame + '/' + targets + '/' + cur_jd + '/' + jd_rate + '/' + tail_length + '/' + valid_time);
 	let data = await response.json();
 	return data;
 }
@@ -1424,69 +1431,73 @@ function appendCheckboxElement(parent_element , child_element_name){
 
 function addCheckboxFromUpload(newData){
 	for(let index in newData){
-		let catergory = newData[index]["category"];
-		catergory = capitalizeFirstLetter(catergory);
-		let nested_div = document.getElementById("nested" + catergory);
-		if(nested_div == null){
-			let name = capitalizeFirstLetter(newData[index]["body name"]);
-			nested_div = document.createElement("div");
-			nested_div.setAttribute("id", "nested" + name);
-			nested_div.setAttribute("style", "display:none");
-			nested_div.setAttribute("class", "nested_list");
-			let planet_box_div = document.getElementById(catergory + "-box");
-			planet_box_div.appendChild(nested_div);
-			let planet_label = document.getElementById(catergory + "-label");
-			planet_label.addEventListener("click", function() {
-				if(nested_div.getAttribute("style") == "display:none"){
-					nested_div.setAttribute("style", "display:content");
-				}
-				else{
-					nested_div.setAttribute("style", "display:none");
+		const need_to_add = visualizer_list[newData[index]["body_name"]];
+		//console.log(visualizer_list);
+		if(need_to_add){
+			let catergory = newData[index]["category"];
+			catergory = capitalizeFirstLetter(catergory);
+			let nested_div = document.getElementById("nested" + catergory);
+			if(nested_div == null){
+				let name = capitalizeFirstLetter(newData[index]["body name"]);
+				nested_div = document.createElement("div");
+				nested_div.setAttribute("id", "nested" + name);
+				nested_div.setAttribute("style", "display:none");
+				nested_div.setAttribute("class", "nested_list");
+				let planet_box_div = document.getElementById(catergory + "-box");
+				planet_box_div.appendChild(nested_div);
+				let planet_label = document.getElementById(catergory + "-label");
+				planet_label.addEventListener("click", function() {
+					if(nested_div.getAttribute("style") == "display:none"){
+						nested_div.setAttribute("style", "display:content");
+					}
+					else{
+						nested_div.setAttribute("style", "display:none");
+					}
+				});
+			}
+			let upper_name = capitalizeFirstLetter(newData[index]["body name"]);
+			let inner_nested_div = document.createElement("div");
+			inner_nested_div.setAttribute("id", upper_name);
+			inner_nested_div.setAttribute("class", "checkbox_and_label");
+			nested_div.appendChild(inner_nested_div);
+			// Create an input and label
+			let inner_input = document.createElement("input");
+			inner_input.setAttribute("id", upper_name + "-body");
+			inner_input.setAttribute("type", "checkbox");
+			inner_input.setAttribute("disabled", "disabled");
+			inner_input.setAttribute("class", "readonly");
+			inner_input.setAttribute("name", upper_name + "-body");
+			inner_input.setAttribute("value", upper_name);
+			inner_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
+
+			let inner_label = document.createElement("label");
+			inner_label.setAttribute("for", upper_name + "-body");
+			inner_label.setAttribute("class", "readonlylabel");
+			inner_label.setAttribute("id", upper_name + "-label1");
+			inner_label.innerHTML = upper_name;
+			let br1 = document.createElement("br");
+
+			// Add input and label to inner nested div
+			inner_nested_div.appendChild(inner_input);
+			inner_nested_div.appendChild(inner_label);
+			inner_nested_div.appendChild(br1);
+			let addButton = document.createElement("i");
+			addButton.setAttribute("class", "plus");
+			addButton.setAttribute("id", upper_name + "-plus");
+			addButton.setAttribute("name", upper_name);
+			addButton.setAttribute("value", upper_name);
+			addButton.addEventListener("click", function(){
+				if(!visualizer_list[upper_name]){
+					if(togglePlay){
+						viz.stop();
+						togglePlay = false;
+					}
+					addClickedBody(upper_name);
 				}
 			});
+			inner_label.appendChild(addButton);
+			body_meta_data.push(newData[index]);
 		}
-		let upper_name = capitalizeFirstLetter(newData[index]["body name"]);
-		let inner_nested_div = document.createElement("div");
-		inner_nested_div.setAttribute("id", upper_name);
-		inner_nested_div.setAttribute("class", "checkbox_and_label");
-		nested_div.appendChild(inner_nested_div);
-		// Create an input and label
-		let inner_input = document.createElement("input");
-		inner_input.setAttribute("id", upper_name + "-body");
-		inner_input.setAttribute("type", "checkbox");
-		inner_input.setAttribute("disabled", "disabled");
-		inner_input.setAttribute("class", "readonly");
-		inner_input.setAttribute("name", upper_name + "-body");
-		inner_input.setAttribute("value", upper_name);
-		inner_input.setAttribute("onClick" , "handleCheckboxClick(id, value)");
-
-		let inner_label = document.createElement("label");
-		inner_label.setAttribute("for", upper_name + "-body");
-		inner_label.setAttribute("class", "readonlylabel");
-		inner_label.setAttribute("id", upper_name + "-label1");
-		inner_label.innerHTML = upper_name;
-		let br1 = document.createElement("br");
-
-		// Add input and label to inner nested div
-		inner_nested_div.appendChild(inner_input);
-		inner_nested_div.appendChild(inner_label);
-		inner_nested_div.appendChild(br1);
-		let addButton = document.createElement("i");
-		addButton.setAttribute("class", "plus");
-		addButton.setAttribute("id", upper_name + "-plus");
-		addButton.setAttribute("name", upper_name);
-		addButton.setAttribute("value", upper_name);
-		addButton.addEventListener("click", function(){
-			if(!visualizer_list[upper_name]){
-				if(togglePlay){
-					viz.stop();
-					togglePlay = false;
-				}
-				addClickedBody(upper_name);
-			}
-		});
-		inner_label.appendChild(addButton);
-		body_meta_data.push(newData[index]);
 	}
 }
 
@@ -1511,11 +1522,14 @@ sim_form.addEventListener('submit', function(e){
 	comparing = false;
 	// Data user entered in form
 	const formData = new FormData(this);
-	viz.stop();
-	viz = null;
-	if(viz1 != null){
-		viz1.stop();
-		viz1 = null;
+	if(togglePlay){
+		viz.stop();
+		viz = null;
+		if(viz1 != null){
+			viz1.stop();
+			viz1 = null;
+		}
+		togglePlay = false;
 	}
 
 	visualizer_list = [];
@@ -1532,9 +1546,19 @@ sim_form.addEventListener('submit', function(e){
 
 	// Creates the new simulation from data entered
 	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1/12, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu]);
-
-	// Push the simulation on the stack
-	simulation_stack.push[new_viz];
+	
+	var time_div = document.createElement("div");
+	time_div.setAttribute("class","sim-time");
+	const sim_time = document.createElement("h3");
+	sim_time.setAttribute("id", "sim_time");
+	//sim_time.id = "sim_time";
+	const sim_rate = document.createElement("h4");
+	sim_rate.setAttribute("id", "sim_rate");
+	time_div.appendChild(sim_time);
+	time_div.appendChild(sim_rate);
+	document.body.replaceChild(time_div, document.getElementById("time-container"));
+	time_div.setAttribute("id", "time-container");
+	
 	viz = new_viz;
 	// console.log(viz);
 	// viz.start();
@@ -1551,13 +1575,15 @@ compare_form.addEventListener('submit', function(e){
 	e.preventDefault();
 	comparing = true;
 	const formData = new FormData(this);
-	viz.stop();
-	viz = null;
-	if(viz1 != null){
-		viz1.stop();
-		viz1 = null;
+	if(togglePlay){
+		viz.stop();
+		viz = null;
+		if(viz1 != null){
+			viz1.stop();
+			viz1 = null;
+		}
+		togglePlay = false;
 	}
-
 	visualizer_list = [];
 
 	var comparison_container = document.createElement('div');
@@ -1571,22 +1597,71 @@ compare_form.addEventListener('submit', function(e){
 	document.body.replaceChild(comparison_container, document.getElementById('main-container'));
 	comparison_container.id = 'main-container';
 	// convert time entered entered into milliseconds passed UNIX epoch
-	const start_time =  Date.parse(formData.get('jd_start')) ;
-
+	const start_time1 =  Date.parse(formData.get('jd_start'));
+	const start_time2 =  Date.parse(formData.get('jd_start2'));
+	console.log(start_time1);
+	console.log(start_time2);
 	// TODO: check if both start times are the same
 	//		 if both times are identical, display the simulation time once on the top of the page
 	//		 if not, display two separate times on each mini div
 	
 	// Create two new simulations that will be compared side by side
-	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1/12, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison1");
-	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1/12, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison2", false);
+	var new_viz1 = createNewSim(formData.get('wrt'), formData.get('targets'), 1/12, start_time1, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison1");
+	var new_viz2 = createNewSim(formData.get('wrt2'), formData.get('targets2'), 1/12, start_time2, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu], "comparison2", false);
 	new_viz2._camera = new_viz1._camera;
-	
+
+	// update globals
 	viz = new_viz1;
 	viz1 = new_viz2;
-	viz1.onTick = null;
-	// viz.start();
-	// viz1.start();
+
+	// create div that will contain the simulation time(s) and rate(s)
+	var time_div = document.createElement("div");
+	time_div.setAttribute("class","sim-time");
+	time_div.setAttribute("id", "time-container");
+
+
+	if(start_time1 != start_time2){
+		const left_time = document.createElement("div");
+		left_time.setAttribute("class", "left-time");
+
+		const sim_time = document.createElement("h3");
+		sim_time.setAttribute("id", "sim_time");
+		//sim_time.id = "sim_time";
+		const sim_rate = document.createElement("h4");
+		sim_rate.setAttribute("id", "sim_rate");
+		left_time.appendChild(sim_time);
+		left_time.appendChild(sim_rate);
+		time_div.appendChild(left_time);
+
+
+		const right_time = document.createElement("div");
+		right_time.setAttribute("class", "right-time");
+
+		sim_time1 = document.createElement("h3");
+		sim_time1.setAttribute("id", "sim_time");
+		//sim_time.id = "sim_time";
+		sim_rate1 = document.createElement("h4");
+		sim_rate1.setAttribute("id", "sim_rate");
+		right_time.appendChild(sim_time1);
+		right_time.appendChild(sim_rate1);
+		time_div.appendChild(right_time);
+
+		viz1.onTick = tick1;
+	}
+	else{
+		const sim_time = document.createElement("h3");
+		sim_time.setAttribute("id", "sim_time");
+		//sim_time.id = "sim_time";
+		const sim_rate = document.createElement("h4");
+		sim_rate.setAttribute("id", "sim_rate");
+		time_div.appendChild(sim_time);
+		time_div.appendChild(sim_rate);
+		viz1.onTick = null;
+	}
+
+	
+	document.body.replaceChild(time_div, document.getElementById("time-container"));
+
 });
 
 // Form to submit a new spk kernel
@@ -1599,14 +1674,16 @@ let form_submit = document.getElementById("submit_SPK");
 form.addEventListener('submit', function(event){
 	event.preventDefault();
 	const formData = new FormData(this);
+	showLoading();
 	// Call API endpoint that will submit the new file
-	fetch('http://0.0.0.0:5000/api/spk-upload/', {
+	fetch('http://0.0.0.0:5000/api/spk-upload/' + viz.wrt, {
 		method: 'POST',
 		body: formData
 	})
 	.then(response => {
+		removeLoading();
 		response.json().then(function(parsedJson) {
-			console.log(parsedJson);
+			//console.log(parsedJson);
 			if(response.status === 400){
 				alert(parsedJson.error);
 				displayError(parsedJson.error);
@@ -1625,6 +1702,7 @@ form.addEventListener('submit', function(event){
 			else{
 				alert("File uploaded successfully!");
 				console.log(parsedJson);
+				//updateBodyChecklist(parsedJson);
 				addCheckboxFromUpload(parsedJson);
 			}
 		});
@@ -1739,7 +1817,7 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 			
 
 			// Retrieve the position data with the specified parameters
-			getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
+			getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
 				if(data.error){
 					displayError(data);
 					return data;
@@ -1854,7 +1932,7 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 						rotation: is_rotating,
 						hideOrbit: true,
 						positionVectors: allAdjustedVals,
-						ephemUpdate: getPositionData2,
+						ephemUpdate: getPositionData,
 						jdTimeData: allAdjustedTimes,
 						levelsOfDetail: [{
 							threshold: 0,
@@ -1899,7 +1977,7 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 	}
 	else{
 		// Retrieve the position data with the specified parameters
-			getPositionData2(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
+			getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
 				if(data.error){
 					displayError(data);
 					return data;
@@ -2014,7 +2092,7 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 						rotation: is_rotating,
 						hideOrbit: true,
 						positionVectors: allAdjustedVals,
-						ephemUpdate: getPositionData2,
+						ephemUpdate: getPositionData,
 						jdTimeData: allAdjustedTimes,
 						levelsOfDetail: [{
 							threshold: 0,
@@ -2069,6 +2147,8 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 	Main function to begin the application
 */
 function runApp(){
+
+
 	/////////////////////////////////
 	///// Default Visualization /////
 	/////////////////////////////////
@@ -2077,10 +2157,23 @@ function runApp(){
 
 	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', 1/12, Date.now()); // todo: change last parameter to be in JD
 
-	document.getElementById('sim_time').innerHTML = viz.getDate();
-	const sim_time = document.getElementById('sim_time');
+	//document.getElementById('sim_time').innerHTML = viz.getDate();
+	var time_div = document.createElement("div");
+	time_div.setAttribute("class","sim-time");
+	time_div.setAttribute("id", "time-container");
+	const sim_time = document.createElement("h3");
+	sim_time.setAttribute("id", "sim_time");
+	//sim_time.id = "sim_time";
+	const sim_rate = document.createElement("h4");
+	sim_rate.setAttribute("id", "sim_rate");
+	time_div.appendChild(sim_time);
+	time_div.appendChild(sim_rate);
+	document.body.appendChild(time_div);
+	//console.log(time_div);
 
-	const sim_rate = document.getElementById("sim_rate");
+	// const sim_time = document.getElementById('sim_time');
+
+	// const sim_rate = document.getElementById("sim_rate");
   
 	// A time slider that changes the rate of time for the simulation
 	var time_slider = document.getElementById("myRange");
@@ -2210,7 +2303,11 @@ function runApp(){
 		//This pulls the value input from the time set field
 
 		//Todo, do something with this
-		console.log(input);
+		viz.mult = input / 60 / viz.getJdDelta();
+		if(viz1){
+			viz1.mult = input / 60 / viz1.getJdDelta();
+		}
+		//console.log(input);
 	});
 
 	document.getElementById("input_length_set").addEventListener("click" , function(){

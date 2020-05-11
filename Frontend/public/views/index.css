@@ -201,7 +201,30 @@ input.readonly {
 .sim-time {
   position: absolute;
   top: 0px;
-  left: 35%;
+  /*left: 3%;*/
+  width: 100%;
+  font-family: Helvetica, Arial, sans-serif;
+  color: white;
+  text-align: center;
+  z-index: 2;
+}
+
+.left-time {
+  position: relative;
+  top: 0px;
+  left: 0px;
+  width: 50%;
+}
+.right-time {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    width: 50%;
+}
+
+.compare-sim-time {
+  position: absolute;
+  top: 0px;
   font-family: Helvetica, Arial, sans-serif;
   color: white;
   text-align: center;
