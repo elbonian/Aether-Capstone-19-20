@@ -3,14 +3,15 @@
 # Maintainer: Aether
 
 from flask import Flask, Response, request
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
-import jsonpickle
+from datetime import datetime, timedelta
 from signal import signal, SIGINT
-import re
+from argparse import ArgumentParser
+#import re
+import jsonpickle
 import numpy as np
 import spiceypy as spice
-from flask_cors import CORS
-from datetime import datetime, timedelta
 from AetherBodies import AetherBodies
 from MetakernelWriter import MetakernelWriter
 
@@ -256,6 +257,19 @@ def returnResponse(response, status):
     return Response(response=response_pickled, status=status, mimetype="application/json")
 
 
+def parse_args():
+
+    parser = ArgumentParser(description="The backend REST server for Aether, a CU - Boulder computer science senior "
+                                        "capstone project sponsored by NASA/JPL.")
+
+    parser.add_argument('--debug', help="If specified, run the server using the built in Flask WSGI server.",
+                        action="store_true", default=False)
+
+    parsed_args = parser.parse_args()
+
+    return parsed_args
+
+
 @app.route('/api/positions/<string:ref_frame>/<string:targets>/<string:curVizJd>/<string:curVizJdDelta>/<string:tailLenJd>/<int:validSeconds>', methods=['GET'])
 def get_object_positions(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd, validSeconds):
     """
@@ -311,7 +325,7 @@ def get_object_positions(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd,
 
     # check to make sure all targets are valid
     for target in targets_list:
-        if (not aether_bodies.isValidID(target)) and (not aether_bodies.isValidName(target)): #target not in valid_targets:
+        if (not aether_bodies.isValidID(target)) and (not aether_bodies.isValidName(target)):
             return returnResponse({'error': '{} is not a known target.'.format(target)}, 401)
 
     # convert all JD string arguments into floats... maybe they could be specified as floats instead...
@@ -516,80 +530,118 @@ def get_available_bodies(ref_frame):
     }
     """
 
+    # convert reference frame to lower case for consistency
     ref_frame = ref_frame.lower()
 
     # check to make sure the reference frame is valid
     if not aether_bodies.isValidRefFrame(ref_frame):
         return returnResponse({'error': '{} is not a valid reference frame.'.format(ref_frame)}, 400)
 
+    # get all body info from AetherBodies class
     known_bodies = aether_bodies.getBodies()
 
-    # get rotation, mass, radius, min-max speeds for each body
-    # print(len(known_bodies))
+    # get rotation, mass, radii, min-max speeds for each body
 
+    # traverse list of known bodies
     for bod_dict in known_bodies:
 
-        # print(bod_dict)
-
+        # convert body's NAIF ID to a string so that it is recognized by spice functions
         bod_id = str(bod_dict['spice id'])
 
+        # get the min and max speeds for each body
         min_max_speeds = get_min_max_speed(bod_id, bod_dict['valid times'], ref_frame)
+
+        # add min and max speeds to the dictionary
         bod_dict['min speed'] = min_max_speeds[0]
         bod_dict['max speed'] = min_max_speeds[1]
 
+        # check if body has radius data -- if so, get that data and add it to the dictionary
         if bod_dict['has radius data']:
             bod_dict['radius'] = get_radius(bod_id)
 
+        # check if body has mass data -- if so, get that data and add it to the dictionary
         if bod_dict['has mass data']:
             bod_dict['mass'] = get_mass(bod_id)
 
+        # check if body has rotation data -- if so, get that data and add it to the dictionary
         if bod_dict['has rotation data']:
             bod_dict['rotation data'] = get_rotation_data(bod_id, bod_dict['body name'])
 
+    # create the response and return it to the frontend
     return returnResponse(known_bodies, 200)
 
 
 @app.route('/api/spk-upload/<string:ref_frame>', methods=['POST'])
 def spk_upload(ref_frame):
+    """
+    aether-rest-server.py -- spk_upload
+        This function allows users to upload new SPICE SPK kernels to the backend. It is called when the frontend makes
+        a POST request to the above URL with the specified param. This function simply obtains the uploaded file, makes
+        sure it's valid, and then registers it with the SPICE subsystem and AetherBodies.
 
+    Params: ref_frame <str> -- the name or NAIF ID of the observing body for which min and max speeds for each object
+        are calculated against. This determines the range of speeds which the frontend uses for trajectory gradients. It
+        is necessary because the min and max speeds of an object are different for different observers. To avoid calling
+        available-bodies again, which would be redundant, simply perform the same computation for the new bodies in the
+        uploaded kernel.
+
+    Returns: a Flask response object with a list of dictionaries. Each dictionary in the list provides metadata for a
+        single body that was newly added from the uploaded kernel. This response is identical in format to
+        available-bodies, the difference is that the only items returned are the new bodies in the uploaded kernel.
+
+    """
+
+    # this function modifies aether_bodies, so it needs to be declared global
     global aether_bodies
 
+    # convert ref_frame to lower case for consistency
     ref_frame = ref_frame.lower()
 
     # check to make sure the reference frame is valid
     if not aether_bodies.isValidRefFrame(ref_frame):
         return returnResponse({'error': '{} is not a valid reference frame.'.format(ref_frame)}, 400)
 
+    # file extension for binary spk kernels
     spk_extension = '.bsp'
 
-    # check if the post request has the file part
+    # check if the post request has a file part
     if 'file' not in request.files:
         return returnResponse({'error': 'No file part in the request.'}, 400)
 
+    # get the file object from the request
     file = request.files['file']
 
+    # ensure file exists
     if file.filename == '':
         return returnResponse({'error': 'No file selected for uploading'}, 400)
 
+    # get filename via secure_filename -- ensures no tricks (e.g. having ../ in the filename) can mess up the system
     filename = secure_filename(file.filename)
 
+    # make sure the file is a binary spk kernel
     if not filename.endswith(spk_extension):
 
         return returnResponse({'error': 'Only .bsp files are allowed.'}, 400)
 
     else:
-
+        # set file path to the user_uploaded directory
         file_path = 'SPICE/kernels/user_uploaded/' + filename
 
+        # save the file
         file.save(file_path)
 
+        # furnish the kernel into the SPICE subsystem
         spice.furnsh(file_path)
 
+        # add the bodies in the kernel into the AetherBodies object
         new_bodies = aether_bodies.addFromKernel(file_path, returnNewBodies=True)
 
+        # if no new bodies were added, the file may be a duplicate, or there were no new bodies in it...
+        # in this case, return a special code that the frontend will catch
         if not new_bodies:
             return returnResponse([], 409)
 
+        # traverse the new bodies and get mass, radii, min-max speeds, rotations -- same logic as available-bodies
         for bod_dict in new_bodies:
 
             bod_id = str(bod_dict['spice id'])
@@ -610,30 +662,50 @@ def spk_upload(ref_frame):
         # DEBUG
         # print(new_bodies)
 
-        spice.furnsh(file_path)
-
+        # make the response and return it to the frontend
         return returnResponse(new_bodies, 200)
 
 
 @app.route('/api/spk-clear/', methods=['GET'])
 def clear_uploaded_kernels():
+    """
+    aether-rest-server.py -- spk_clear
+        This function allows users to clear all the uploaded kernels.
 
+    Params: None
+
+    Returns: a Flask response object with a list of strings. Each string in the list is the name of a body which was
+        removed.
+
+    """
+
+    # this function modifies the aether_bodies object so it must be declared global.
     global aether_bodies
 
     removed_bod_names = aether_bodies.removeUploadedKernels()
 
+    spice.kclear()
+
+    mkw.write()
+
+    spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
+
     return returnResponse(removed_bod_names, 200)
 
 
-if __name__ == '__main__':
-    # create metakernel file
-    mkw = MetakernelWriter()
-    mkw.write()
+# -------------------- MAIN --------------------
 
-    # load the kernels
-    spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
+# create metakernel file
+mkw = MetakernelWriter()
+mkw.write()
 
-    signal(SIGINT, exitNicely)
+# load the kernels
+spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
 
-    # start the server
-    app.run(host="0.0.0.0", port=5000, threaded=False)
+signal(SIGINT, exitNicely)
+
+# args = parse_args()
+#
+# if args.debug:
+#     # start the server
+#     app.run(host="0.0.0.0", port=5000, threaded=False)
