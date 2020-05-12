@@ -349,6 +349,25 @@ input.readonly {
   background-color: darkgrey;
 }
 
+#kernel:hover {
+  background-color: white;
+  cursor: pointer;
+}
+
+.kclear_class:hover {
+  background-color: white;
+  cursor: pointer;
+}
+
+.kclear_class {
+  margin-left:10%;
+  margin-right: 10%;
+  margin-top:4%;
+  display: block;
+  border-radius: 5px;
+  background-color: darkgrey;
+}
+
 /*Container for the list of bodies*/
 .content1 {
   background-color: white;

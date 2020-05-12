@@ -394,7 +394,7 @@ class AetherObject extends Spacekit.SphereObject {
 		let adjKmPerSec = [];
 		//get max and min kmpersec and scale them between the max and min
 		for(let i = 0; i < kmPosX.length-1; i++){
-			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / 7200 / unitsPerAu;
+			let kmPerSec = Math.sqrt(Math.pow((kmPosX[i+1] - kmPosX[i]),2) + Math.pow((kmPosY[i+1] - kmPosY[i]),2) + Math.pow((kmPosZ[i+1] - kmPosZ[i]),2)) / (secondsPerDay * this._simulation.getJdDelta()) / unitsPerAu;
 			kmPerSecList.push(kmPerSec);
 		}
 		for (let i = 0; i < kmPerSecList.length; i++) {
@@ -534,6 +534,25 @@ class AetherObject extends Spacekit.SphereObject {
 	  updateTailLength(){
 	  	this.tail_length = this.currIndex - this.tailStartIndex + 1;
 	  }
+
+	  /**
+	  	Scale the object according to how far away the camera is
+	  */
+	  updateRadiusScaling(){
+	  	  // Get distance from object to simulation camera
+	  	  const dist = origin.distanceTo(this._simulation.getViewer().get3jsCamera().position);
+	  	  const factor = Math.log2(dist - 500) / 2;
+	  	  if(factor < 1 || isNaN(factor)){
+	  	  	this._obj.scale.set(1,1,1);
+	  	  }
+	  	  else{
+	  	 	 this._obj.scale.set(factor,factor,factor);
+	  	  }
+	  	  if(this.name == "sun"){
+	  	  	console.log(dist);
+	  	  	console.log(factor);
+	  	  }
+	  }
  	  
 	  /**
 		  Update the object's line object according to its position indexes
@@ -667,6 +686,13 @@ class AetherObject extends Spacekit.SphereObject {
 
       	// Update label position
       	super.updateLabelPosition([this.positionVectors[Math.floor(this.currIndex)].x, this.positionVectors[Math.floor(this.currIndex)].y, this.positionVectors[Math.floor(this.currIndex)].z]);
+
+
+      	// If object is a sphere, scale it so it's easier to see from far away
+      	// if(this._renderMethod == 'SPHERE'){
+      	// 	this.updateRadiusScaling();
+      	// }
+
 
       	////////////////////////////////////////////////////////////////////////////////////////
       	//////// DEAL WITH FETCHING NEW/OLD POSITION DATA
@@ -808,6 +834,8 @@ var grid_visible = true;
 
 var sim_time1 = null;
 var sim_rate1 = null;
+
+const origin = new Spacekit.THREE.Vector3(0,0,0);
 
 /////////////////////////////////
 /////// Utility Functions ///////
@@ -1195,26 +1223,26 @@ async function getPositionData(ref_frame, targets, cur_jd, jd_rate, tail_length,
 	return data;
 }
 
-/**
-	async function to get which bodies are in the db
-	@return {json} data - JSON of available bodies
-*/
-async function getAvailableBodies(){
-	let response = await fetch('http://0.0.0.0:5000/api/body-list/');
-	let data = await response.json();
-	return data;
-}
 
 /**
 	async function to get which bodies are in the db
 	@return {json} data - JSON of available bodies
 */
-async function getAvailableBodies2(wrt){
+async function getAvailableBodies(wrt){
 	let response = await fetch('http://0.0.0.0:5000/api/available-bodies/' + wrt);
 	let data = await response.json();
 	return data;
 }
 
+/*
+	async function to clear all user-uploaded kernels from the backend
+	@return {json} data - JSON list of all deleted bodies
+*/
+async function clearKernels(){
+	let response = await fetch('http://0.0.0.0:5000/api/spk-clear/');
+	let data = await response.json();
+	return data;
+}
 
 // Mapping of the Sun and the planet's texture paths
 let body_textures = {
@@ -1436,7 +1464,15 @@ var radii = {};
 var rotation_data = {};
 var expanded = false;
 
-/**
+/*
+	This function removes boxes from the dropdown list by name
+	@param bodies - A list of strings, with each string being a lowercase name of a body
+*/
+// function removeBoxesByName(){
+
+// }
+
+/*
 	This function is used to append a checkbox element to a checkbox menu
 	@param parent_element - This is the checkbox menu that we want to add the new checkbox element to
 	@param child_element_name - This is the name of the checkbox element that we want to create
@@ -1570,8 +1606,14 @@ sim_form.addEventListener('submit', function(e){
 	// convert time entered entered into milliseconds passed UNIX epoch
 	const start_time =  Date.parse(formData.get('jd_start')) ;
 
+	// See if user entered granularity
+	var granularity = 2/24;
+	if(formData.get('granularity')){
+		granularity = formData.get('granularity');
+	}
+
 	// Creates the new simulation from data entered
-	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), 1/12, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu]);
+	var new_viz = createNewSim(formData.get('wrt'), formData.get('targets'), granularity, start_time, [250000 / unitsPerAu, 500000 / unitsPerAu, 500000 / unitsPerAu]);
 	
 	var time_div = document.createElement("div");
 	time_div.setAttribute("class","sim-time");
@@ -1833,7 +1875,7 @@ function createNewSim(wrt, targets, jd_delta=1/12, unix_epoch_start, camera_star
 	// Only get available body detail if this will be a primary sim, prevents two sims from issuing the API request if comparing sims
 	if(primary_sim){
 		showLoading();
-		getAvailableBodies2(wrt).then(data =>{
+		getAvailableBodies(wrt).then(data =>{
 			updateBodyChecklist(data);
 
 			
