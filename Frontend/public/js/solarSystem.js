@@ -565,7 +565,7 @@ class AetherObject extends Spacekit.SphereObject {
 		// ensure object has a line object
 		if(this.line != null){
 			// update the line's draw range to only display from the end of the tail to the object's position
-			this.line.geometry.setDrawRange(this.tailStartIndex, Math.ceil(this.currIndex) - this.tailStartIndex + 1);
+			this.line.geometry.setDrawRange(this.tailStartIndex, this.currIndex - this.tailStartIndex + 1);
 		}
 	  }
 
@@ -1002,7 +1002,13 @@ function initCheckboxes(){
 		let checkBoxId = checkboxes[x].id;
 		let checkBoxBody = checkboxes[x].id.split("-")[0];
 		if(planetKeys.includes(checkBoxBody)){
-			checkbox.checked = true;
+			if(visualizer_list[checkBoxBody].hidden === true){
+			    checkbox.checked = false;
+			}
+			else {
+			    checkbox.checked = true;
+			}
+			//checkbox.checked = true;
 			checkbox.removeAttribute("disabled");
 			checkbox.removeAttribute("class");
 			let bodyLabel = document.getElementById(checkBoxBody + "-label1");
@@ -1018,7 +1024,13 @@ function initCheckboxes(){
 			let checkBoxId = checkboxes[x].id;
 			let checkBoxBody = checkboxes[x].id.split("-")[0];
 			if(planetKeys2.includes(checkBoxBody)){
-				checkbox.checked = true;
+				//checkbox.checked = true;
+				if(visualizer_list[checkBoxBody].hidden === true){
+				    checkbox.checked = false;
+				}
+				else {
+				    checkbox.checked = true;
+				}
 				checkbox.removeAttribute("disabled");
 				checkbox.removeAttribute("class");
 				let bodyLabel = document.getElementById(checkBoxBody + "-label1");
