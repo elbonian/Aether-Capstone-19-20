@@ -4,9 +4,10 @@ WORKDIR /
 RUN apt-get update
 RUN apt-get install -y build-essential python3-pip wget
 RUN pip3 install setuptools wheel
-RUN pip3 install spiceypy Flask flask-cors jsonpickle gunicorn
 RUN mkdir Aether
 WORKDIR /Aether
+COPY requirements.txt ./
+RUN pip3 install -r requirements.txt
 RUN mkdir SPICE
 RUN cd SPICE && mkdir kernels && mkdir tools
 RUN cd SPICE/kernels && mkdir default && mkdir user_uploaded
@@ -15,5 +16,5 @@ RUN wget http://naif.jpl.nasa.gov/pub/naif/utilities/PC_Linux_64bit/brief -P /Ae
 RUN cd SPICE/tools && chmod a+x brief
 COPY aether-rest-server.py SPKParser.py MetakernelWriter.py AetherBodies.py ./
 EXPOSE 5000
-# auto run the REST server using a production-ready WSGI HTTP server -- spins up 1 process by default
-CMD gunicorn -w 1 --bind 0.0.0.0:5000 aether-rest-server:app
+# auto run the REST server using a production-ready WSGI HTTP server -- spins up 1 worker process
+CMD gunicorn -w 1 -t 60 --access-logfile - --bind 0.0.0.0:5000 aether-rest-server:app

@@ -345,7 +345,7 @@ def get_object_positions(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd,
     jd_start = curVizJd - tailLenJd
 
     # ensure jd_end is a multiple of the current JD delta
-    if tailLenJd % curVizJdDelta > 0.00000001:  # value is small enough to account for round off error in most cases
+    if ((tailLenJd / curVizJdDelta) % 1) > 0.0001:  # value is small enough to account for round off error in most cases
         return returnResponse({'error': 'tailLenJd must be evenly divisible by curVizJdDelta.'}, 403)
 
     # Convert back to string and add 'jd ' to the front for SPICE
