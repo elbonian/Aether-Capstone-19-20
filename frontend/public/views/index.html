@@ -16,8 +16,10 @@
         <title>Aether</title>
 
 		<script src="/spacekit/build/spacekit.js"></script>
+    <script src="/js/loadingScreen.js"></script>
+    <script src="/js/AetherSimulation.js"></script>
+    <script src="/js/AetherObject.js"></script>
 
-        <!-- <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script> -->
          <script>
             function openForm() {
               document.getElementById("form-container1").style.display = "block";
@@ -141,28 +143,6 @@
         <!-- Main menu div -->
         <div id="menu">
 
-            <!-- Comments, maybe depreciated
-              <form class="form" id="newSimForm">
-                Enter the body from which all positions will be calculated (i.e. solar system barycenter):
-                <input type="text" name="wrt"><br>
-                Enter the names of the targets you would like to view, separated by a '+' (i.e. sun+earth+moon):
-                <input type="text" name="targets"><br>
-                Enter the JD you would like to begin the simulation at (i.e. 2451545.0)
-                <input type="text" name="jd_start">
-                <input type="submit" value="Create">
-              </form> 
-            -->
-
-            <!-- To Remove
-              <h4 style="color: white">Time Controls</h4>
-            -->
-
-            <!-- To Remove once updated
-              <p style="color: gray">Rate of Time</p>
-              <div class="slidecontainer">
-                <input type="range" min="1" max="5" value="3"   step="1" class="slider" id="time-rate">
-              </div>
-            -->
             <div class="button-holder">
             	<button class="openbtn" id="openbtn" onclick="openNav1()">Available Bodies</button>
 	            <div id="mySidebar1" class="sidebar">
@@ -231,7 +211,7 @@
         <div id="error-console">
             <h4 style="color: red; margin: 0 auto;">Error Log:</h5>
             <br>
-            <ul id="error-list">
+            <ul id="error-list" style="font-family: Helvetica, Ariel, sans-serif">
             
             </ul>
         </div>
@@ -257,9 +237,9 @@
 
             <label for="jd_start" style="color: black">Starting Date</label>
             <input type="text" placeholder="i.e. 01 Jan 2000 12:00:00 UTC" name="jd_start" required>
-            <br><br>
-            <label for="granularity" style="color: black">Granularity (how many days each line-segment represents)</label>
-            <input type="text" placeholder="i.e. 2/24 (2 hours per line-segment)" name="granularity">
+             <h5 style="color: black">Granularity</h5>
+              <label for="granularity" style="color: black">(step size in days)</label>
+              <input type="text" placeholder="i.e. 0.0833333 (2 hours per line-segment)" name="granularity">
             <button type="submit" class="btn" onclick="closeForm()">Create</button>
             <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
             </form>
@@ -270,7 +250,7 @@
             <form class="form-container" id="comparison-form">
                 <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
                 <div class="column">
-                    <h5 style="color: black">Simulation 1</h5>
+                    <h5 style="color: black">Primary Simulation</h5>
                     <label for="wrt" style="color: black">With Respect To</label>
                     <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
 
@@ -282,7 +262,7 @@
 
                 </div>
                 <div class="column">
-                    <h5 style="color: black">Simulation 2</h5>
+                    <h5 style="color: black">Secondary Simulation</h5>
                     <label for="wrt2" style="color: black">With Respect To</label>
                     <input type="text" placeholder="i.e. solar system barycenter" name="wrt2" required>
 
@@ -291,6 +271,10 @@
 
                     <label for="jd_start2" style="color: black">Starting Date</label>
                     <input type="text" placeholder="i.e. 01 Jan 2000 12:00:00 UTC" name="jd_start2" required>
+
+                    <h5 style="color: black">Granularity</h5>
+                    <label for="granularity" style="color: black">(step size in days)</label>
+                    <input type="text" placeholder="i.e. 0.0833333 (2 hours per line-segment)" name="granularity">
 
                     <button type="submit" class="btn" onclick="closeForm2()">Create</button>
                     <button type="button" class="btn cancel" onclick="closeForm2()">Close</button>
@@ -307,8 +291,8 @@
         <div id="comparison2">
             
         </div> -->
-
-        
+        <script src="/js/dropdownFunctions.js"></script>
+        <script src="/js/eventHandlers.js"></script>
         <script src="/js/solarSystem.js"></script>
         <script type="text/javascript">
           //functions to open and close the two side menus

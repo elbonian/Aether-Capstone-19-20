@@ -1,0 +1,667 @@
+/*
+    CU Boulder CS Capstone - NASA/JPL Group (Aether)
+    Spring 2020
+    Maintainer: Aether
+
+
+    This is the main javascript file that facilitates the frontend visualization. This file contains:
+        1. Definitions of all global constants, variables, and references used by all .html and .js files
+        2. Utility functions
+        3. Functions that are responsible for hitting the backend REST API endpoints
+        4. The two main visualization functions, runApp() and createNewSim()
+
+*/
+
+
+
+/////////////////////////////////////////////////
+/////////////////// Globals	/////////////////////
+/////////////////////////////////////////////////
+
+
+
+/*----------------- Constants -----------------*/
+ 
+// Julian Date of the J2000 epoch
+const j2000 = 2451545.0;
+
+// Seconds in a day
+// TODO: doesn't take leapseconds into account
+const secondsPerDay = 86400;
+
+// The amount of units in the THREE.Scene that represent one astronomical unit (AU)
+const unitsPerAu = 100000.0;
+
+// A THREE.js vector that represents the origin of the simulation(s)
+// [x,y,z] = [0,0,0]
+const origin = new Spacekit.THREE.Vector3(0,0,0);
+
+// A number indicating the default amount of real time between each position point, as a fraction of a day
+const default_granularity = 1/12; // 2 hours per step, 2/24
+
+
+
+/*----------------- Variables -----------------*/
+
+// Mapping containing the filepath to available body textures
+var body_textures = {
+    // The first section of textures are from Solar System Scope
+    // https://www.solarsystemscope.com/textures/
+    "sun" : '/js/textures/2k_sun.jpg',
+    "mercury" : '/js/textures/2k_mercury.jpg',
+    "venus" : '/js/textures/2k_venus_surface.jpg',
+    "earth" : '/js/textures/2k_earth_daymap.jpg',
+    "mars" : '/js/textures/2k_mars.jpg',
+    "jupiter" : '/js/textures/2k_jupiter.jpg',
+    "saturn" : '/js/textures/2k_saturn.jpg',
+    "uranus" : '/js/textures/2k_uranus.jpg',
+    "neptune" : '/js/textures/2k_neptune.jpg',
+    "pluto" : '/js/textures/plutomap2k.jpg',
+    "moon" : '/js/textures/2k_moon.jpg',
+    // The following textures are from the USGS
+    // https://astrogeology.usgs.gov/search
+    "callisto" : '/js/textures/callisto.jpg',
+    "ceres" : '/js/textures/ceres.jpg',
+    "dione" : '/js/textures/dione.jpg',
+    "enceladus" : '/js/textures/enceladus.jpg',
+    "europa" : '/js/textures/europa.jpg',
+    "ganymede" : '/js/textures/ganymede.jpg',
+    "iapetus" : '/js/textures/iapetus.jpg',
+    "io" : '/js/textures/io.jpg',
+    "rhea" : '/js/textures/rhea.jpg',
+    "tethys" : '/js/textures/tethys.jpg',
+    "titan" : '/js/textures/titan.jpg',
+    "vesta" : '/js/textures/vesta.jpg',
+};
+
+// Dictionary of the bodies in the primary simulation
+// i.e. "body name" : body object
+var visualizer_list = {};
+
+// Dictionary of the bodies in the secondary simulation
+// i.e. "body name" : body object
+var visualizer_list2 = {};
+
+// A list of bodies available from the backend
+// i.e. [body_1,body_2,...,body_n]
+// i.e. body_1 = {
+//          "body name" : "sun",
+//          "category" : "sun",
+//          "has radius data" : true,
+//          "has rotation data" : true,
+//          "is user-uploaded" : false,
+//          "spice id" : 10,
+//          "valid times" : [(start_time_1, end_time_1),...,(start_time_n, end_time_n)]
+//      }
+var body_meta_data = [];
+
+// Dictionary of radii data for bodies
+var radii = {};
+
+// Dictionary of rotation parameters for bodies
+var rotation_data = {};
+
+
+
+/*------------------- Flags -------------------*/
+
+// A flag indicating whether we are comparing simulations or not
+var comparing = false;
+
+// A flag for whether the simulation(s) are playing or not
+var togglePlay = false;
+
+// A flag indicating whether the xy grid is visible or not
+var grid_visible = true;
+
+
+
+/*------------- Object References -------------*/
+
+// A reference to the Spacekit.Stars() object associated with the primary simulation
+var stars = null;
+
+// A reference to the Spacekit.Stars() object associated with the secondary simulation
+var stars1 = null;
+
+// A reference to the HTML DOM element that contains the secondary simulation's time
+var sim_time1 = null;
+
+// A reference to the HTML DOM element that contains the secondary simulation's rate of time
+var sim_rate1 = null;
+
+// REFERENCE TO PRIMARY SIMULATION
+var viz = null;
+
+// REFERENCE TO SECONDARY SIMULATION
+var viz1 = null;
+
+
+
+/////////////////////////////////////////////////
+/////////////// Utility Functions ///////////////
+/////////////////////////////////////////////////
+
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+/**
+    Displays a note in the info log
+    @param {string} error - Error message to be displayed
+    TODO: rename from displayError() to displayNotice()
+*/
+function displayError(error){
+    if(error.error){
+        let li = document.createElement("LI"); 
+        let err = document.createTextNode("Error: " + error.error);
+        li.appendChild(err);
+        li.setAttribute("style", "color: red;");
+        document.getElementById("error-list").appendChild(li);
+    }
+    else{
+        let li = document.createElement("LI"); 
+        let err = document.createTextNode("Error: " + error);
+        li.appendChild(err);
+        li.setAttribute("style", "color: red;");
+        document.getElementById("error-list").appendChild(li);
+    }
+}
+
+/**
+    Check if object has any properties
+    @param {Object} obj - Javascript object
+    @return {Boolean} true/false - whether the object has a property
+*/
+function isEmpty(obj) {
+    for(var key in obj) {
+        if(obj.hasOwnProperty(key))
+            return false;
+    }
+    return true;
+}
+
+/**
+    Checks if ephemeris of a body at a certain time is available
+    @param {string} body_name - The name of the body that is being checked
+    @param {int} desired_time - The time in milliseconds past UNIX epoch that we want to load ephemeris for
+    @return {Boolean} - A bool indicating whether the body can be loaded at the desired time or not
+*/
+function canLoadBody(body_name, desired_time){
+    // Find body meta data
+    let body = body_meta_data.find( x => x["body name"] === body_name.toLowerCase());
+    let time_range = body["valid times"];
+    // Get start and end dates in comparable format
+    let start_time = new Date(time_range[0][0]);
+    let end_time = new Date(time_range[0][1]);
+    if(desired_time > end_time || desired_time < start_time){
+        return false;
+    }
+    else{
+        return true;
+    }
+}
+
+
+
+
+
+/**
+	Updates the HTML displaying the rate of the primary simulation
+*/
+function tick(){
+	const date = this.getDate().toString();
+	sim_time.innerHTML = date.slice(4, date.length);
+
+	if(this._isPaused){
+		sim_rate.innerHTML = "JD/Sec: " + 0;
+	}
+	else{
+		const rate = "JD/Sec: " + 60 * this.mult * this.getJdDelta();
+		sim_rate.innerHTML = rate;
+	}
+}
+
+/**
+	Updates the html displaying the rate of the secondary simulation
+*/
+function tick1(){
+	const date = this.getDate().toString();
+	sim_time1.innerHTML = date.slice(4, date.length);
+
+	if(this._isPaused){
+		sim_rate1.innerHTML = "JD/Sec: " + 0;
+	}
+	else{
+		const rate = "JD/Sec: " + 60 * this.mult * this.getJdDelta();
+		sim_rate1.innerHTML = rate;
+	}
+}
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////// BACKEND API ENDPOINTS /////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+	async function to get body data from API
+	@param {string} ref_frame - Reference from to retrieve the data from
+	@param {string} targets - Target bodies in which to retrieve data
+	@param {string} cur_jd - Current Julian date of the simulation
+	@param {float}  jd_rate - Rate of change of jd
+	@param {string} tail_length - The length of the position tail in JD
+	@param {string} valid_time - The length of time in seconds the object will be able to animate from the data returned
+	@return {json} data - JSON of body data
+*/
+async function getPositionData(ref_frame, targets, cur_jd, jd_rate, tail_length, valid_time){
+	let response = await fetch('http://0.0.0.0:5000/api/positions/' + ref_frame + '/' + targets + '/' + cur_jd + '/' + jd_rate + '/' + tail_length + '/' + valid_time);
+	let data = await response.json();
+	return data;
+}
+
+/**
+	async function to get which bodies are in the db
+    @param {string} wrt - The name of the body at the center of the simulation
+	@return {json} data - JSON of available bodies
+*/
+async function getAvailableBodies(wrt){
+	let response = await fetch('http://0.0.0.0:5000/api/available-bodies/' + wrt);
+	let data = await response.json();
+	return data;
+}
+
+/*
+	async function to clear all user-uploaded kernels from the backend
+	@return {json} data - JSON list of all deleted bodies
+*/
+async function clearKernels(){
+	let response = await fetch('http://0.0.0.0:5000/api/spk-clear/');
+	let data = await response.json();
+	return data;
+}
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////// MAIN VISUALIZATION FUNCTIONS /////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/**
+	Create an AetherSimulation and add the bodies to the simulation
+	@param {string} wrt - (With Respect To) The object from which the positions are computed in reference to
+	@param {string} targets - Target bodies that will be simulated
+	@param {Number} jd_delta - The rate the jd for simulation to change
+	@param {float} jd_start - Jd for simulation to start
+	@param {Array} camera_start - Position for the camera to start, default=[2500,5000,5000]
+	@param {string} container - div to place the simulation in, default=main-container
+*/
+function createNewSim(wrt, targets, jd_delta=default_granularity, unix_epoch_start, camera_start=[250000,500000,500000], container='main-container', primary_sim=true){
+
+	////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////// CREATE THE SIMULATION OBJECT /////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////
+
+	var new_viz = new AetherSimulation(document.getElementById(container), {
+	  basePath: 'https://typpo.github.io/spacekit/src',
+	  jdDelta: jd_delta,
+	  startDate: unix_epoch_start,
+	  startPaused: true,
+	  unitsPerAu: unitsPerAu,
+	  camera: {
+	  	initialPosition: camera_start,
+	  	enableDrift: false,
+	  },
+	  wrt: wrt
+	});
+
+
+	////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////// GET AVAILABLE BODY DETAILS FROM THE BACKEND /////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////
+
+	// Only get available body details if this will be a primary sim, prevent two sims from issuing the API request if comparing sims
+	if(primary_sim){
+        // Pull up the loading screen
+		showLoading();
+
+        // Issue an API request to gather body meta data
+		getAvailableBodies(wrt).then(data =>{
+			// Update the dropdown items
+            updateBodyChecklist(data);
+
+			// Retrieve the position data with the specified parameters
+			getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
+				if(data.error){
+					removeLoading();
+					displayError(data);
+					return data;
+				}
+
+				////////////////////////////////////////////////////////////////////////////////////////////
+				///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
+				////////////////////////////////////////////////////////////////////////////////////////////
+
+				for(const body of body_meta_data){
+					const body_name = body["body name"];
+					// Check for radius
+					if(body["has radius data"]){
+						radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
+					}
+					else{
+						radii[body_name] = [-1, -1];
+						body_textures[body_name] = '/js/textures/smallparticle.png';
+					}
+					// Check for rotation
+					if(body["has rotation data"]){
+						rotation_data[body_name] = body["rotation data"];
+					}
+					else{
+						rotation_data[body_name] = {
+							"ra": null,
+							"dec": null,
+							"pm": null,
+							"ra_delta": null,
+							"dec_delta": null,
+							"pm_delta": null,
+							"nut_prec_angles": null,
+							"nut_prec_ra": null,
+							"nut_prec_dec": null,
+						};
+					}
+				}
+
+				// Iterate over each body returned by the API call
+				for(const property in data){
+					// Array of [x,y,z] coords in AU
+					var allAdjustedVals = [];
+					// Array of Julian Dates corresponding to each position
+					var allAdjustedTimes = [];
+					// Current Julian Date
+					var cur_jd = new_viz.getJd();
+
+					// Set tail indexes
+					var cur_idx = data[property].cur_time_idx;
+					const tail_start_idx = 0;
+					var tail_end_idx;
+					if(data[property].times.length % 2 == 0){
+						tail_end_idx = data[property].times.length / 2;
+					}
+					else {
+						tail_end_idx = Math.ceil(data[property].times.length / 2);
+					}
+
+					// Iterate over the data for the current body
+					var i = 0;
+					for(pos of data[property].positions){
+						// Convert coordinates in km to au
+						adjustedVals = pos.map(Spacekit.kmToAu);
+						// Convert coords to ecliptic
+						adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+						let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+						
+						// Push positions and their corresponding times to arrays
+						allAdjustedVals.push(vector);
+						allAdjustedTimes.push(parseFloat(data[property].times[i]));
+						i++;
+					}
+					
+					// Create object
+					var bodyName = capitalizeFirstLetter(property)
+					var radius;
+
+					// Check for radius data
+					if(radii[property] == [-1, -1]){
+						displayError(property + " HAS NO RADIUS DATA AVAILABLE");
+					}
+
+					// Check rotation data for body
+					var is_rotating = true;
+					if(rotation_data[property].ra == null){
+						displayError(property + " HAS NO ROTATION DATA AVAILABLE" );
+						is_rotating = false; // disable the object's rotation if no rotation data
+					}
+
+					// Create a new space object
+					let body = new_viz.createAetherObject(property, {
+						labelText: bodyName,
+						name: property,
+						textureUrl: body_textures[property],
+						currIndex: cur_idx,
+						radius: radii[property][0],
+						radius_polar: radii[property][1],
+						rotation: is_rotating,
+						hideOrbit: true,
+						positionVectors: allAdjustedVals,
+						ephemUpdate: getPositionData,
+						jdTimeData: allAdjustedTimes,
+						levelsOfDetail: [{
+							threshold: 0,
+							segments: 40,
+						}],
+						rotation: {
+							enable: is_rotating,
+						},
+						ra: rotation_data[property].ra,
+						dec: rotation_data[property].dec,
+						pm: rotation_data[property].pm,
+						ra_delta: rotation_data[property].ra_delta,
+						dec_delta: rotation_data[property].dec_delta,
+						pm_delta: rotation_data[property].pm_delta,
+						nut_prec_angles: rotation_data[property].nut_prec_angles,
+						nut_prec_ra: rotation_data[property].nut_prec_ra,
+						nut_prec_dec: rotation_data[property].nut_prec_dec,
+					});
+
+                    // Set globals
+					if(primary_sim){
+						visualizer_list[bodyName] = body;
+					}
+					else{
+						visualizer_list2[bodyName] = body;
+					}
+				}
+				initCheckboxes();
+				removeLoading();	
+			})
+			.catch(error => {
+				removeLoading();
+				console.error(error);
+			});
+		});
+	}
+	else{
+		// Retrieve the position data with the specified parameters
+		getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
+			if(data.error){
+				displayError(data);
+				return data;
+			}
+
+			////////////////////////////////////////////////////////////////////////////////////////////
+			///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
+			////////////////////////////////////////////////////////////////////////////////////////////
+
+			for(const body of body_meta_data){
+				const body_name = body["body name"];
+				// Check for radius
+				if(body["has radius data"]){
+					radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
+				}
+				else{
+					radii[body_name] = [-1, -1];
+					body_textures[body_name] = '/js/textures/smallparticle.png';
+				}
+				// Check for rotation
+				if(body["has rotation data"]){
+					rotation_data[body_name] = body["rotation data"];
+				}
+				else{
+					rotation_data[body_name] = {
+						"ra": null,
+						"dec": null,
+						"pm": null,
+						"ra_delta": null,
+						"dec_delta": null,
+						"pm_delta": null,
+						"nut_prec_angles": null,
+						"nut_prec_ra": null,
+						"nut_prec_dec": null,
+					};
+				}
+			}
+
+			// Iterate over each body returned by the API call
+			for(const property in data){
+				// Array of [x,y,z] coords in AU
+				var allAdjustedVals = [];
+				// Array of Julian Dates corresponding to each position
+				var allAdjustedTimes = [];
+				// Current Julian Date
+				var cur_jd = new_viz.getJd();
+
+				// Set tail indexes
+				var cur_idx = data[property].cur_time_idx;
+				const tail_start_idx = 0;
+				var tail_end_idx;
+				if(data[property].times.length % 2 == 0){
+					tail_end_idx = data[property].times.length / 2;
+				}
+				else {
+					tail_end_idx = Math.ceil(data[property].times.length / 2);
+				}
+
+				// Iterate over the data for the current body
+				var i = 0;
+				for(pos of data[property].positions){
+					// Convert coordinates in km to au
+					adjustedVals = pos.map(Spacekit.kmToAu);
+					// Convert coords to ecliptic
+					adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+					let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+					
+					// Push positions and their corresponding times to arrays
+					allAdjustedVals.push(vector);
+					allAdjustedTimes.push(parseFloat(data[property].times[i]));
+					i++;
+				}
+				
+				// Create object
+				var bodyName = capitalizeFirstLetter(property)
+				var radius;
+				if(bodyName == "Sun"){
+					radius = 0.17;
+					//new_viz.createLight(allAdjustedVals[cur_idx]);
+				}
+				else if(bodyName == "Moon"){
+					radius = 0.0005;
+				}
+				else{
+					radius = .08;
+				}
+
+				// Check for radius data
+				if(radii[property] == [-1, -1]){
+					displayError(property + " HAS NO RADIUS DATA AVAILABLE");
+				}
+
+				// Check rotation data for body
+				var is_rotating = true;
+				if(rotation_data[property].ra == null){
+					displayError(property + " HAS NO ROTATION DATA AVAILABLE" );
+					is_rotating = false; // disable the object's rotation if no rotation data
+				}
+
+				// Create a new space object
+				let body = new_viz.createAetherObject(property, {
+					labelText: bodyName,
+					name: property,
+					textureUrl: body_textures[property],
+					currIndex: cur_idx,
+					radius: radii[property][0],
+					radius_polar: radii[property][1],
+					rotation: is_rotating,
+					hideOrbit: true,
+					positionVectors: allAdjustedVals,
+					ephemUpdate: getPositionData,
+					jdTimeData: allAdjustedTimes,
+					levelsOfDetail: [{
+						threshold: 0,
+						segments: 40,
+					}],
+					rotation: {
+						enable: is_rotating,
+					},
+					ra: rotation_data[property].ra,
+					dec: rotation_data[property].dec,
+					pm: rotation_data[property].pm,
+					ra_delta: rotation_data[property].ra_delta,
+					dec_delta: rotation_data[property].dec_delta,
+					pm_delta: rotation_data[property].pm_delta,
+					nut_prec_angles: rotation_data[property].nut_prec_angles,
+					nut_prec_ra: rotation_data[property].nut_prec_ra,
+					nut_prec_dec: rotation_data[property].nut_prec_dec,
+				});
+
+                // Set globals
+				if(primary_sim){
+					visualizer_list[bodyName] = body;
+				}
+				else{
+					visualizer_list2[bodyName] = body;
+				}
+                if(property === "saturn"){
+                    var geometry = new THREE.RingGeometry( 100000, 500000, 64 );
+                    var material = new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide } );
+                    var mesh = new THREE.Mesh( geometry, material );
+                    body._obj.add( mesh );
+                }
+			}
+			initCheckboxes();
+		})
+		.catch(error => {
+			console.error(error);
+		});
+	}
+	
+	// Make camera controls more fine-grained
+	new_viz.tuneCameraControls(0.75, 1, 2, 14);
+    // Set simulation's onTick method
+	new_viz.onTick = tick;
+
+	return new_viz;
+}
+
+
+/**
+	Main function that begins the default simulation
+*/
+function runApp(){
+
+
+	/////////////////////////////////
+	///// Default Visualization /////
+	/////////////////////////////////
+
+	// Main visualization object
+	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', default_granularity, Date.now());
+    //viz.createLight();
+    // Create the HTML div container for the simulation(s) time and rate-of-time
+    var time_div = document.createElement("div");
+    time_div.setAttribute("class","sim-time");
+    time_div.setAttribute("id", "time-container");
+    const sim_time = document.createElement("h3");
+    sim_time.setAttribute("id", "sim_time");
+    const sim_rate = document.createElement("h4");
+    sim_rate.setAttribute("id", "sim_rate");
+    time_div.appendChild(sim_time);
+    time_div.appendChild(sim_rate);
+    document.body.appendChild(time_div);
+}
+
+// START THE APP
+runApp();
