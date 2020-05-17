@@ -182,6 +182,7 @@ input[type="text"]::placeholder {
   display: none;
   background-color: grey;
   opacity: .9;
+  padding: 5px;
 }
 
 #checkboxes label {
@@ -214,14 +215,14 @@ input.readonly {
 .left-time {
   position: relative;
   top: 0px;
-  left: 0px;
-  width: 50%;
+  left: 15%;
+  width: 35%;
 }
 .right-time {
     position: absolute;
-    right: 0px;
+    right: 15%;
     top: 0px;
-    width: 50%;
+    width: 35%;
 }
 
 .compare-sim-time {

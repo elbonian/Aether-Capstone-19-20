@@ -409,8 +409,22 @@ function addCheckboxFromUpload(newData){
         inner_label.appendChild(addButton);
         body_meta_data.push(newData[index]);
 
+
         // Set up the right-click context menu for the dropdown items
-        // let boxes = document.querySelectorAll(".checkbox_and_label");
+        let boxes = document.querySelectorAll(".checkbox_and_label");
+        boxes.forEach(function(item){
+            let itemID = item.id;
+            // Add the event listener
+            item.addEventListener("contextmenu" , function(e){
+            e.preventDefault();
+            let contextMenu = document.getElementsByClassName("context-menu")[0];
+            contextMenu.style.top = e.clientY + "px";
+            contextMenu.style.left = e.clientX + "px";
+            contextMenu.style.display = "block";
+            contextMenu.id = itemID + "-context-menu";
+            contextMenu.name = itemID;
+            });
+        });
     }
 }
 
