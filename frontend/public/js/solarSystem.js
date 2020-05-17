@@ -292,6 +292,150 @@ async function clearKernels(){
 
 
 /**
+    Handle the data returned from the getPositions request. For each body, create a new AetherBody object and add it to the simulation
+    @param {Object} data - The data returned from the backed in dictionary form
+    @param {Object} new_viz - The simulation that the bodies will be added to
+    @para, {Boolean} primary_sim - A flag indicating whether new_viz is the primary sim or not
+*/
+function createBodiesFromData(data, new_viz, primary_sim){
+    if(data.error){
+        removeLoading();
+        displayError(data);
+        return data;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////
+
+    for(const body of body_meta_data){
+        const body_name = body["body name"];
+        // Check for radius
+        if(body["has radius data"]){
+            radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
+        }
+        else{
+            radii[body_name] = [-1, -1];
+            body_textures[body_name] = '/js/textures/smallparticle.png';
+        }
+        // Check for rotation
+        if(body["has rotation data"]){
+            rotation_data[body_name] = body["rotation data"];
+        }
+        else{
+            rotation_data[body_name] = {
+                "ra": null,
+                "dec": null,
+                "pm": null,
+                "ra_delta": null,
+                "dec_delta": null,
+                "pm_delta": null,
+                "nut_prec_angles": null,
+                "nut_prec_ra": null,
+                "nut_prec_dec": null,
+            };
+        }
+    }
+
+    // Iterate over each body returned by the API call
+    for(const property in data){
+        // Array of [x,y,z] coords in AU
+        var allAdjustedVals = [];
+        // Array of Julian Dates corresponding to each position
+        var allAdjustedTimes = [];
+        // Current Julian Date
+        var cur_jd = new_viz.getJd();
+
+        // Set tail indexes
+        var cur_idx = data[property].cur_time_idx;
+        const tail_start_idx = 0;
+        var tail_end_idx;
+        if(data[property].times.length % 2 == 0){
+            tail_end_idx = data[property].times.length / 2;
+        }
+        else {
+            tail_end_idx = Math.ceil(data[property].times.length / 2);
+        }
+
+        // Iterate over the data for the current body
+        var i = 0;
+        for(pos of data[property].positions){
+            // Convert coordinates in km to au
+            adjustedVals = pos.map(Spacekit.kmToAu);
+            // Convert coords to ecliptic
+            adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
+            let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
+            
+            // Push positions and their corresponding times to arrays
+            allAdjustedVals.push(vector);
+            allAdjustedTimes.push(parseFloat(data[property].times[i]));
+            i++;
+        }
+        
+        // Create object
+        var bodyName = capitalizeFirstLetter(property)
+        var radius;
+
+        // Check for radius data
+        if(radii[property] == [-1, -1]){
+            displayError(property + " HAS NO RADIUS DATA AVAILABLE");
+        }
+
+        // Check rotation data for body
+        var is_rotating = true;
+        if(rotation_data[property].ra == null){
+            displayError(property + " HAS NO ROTATION DATA AVAILABLE" );
+            is_rotating = false; // disable the object's rotation if no rotation data
+        }
+
+        // Create a new space object
+        let body = new_viz.createAetherObject(property, {
+            labelText: bodyName,
+            name: property,
+            textureUrl: body_textures[property],
+            currIndex: cur_idx,
+            radius: radii[property][0],
+            radius_polar: radii[property][1],
+            rotation: is_rotating,
+            hideOrbit: true,
+            positionVectors: allAdjustedVals,
+            ephemUpdate: getPositionData,
+            jdTimeData: allAdjustedTimes,
+            levelsOfDetail: [{
+                threshold: 0,
+                segments: 40,
+            }],
+            rotation: {
+                enable: is_rotating,
+            },
+            ra: rotation_data[property].ra,
+            dec: rotation_data[property].dec,
+            pm: rotation_data[property].pm,
+            ra_delta: rotation_data[property].ra_delta,
+            dec_delta: rotation_data[property].dec_delta,
+            pm_delta: rotation_data[property].pm_delta,
+            nut_prec_angles: rotation_data[property].nut_prec_angles,
+            nut_prec_ra: rotation_data[property].nut_prec_ra,
+            nut_prec_dec: rotation_data[property].nut_prec_dec,
+        });
+
+        // Set globals
+        if(primary_sim){
+            visualizer_list[bodyName] = body;
+        }
+        else{
+            visualizer_list2[bodyName] = body;
+        }
+    }
+    initCheckboxes();
+    if(document.getElementById("divLoadingFrame")){
+        removeLoading();    
+    }
+}
+
+
+
+/**
 	Create an AetherSimulation and add the bodies to the simulation
 	@param {string} wrt - (With Respect To) The object from which the positions are computed in reference to
 	@param {string} targets - Target bodies that will be simulated
@@ -335,297 +479,22 @@ function createNewSim(wrt, targets, jd_delta=default_granularity, unix_epoch_sta
             updateBodyChecklist(data);
 
 			// Retrieve the position data with the specified parameters
-			getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
-				if(data.error){
-					removeLoading();
-					displayError(data);
-					return data;
-				}
-
-				////////////////////////////////////////////////////////////////////////////////////////////
-				///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
-				////////////////////////////////////////////////////////////////////////////////////////////
-
-				for(const body of body_meta_data){
-					const body_name = body["body name"];
-					// Check for radius
-					if(body["has radius data"]){
-						radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
-					}
-					else{
-						radii[body_name] = [-1, -1];
-						body_textures[body_name] = '/js/textures/smallparticle.png';
-					}
-					// Check for rotation
-					if(body["has rotation data"]){
-						rotation_data[body_name] = body["rotation data"];
-					}
-					else{
-						rotation_data[body_name] = {
-							"ra": null,
-							"dec": null,
-							"pm": null,
-							"ra_delta": null,
-							"dec_delta": null,
-							"pm_delta": null,
-							"nut_prec_angles": null,
-							"nut_prec_ra": null,
-							"nut_prec_dec": null,
-						};
-					}
-				}
-
-				// Iterate over each body returned by the API call
-				for(const property in data){
-					// Array of [x,y,z] coords in AU
-					var allAdjustedVals = [];
-					// Array of Julian Dates corresponding to each position
-					var allAdjustedTimes = [];
-					// Current Julian Date
-					var cur_jd = new_viz.getJd();
-
-					// Set tail indexes
-					var cur_idx = data[property].cur_time_idx;
-					const tail_start_idx = 0;
-					var tail_end_idx;
-					if(data[property].times.length % 2 == 0){
-						tail_end_idx = data[property].times.length / 2;
-					}
-					else {
-						tail_end_idx = Math.ceil(data[property].times.length / 2);
-					}
-
-					// Iterate over the data for the current body
-					var i = 0;
-					for(pos of data[property].positions){
-						// Convert coordinates in km to au
-						adjustedVals = pos.map(Spacekit.kmToAu);
-						// Convert coords to ecliptic
-						adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-						let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
-						
-						// Push positions and their corresponding times to arrays
-						allAdjustedVals.push(vector);
-						allAdjustedTimes.push(parseFloat(data[property].times[i]));
-						i++;
-					}
-					
-					// Create object
-					var bodyName = capitalizeFirstLetter(property)
-					var radius;
-
-					// Check for radius data
-					if(radii[property] == [-1, -1]){
-						displayError(property + " HAS NO RADIUS DATA AVAILABLE");
-					}
-
-					// Check rotation data for body
-					var is_rotating = true;
-					if(rotation_data[property].ra == null){
-						displayError(property + " HAS NO ROTATION DATA AVAILABLE" );
-						is_rotating = false; // disable the object's rotation if no rotation data
-					}
-
-					// Create a new space object
-					let body = new_viz.createAetherObject(property, {
-						labelText: bodyName,
-						name: property,
-						textureUrl: body_textures[property],
-						currIndex: cur_idx,
-						radius: radii[property][0],
-						radius_polar: radii[property][1],
-						rotation: is_rotating,
-						hideOrbit: true,
-						positionVectors: allAdjustedVals,
-						ephemUpdate: getPositionData,
-						jdTimeData: allAdjustedTimes,
-						levelsOfDetail: [{
-							threshold: 0,
-							segments: 40,
-						}],
-						rotation: {
-							enable: is_rotating,
-						},
-						ra: rotation_data[property].ra,
-						dec: rotation_data[property].dec,
-						pm: rotation_data[property].pm,
-						ra_delta: rotation_data[property].ra_delta,
-						dec_delta: rotation_data[property].dec_delta,
-						pm_delta: rotation_data[property].pm_delta,
-						nut_prec_angles: rotation_data[property].nut_prec_angles,
-						nut_prec_ra: rotation_data[property].nut_prec_ra,
-						nut_prec_dec: rotation_data[property].nut_prec_dec,
-					});
-
-                    // Set globals
-					if(primary_sim){
-						visualizer_list[bodyName] = body;
-					}
-					else{
-						visualizer_list2[bodyName] = body;
-					}
-				}
-				initCheckboxes();
-				removeLoading();	
-			})
-			.catch(error => {
+			getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {createBodiesFromData(data, new_viz, primary_sim)}).catch(error => {
 				removeLoading();
 				console.error(error);
 			});
-		});
+		}).catch(error => {
+            removeLoading();
+            console.error(error);
+        });
 	}
 	else{
 		// Retrieve the position data with the specified parameters
-		getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
-			if(data.error){
-				displayError(data);
-				return data;
-			}
-
-			////////////////////////////////////////////////////////////////////////////////////////////
-			///////////////////////// GET RADII, ROATION, AND POSITION DATA ////////////////////////////
-			////////////////////////////////////////////////////////////////////////////////////////////
-
-			for(const body of body_meta_data){
-				const body_name = body["body name"];
-				// Check for radius
-				if(body["has radius data"]){
-					radii[body_name] = [body["radius"].map(Spacekit.kmToAu)[0], body["radius"].map(Spacekit.kmToAu)[2]]; // Keep track of equatorial radius and polar radius
-				}
-				else{
-					radii[body_name] = [-1, -1];
-					body_textures[body_name] = '/js/textures/smallparticle.png';
-				}
-				// Check for rotation
-				if(body["has rotation data"]){
-					rotation_data[body_name] = body["rotation data"];
-				}
-				else{
-					rotation_data[body_name] = {
-						"ra": null,
-						"dec": null,
-						"pm": null,
-						"ra_delta": null,
-						"dec_delta": null,
-						"pm_delta": null,
-						"nut_prec_angles": null,
-						"nut_prec_ra": null,
-						"nut_prec_dec": null,
-					};
-				}
-			}
-
-			// Iterate over each body returned by the API call
-			for(const property in data){
-				// Array of [x,y,z] coords in AU
-				var allAdjustedVals = [];
-				// Array of Julian Dates corresponding to each position
-				var allAdjustedTimes = [];
-				// Current Julian Date
-				var cur_jd = new_viz.getJd();
-
-				// Set tail indexes
-				var cur_idx = data[property].cur_time_idx;
-				const tail_start_idx = 0;
-				var tail_end_idx;
-				if(data[property].times.length % 2 == 0){
-					tail_end_idx = data[property].times.length / 2;
-				}
-				else {
-					tail_end_idx = Math.ceil(data[property].times.length / 2);
-				}
-
-				// Iterate over the data for the current body
-				var i = 0;
-				for(pos of data[property].positions){
-					// Convert coordinates in km to au
-					adjustedVals = pos.map(Spacekit.kmToAu);
-					// Convert coords to ecliptic
-					adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-					let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
-					
-					// Push positions and their corresponding times to arrays
-					allAdjustedVals.push(vector);
-					allAdjustedTimes.push(parseFloat(data[property].times[i]));
-					i++;
-				}
-				
-				// Create object
-				var bodyName = capitalizeFirstLetter(property)
-				var radius;
-				if(bodyName == "Sun"){
-					radius = 0.17;
-					//new_viz.createLight(allAdjustedVals[cur_idx]);
-				}
-				else if(bodyName == "Moon"){
-					radius = 0.0005;
-				}
-				else{
-					radius = .08;
-				}
-
-				// Check for radius data
-				if(radii[property] == [-1, -1]){
-					displayError(property + " HAS NO RADIUS DATA AVAILABLE");
-				}
-
-				// Check rotation data for body
-				var is_rotating = true;
-				if(rotation_data[property].ra == null){
-					displayError(property + " HAS NO ROTATION DATA AVAILABLE" );
-					is_rotating = false; // disable the object's rotation if no rotation data
-				}
-
-				// Create a new space object
-				let body = new_viz.createAetherObject(property, {
-					labelText: bodyName,
-					name: property,
-					textureUrl: body_textures[property],
-					currIndex: cur_idx,
-					radius: radii[property][0],
-					radius_polar: radii[property][1],
-					rotation: is_rotating,
-					hideOrbit: true,
-					positionVectors: allAdjustedVals,
-					ephemUpdate: getPositionData,
-					jdTimeData: allAdjustedTimes,
-					levelsOfDetail: [{
-						threshold: 0,
-						segments: 40,
-					}],
-					rotation: {
-						enable: is_rotating,
-					},
-					ra: rotation_data[property].ra,
-					dec: rotation_data[property].dec,
-					pm: rotation_data[property].pm,
-					ra_delta: rotation_data[property].ra_delta,
-					dec_delta: rotation_data[property].dec_delta,
-					pm_delta: rotation_data[property].pm_delta,
-					nut_prec_angles: rotation_data[property].nut_prec_angles,
-					nut_prec_ra: rotation_data[property].nut_prec_ra,
-					nut_prec_dec: rotation_data[property].nut_prec_dec,
-				});
-
-                // Set globals
-				if(primary_sim){
-					visualizer_list[bodyName] = body;
-				}
-				else{
-					visualizer_list2[bodyName] = body;
-				}
-                if(property === "saturn"){
-                    var geometry = new THREE.RingGeometry( 100000, 500000, 64 );
-                    var material = new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide } );
-                    var mesh = new THREE.Mesh( geometry, material );
-                    body._obj.add( mesh );
-                }
-			}
-			initCheckboxes();
-		})
-		.catch(error => {
-			console.error(error);
-		});
+        getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {createBodiesFromData(data, new_viz, primary_sim)}).catch(error => {
+            removeLoading();
+            console.error(error);
+        });
+		
 	}
 	
 	// Make camera controls more fine-grained

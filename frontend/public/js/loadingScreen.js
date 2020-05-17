@@ -89,6 +89,8 @@ function showLoading() {
 // removeLoading() - Remove loading wheel.
 // Requires ECMAScript 6 (any modern browser).
 function removeLoading() {
-    document.body.removeChild(document.getElementById("divLoadingFrame"));
-    document.body.removeChild(document.getElementById("styleLoadingWindow"));
+    if(document.getElementById("divLoadingFrame")){
+        document.body.removeChild(document.getElementById("divLoadingFrame"));
+        document.body.removeChild(document.getElementById("styleLoadingWindow"));
+    }
 };

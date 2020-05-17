@@ -169,126 +169,13 @@ function addClickedBody(bodyName){
             return;
         }
     }
-    getPositionData(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10*4).toString(), "20").then(data => {
-        //console.log(data);
-        if(data.error){
-            console.error(data);
-            displayError(data);
-            return data;
-        }
-        // iterate over each body returned by the API call
-        for(const property in data){
-            // Array of [x,y,z] coords in AU
-            var allAdjustedVals = [];
-            // Array of Julian Dates corresponding to each position
-            var allAdjustedTimes = [];
-            // set tail indexes
-            var cur_idx = data[property].cur_time_idx;
-            const tail_start_idx = 0;
-            var tail_end_idx;
-            if(data[property].times.length % 2 == 0){
-                tail_end_idx = data[property].times.length / 2;
-            }
-            else {
-                tail_end_idx = Math.ceil(data[property].times.length / 2);
-            }
-            // iterate over the data for the current body
-            var i = 0;
-            for(pos of data[property].positions){
-                // convert coordinates in km to au
-                adjustedVals = pos.map(Spacekit.kmToAu);
-                // convert coords to ecliptic
-                adjustedVals2 = Spacekit.equatorialToEcliptic_Cartesian(adjustedVals[0], adjustedVals[1], adjustedVals[2], Spacekit.getObliquity());
-                let vector = new Spacekit.THREE.Vector3(adjustedVals2[0]*unitsPerAu, adjustedVals2[1]*unitsPerAu, adjustedVals2[2]*unitsPerAu);
-                // push positions and their corresponding times to arrays
-                allAdjustedVals.push(vector);
-                allAdjustedTimes.push(parseFloat(data[property].times[i]));
-                i++;
-            }
-            let rotate;
-            let textureUrl;
-            // Create object
-            if(!body_data["has rotation data"]){
-                rotate = {
-                    "ra": null,
-                    "dec": null,
-                    "pm": null,
-                    "ra_delta": null,
-                    "dec_delta": null,
-                    "pm_delta": null,
-                    "nut_prec_angles": null,
-                    "nut_prec_ra": null,
-                    "nut_prec_dec": null,
-                };
-                displayError(lowerName + " HAS NO ROTATION DATA AVAILABLE");
-                textureUrl = '/js/textures/smallparticle.png';
-            }
-            else{
-                rotate = {
-                    "ra": body_data["rotation data"].ra,
-                    "dec": body_data["rotation data"].dec,
-                    "pm": body_data["rotation data"].pm,
-                    "ra_delta": body_data["rotation data"].ra_delta,
-                    "dec_delta": body_data["rotation data"].dec_delta,
-                    "pm_delta": body_data["rotation data"].pm_delta,
-                    "nut_prec_angles": body_data["rotation data"].nut_prec_angles,
-                    "nut_prec_ra": body_data["rotation data"].nut_prec_ra,
-                    "nut_prec_dec": body_data["rotation data"].nut_prec_dec,
-                };
-            }
-
-            
-            if(body_data["has radius data"]){
-                radii[lowerName] = [body_data["radius"].map(Spacekit.kmToAu)[0], body_data["radius"].map(Spacekit.kmToAu)[2]];
-                //console.log(body_textures[lowerName]);
-                textureUrl = body_textures[lowerName];
-            }
-            else{
-                displayError(lowerName + " HAS NO RADIUS DATA AVAILABLE");
-                radii[lowerName] = [-1,-1];
-                textureUrl = '/js/textures/smallparticle.png';
-            }
-            
-            // Create a new space object
-            let body = viz.createAetherObject(lowerName, {
-                labelText: bodyName,
-                name: lowerName,
-                textureUrl: textureUrl,
-                currIndex: cur_idx,
-                radius: radii[lowerName][0],
-                radius_polar: radii[lowerName][1],
-                rotation: true,
-                hideOrbit: true,
-                positionVectors: allAdjustedVals,
-                ephemUpdate: getPositionData,
-                jdTimeData: allAdjustedTimes,
-                levelsOfDetail: [{
-                    threshold: 0,
-                    segments: 40,
-                }],
-                rotation: {
-                    enable: body_data["has rotation data"],
-                },
-                ra: rotate.ra,
-                dec: rotate.dec,
-                pm: rotate.pm,
-                ra_delta: rotate.ra_delta,
-                dec_delta: rotate.dec_delta,
-                pm_delta: rotate.pm_delta,
-                nut_prec_angles: rotate.nut_prec_angles,
-                nut_prec_ra: rotate.nut_prec_ra,
-                nut_prec_dec: rotate.nut_prec_dec,
-            });
-            visualizer_list[bodyName] = body;
-            // Set globals
-        }
-        initCheckboxes();
-        let plus = document.getElementById(bodyName + "-plus");
-        plus.remove();      
-    })
-    .catch(error => {
+    getPositionData(viz.wrt, lowerName, viz.getJd().toString(), viz.getJdDelta(), (viz.getJdDelta()*60*10*4).toString(), "20").then(data => {createBodiesFromData(data, viz, true)}).catch(error => {
+        removeLoading();
         console.error(error);
     });
+        
+    let plus = document.getElementById(lowerName.charAt(0).toUpperCase() + lowerName.slice(1) + "-plus");
+    plus.remove(); 
 }
 
 /**
@@ -299,7 +186,14 @@ function addPlusToCheckboxes(){
         let checkboxes = document.getElementById("content1").getElementsByTagName('input');
         for(let x = 0; x < checkboxes.length; x++){
             if(checkboxes[x].disabled){
+
                 let checkboxName = checkboxes[x].id.split("-")[0];
+
+                // CHECK IF BODY NAME CONTAINS A "-", if so ensure the checkbox name isn't stripped of its "-" character
+                if(checkboxes[x].id.split("-")[2]){
+                    checkboxName = "-" + checkboxes[x].id.split("-")[1];
+                }
+                
                 //check to see if plus exists so we dont add it again
                 if(document.getElementById(checkboxName + "-plus")){
                     return;
