@@ -1,12 +1,2 @@
-.idea/
-backend/.idea/
-backend/*.db
-backend/SPICE/tools/*
-backend/SPICE/kernels/**/*.bsp
-backend/SPICE/kernels/**/*.tls
-backend/SPICE/kernels/**/*.tpc
-backend/SPICE/kernels/**/*.bpc
-backend/SPICE/kernels/**/*.tf
-backend/SPICE/kernels/cumulative_metakernel.tm
+frontend/node_modules/
 backend/__pycache__/
-!backend/SPICE/tools/README_tools.md

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en" style= "width: 100%; height: 100%; background-color:black; overflow-y: hidden; overflow-x: hidden">
+    <head>
+        <!-- Use correct character set. -->
+        <meta charset="utf-8">
+        <!-- Tell IE to use the latest, best version. -->
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+        <!-- Make the app on mobile take up the full browser screen and disable user scaling. -->
+        <meta name="viewport"
+            content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+        
+
+            <link rel="shortcut icon" type="image/png" href="assets/favicon-96x96.png"/>
+
+
+        <title>Aether</title>
+
+		<script src="/spacekit/build/spacekit.js"></script>
+    <script src="/js/loadingScreen.js"></script>
+    <script src="/js/AetherSimulation.js"></script>
+    <script src="/js/AetherObject.js"></script>
+
+         <script>
+            function openForm() {
+              document.getElementById("form-container1").style.display = "block";
+              if(togglePlay){
+                  viz.stop();
+                  if(viz1){
+                      viz1.stop();
+                  }
+              }
+            }
+
+            function closeForm() {
+              document.getElementById("form-container1").style.display = "none";
+                if(togglePlay){
+                    viz.start();
+                    if(viz1){
+                        viz1.start();
+                    }
+                }
+            }
+
+            function openForm2() {
+                document.getElementById("form-container2").style.display = "block";
+                if(togglePlay){
+                    viz.stop();
+                    if(viz1){
+                        viz1.stop();
+                    }
+                }
+            }
+
+            function closeForm2() {
+                document.getElementById("form-container2").style.display = "none";
+                if(togglePlay){
+                    viz.start();
+                    if(viz1){
+                        viz1.start();
+                    }
+                }
+            } 
+
+            function openForm3() {
+              console.log(document.getElementById("myForm"));
+              document.getElementById("myForm").style.display = "block";
+              if(togglePlay){
+                  viz.stop();
+                  if(viz1){
+                      viz1.stop();
+                  }
+              }
+            }
+
+            function closeForm3() {
+              document.getElementById("myForm").style.display = "none";
+                if(togglePlay){
+                    viz.start();
+                    if(viz1){
+                        viz1.start();
+                    }
+                }
+            }
+
+            function openForm4() {
+              // document.getElementById("kclear_form").style.display = "block";
+              if(togglePlay){
+                  viz.stop();
+                  if(viz1){
+                      viz1.stop();
+                  }
+              }
+              const clear = confirm("Are you sure you want to clear all user-uploaded kernels from the server?");
+              if(clear){
+                showLoading();
+                clearKernels().then(response => {
+                  //console.log(parsedJson);
+                  // if(response.status != 200){
+                  //   alert(response.error);
+                  //   displayError(response.error);
+                  //   removeLoading();
+                  // }
+                  // else{
+                    
+                    //updateBodyChecklist(parsedJson);
+                    getAvailableBodies(viz.wrt).then(data => {
+                      alert("Kernel(s) successfully removed!");
+                      updateBodyChecklist(data);
+                      initCheckboxes();
+                      removeLoading();
+                    });
+                  // }
+                })
+              .catch(error => {
+                  console.error(error);
+                });
+              }
+              if(togglePlay){
+                  viz.start();
+                  if(viz1){
+                      viz1.start();
+                  }
+              }
+            }
+
+            function closeForm4() {
+              document.getElementById("kclear_form").style.display = "none";
+                if(togglePlay){
+                    viz.start();
+                    if(viz1){
+                        viz1.start();
+                    }
+                }
+            }
+        </script>
+
+        <script src="/js/three.min.js"></script>
+<!--         <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.2.0/gsap.min.js"></script>
+ -->        <link rel="stylesheet" type="text/css" href="/views/index.css">
+    </head>
+
+    <body>
+        <!-- Main menu div -->
+        <div id="menu">
+
+            <div class="button-holder">
+            	<button class="openbtn" id="openbtn" onclick="openNav1()">Available Bodies</button>
+	            <div id="mySidebar1" class="sidebar">
+	              <div id="topOfSidebar">
+	                <a href="javascript:void(0)" class="closebtn" onclick="closeNav1()" title="close">&minus;</a>
+	                <h3> Visible Bodies</h3>
+	              </div>
+	              <!-- content1 div will contain the nested dropdown checklist, contents are generated by solarSystem.js -->
+	              <div id="content1" class="content1"></div>
+	                <button id="kernel" onclick="openForm3()">Upload New SPK Kernel</button>
+                  <button id="kclear" class="kclear_class" onclick="openForm4()">Clear Uploaded Kernels</button>
+	            </div>
+	            <button class="Ropenbtn" id="Ropenbtn" onclick="openNav2()">Sim Controls</button>
+	            <div id="mySidebar2" class="Rsidebar">
+	              <a href="javascript:void(0)" class="closebtn" onclick="closeNav2()" title="close">&minus;</a>
+	              <div class="slidecontainer">
+	                <h3>Rate Of Time</h3>
+	                <input type="range" min="1" max="100" value="50" class="slider" id="myRange">
+	              </div>
+	              <form class="form-inline">
+	                <input type="text" id="input_time" placeholder="JD/sec">
+	                <button type="button" id="input_time_set">Set</button>
+	                <button type="button" id="real_time">Real Time</button>
+	              </form>
+	              <div class="slidecontainer">
+	                <h3>Tail Length</h3>
+	                <input type="range" min="1" max="100" value="50" class="slider" id="myRange2">
+	              </div>
+	              <form class="form-inline">
+	                <input type="text" id="input_length" placeholder="JD" >
+	                <button type="button" id="input_length_set">Set</button>
+	              </form>
+	              <a><button type="button" class="playbtn" id="start-button">Start/Stop</button></a>
+
+	              <form class="btn_group" action="javascipt:void(0)">
+	                 <button type="button" class="action_btn reset" onclick="openForm()">Reset</button>
+	                 <button type="button" class="action_btn compare" onclick="openForm2()">Compare</button>
+                   <br>
+                     <button type="button" id="pretty_button" style="height: 45px" class="action_btn">Pretty Mode</button>
+                    <button type="button" id="grid_button" style="height: 45px" class="action_btn">Toggle Grid</button>
+	              </form>
+                  
+	            </div>
+	        </div>
+    <!--Context Menu (Hidden by default)-->
+    		<form class="form" id="myForm" enctype="multipart/form-data">SPK File Upload:
+    			<p>Please choose an SPK file to upload</p>
+    			<input type="file" name="file"/>
+            	<input type="submit" value="Upload" id="submit_SPK"/>
+            	<button type="button" class="close-SPK-upload" onclick="closeForm3()" id="cancel">Cancel</button>
+            </form>
+            <!-- <form class="form-popup" style="z-index: 9;" id="kclear_form">Are you sure?
+              <p>Are you sure you want to clear all kernels you've uploaded to the server?</p>
+                  <input type="submit" value="Yes, clear kernels" id="clear_kernels"/>
+                  <button type="button" class="close-SPK-upload" onclick="closeForm4()" id="cancel">Cancel</button>
+            </form> -->
+            <div id="context-menu" class="context-menu">
+              <div id="Zoom" class="context-menu-option">
+                    <label><input type="checkbox" id="zoomToBody" name="zoomTB" value="Zoom to Body" style="display: none;">Zoom To Body</label>
+                </div>
+                <div id="info" class="context-menu-option">
+                	<label><input type="checkbox" id="infoButton" name="infobtn" value="Body info" style="display: none;">Body Info</label>
+                </div>
+            </div>
+        </div>
+        <div id="error-console">
+            <h4 style="color: red; margin: 0 auto;">Error Log:</h5>
+            <br>
+            <ul id="error-list" style="font-family: Helvetica, Ariel, sans-serif">
+            
+            </ul>
+        </div>
+        <!-- Main 3D simulation -->
+        <div id="main-container">
+        </div>
+        <!-- <div id="active_sim"></div> -->
+        <!-- <div class='sim-time'>
+            <h3 id="sim_time"></h3>
+            <h4 id="sim_rate"></h4>
+        </div>  -->
+
+        <!--Form for resetting the sim(hidden by default) -->
+        <div class="form-popup" id="form-container1">
+            <form class="form-container" id="newSimForm">
+            <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
+
+            <label for="wrt" style="color: black">With Respect To</label>
+            <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
+
+            <label for="targets" style="color: black">Targets</label>
+            <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
+
+            <label for="jd_start" style="color: black">Starting Date</label>
+            <input type="text" placeholder="i.e. 01 Jan 2000 12:00:00 UTC" name="jd_start" required>
+             <h5 style="color: black">Granularity</h5>
+              <label for="granularity" style="color: black">(step size in days)</label>
+              <input type="text" placeholder="i.e. 0.0833333 (2 hours per line-segment)" name="granularity">
+            <button type="submit" class="btn" onclick="closeForm()">Create</button>
+            <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+            </form>
+        </div>
+
+        <!--Form for the compare sim button -->
+        <div class="form-popup" id="form-container2">
+            <form class="form-container" id="comparison-form">
+                <h3 style="color: black">Please enter the details of the simulation you would like to create:</h3>
+                <div class="column">
+                    <h5 style="color: black">Primary Simulation</h5>
+                    <label for="wrt" style="color: black">With Respect To</label>
+                    <input type="text" placeholder="i.e. solar system barycenter" name="wrt" required>
+
+                    <label for="targets" style="color: black">Targets</label>
+                    <input type="text" placeholder="i.e. sun+earth+moon" name="targets" required>
+
+                    <label for="jd_start" style="color: black">Starting Date</label>
+                    <input type="text" placeholder="i.e. 01 Jan 2000 12:00:00 UTC" name="jd_start" required>
+
+                </div>
+                <div class="column">
+                    <h5 style="color: black">Secondary Simulation</h5>
+                    <label for="wrt2" style="color: black">With Respect To</label>
+                    <input type="text" placeholder="i.e. solar system barycenter" name="wrt2" required>
+
+                    <label for="targets2" style="color: black">Targets</label>
+                    <input type="text" placeholder="i.e. sun+earth+moon" name="targets2" required>
+
+                    <label for="jd_start2" style="color: black">Starting Date</label>
+                    <input type="text" placeholder="i.e. 01 Jan 2000 12:00:00 UTC" name="jd_start2" required>
+
+                    <h5 style="color: black">Granularity</h5>
+                    <label for="granularity" style="color: black">(step size in days)</label>
+                    <input type="text" placeholder="i.e. 0.0833333 (2 hours per line-segment)" name="granularity">
+
+                    <button type="submit" class="btn" onclick="closeForm2()">Create</button>
+                    <button type="button" class="btn cancel" onclick="closeForm2()">Close</button>
+                </div>
+            </form>
+        </div>
+        <div class="info_panel" id="info_panel1" style="display:none"></div>
+        </div>
+       
+
+       <!--  <div id="comparison1">
+            
+        </div>
+        <div id="comparison2">
+            
+        </div> -->
+        <script src="/js/dropdownFunctions.js"></script>
+        <script src="/js/eventHandlers.js"></script>
+        <script src="/js/solarSystem.js"></script>
+        <script type="text/javascript">
+          //functions to open and close the two side menus
+          function openNav1() {
+          	let sdbr1 = document.getElementById("mySidebar1");
+            sdbr1.style.width = "200px";
+            sdbr1.style.height = "48%";
+            //document.getElementById("main").style.marginLeft = "250px";
+            document.getElementById("openbtn").style.display = "none";
+            //document.getElementById("Ropenbtn").style.top = "40%";
+
+          };
+          function closeNav1() {
+          	let sdbr1 = document.getElementById("mySidebar1");
+            sdbr1.style.width = "0px";
+            sdbr1.style.height = "0px";
+            //document.getElementById("main").style.marginLeft = "0px";
+            document.getElementById("openbtn").style.display = "block";
+            //document.getElementById("Ropenbtn").style.top = "50px";
+          };
+          function openNav2() {
+            document.getElementById("mySidebar2").style.width = "200px";
+            //document.getElementById("main").style.marginLeft = "250px";
+            document.getElementById("Ropenbtn").style.display = "none";
+          };
+          function closeNav2() {
+            document.getElementById("mySidebar2").style.width = "0px";
+            //document.getElementById("main").style.marginLeft = "0px";
+            document.getElementById("Ropenbtn").style.display = "block";
+          };
+          openNav1();
+          openNav2();
+      </script>
+        
+    </body>
+</html>
