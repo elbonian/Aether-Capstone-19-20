@@ -66,13 +66,15 @@ For Linux, install Node.js and npm via snap or a package manager. Instructions c
 
 **LINUX AND MAC USERS, READ THIS:**
 
-**The rest of the installation has been automated. Run `install.sh` in your 
+The rest of the installation has been automated. Run `install.sh` in your 
 terminal to automatically build the backend docker image, create the docker container and 
 install required Node.js packages. After running this script, skip to "Running the Application" 
-below.**
+below.
 
-**WINDOWS USERS, we're sorry but you'll have to do this manually. Please follow the instructions in 
-the next two sections.**
+**WINDOWS USERS**
+
+We're sorry but you'll have to do this manually. Please follow the instructions in 
+the next two sections.
 
 #### Building the Docker Image and Container
 Once docker has been installed on your machine, open a terminal and navigate to the 
@@ -100,10 +102,12 @@ dependencies...
 ## Running the Application
 **LINUX AND MAC USERS, READ THIS:**
 
-**Running the application has been automated. Run `run.sh` in your terminal to start the 
-application, then connect to localhost:8080 from your web browser.**
+Running the application has been automated. Run `run.sh` in your terminal to start the 
+application, then connect to localhost:8080 from your web browser.
 
-**WINDOWS USERS, the application must be run manually, please continue reading this section**
+**WINDOWS USERS:** 
+
+The application must be run manually, please continue reading this section.
 
 ### Start the backend
 To run the backend, use the following command to star the docker container you built 
@@ -174,10 +178,22 @@ be automatically added to the "Visible Bodies" drop-down in the appropriate cate
 if the kernel contains a spacecraft, that object will appear in the Spacecraft drop-down. If an object 
 is a moon of Jupiter, it will appear in the Jupiter drop-down.
 
+A large repository of publicly-available SPK kernels can be found on the 
+[NAIF website](https://naif.jpl.nasa.gov/naif/data.html).
 
-- Creating a new sim
+### Creating a new simulation
+Under the simulation/time controls menu on the lower left, towards the bottom of the menu there is a 
+"Reset" button. This button allows you to create a new simulation at any starting date/time, with any 
+object as the origin. Default bodies to load must be specified, but more can always be added via the 
+"Visible Bodies" menu. See the screenshot below for an example.
+
+### Comparing two simulations
+**TODO**
 - Creating a compare sim
 	- bspidmod info
+
+## Uninstall
+**TODO**
 
 ## Code Walkthrough
 **TODO**

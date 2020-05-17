@@ -6,7 +6,7 @@ function trap_ctrlc ()
 {
 
     echo
-    echo "Ctrl-C caught...performing clean up"
+    echo "Ctrl-C caught... performing clean-up."
 
     sudo docker stop Aether-Backend > /dev/null
     echo "Backend docker container stopped."
