@@ -1,5 +1,0 @@
-\begindata
-KERNELS_TO_LOAD=(
-'latest_leapseconds.tls',
-'de435.bsp')
-\begintext
