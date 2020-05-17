@@ -1,3 +1,2 @@
-node_modules
-backend
-testing.html
+frontend/node_modules/
+backend/__pycache__/
