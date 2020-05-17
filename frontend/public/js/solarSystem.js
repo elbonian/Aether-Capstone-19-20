@@ -161,9 +161,9 @@ function displayError(error){
     }
     else{
         let li = document.createElement("LI"); 
-        let err = document.createTextNode("Error: " + error);
+        let err = document.createTextNode("Note: " + error);
         li.appendChild(err);
-        li.setAttribute("style", "color: red;");
+        li.setAttribute("style", "color: lightgray;");
         document.getElementById("error-list").appendChild(li);
     }
 }
@@ -201,8 +201,6 @@ function canLoadBody(body_name, desired_time){
         return true;
     }
 }
-
-
 
 
 
@@ -428,7 +426,7 @@ function createBodiesFromData(data, new_viz, primary_sim){
         }
     }
     initCheckboxes();
-    if(document.getElementById("divLoadingFrame")){
+    if(document.getElementById("divLoadingFrame") && primary_sim){
         removeLoading();    
     }
 }
@@ -501,6 +499,7 @@ function createNewSim(wrt, targets, jd_delta=default_granularity, unix_epoch_sta
 	new_viz.tuneCameraControls(0.75, 1, 2, 14);
     // Set simulation's onTick method
 	new_viz.onTick = tick;
+    new_viz.getViewer().get3jsCamera().near = 0.00001;
 
 	return new_viz;
 }
