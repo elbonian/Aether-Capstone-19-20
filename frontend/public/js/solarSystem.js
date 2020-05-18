@@ -486,8 +486,11 @@ function createNewSim(wrt, targets, jd_delta=default_granularity, unix_epoch_sta
             console.error(error);
         });
 	}
-	else{
-		// Retrieve the position data with the specified parameters
+	else{ 
+        // SECONDARY SIMULATION
+        // does not issue getAvailableBodies() request, does not create loading screen
+		
+        // Retrieve the position data with the specified parameters
         getPositionData(wrt, targets, new_viz.getJd().toString(), new_viz.getJdDelta(), (new_viz.getJdDelta()*60*10*4).toString(), "20").then(data => {createBodiesFromData(data, new_viz, primary_sim)}).catch(error => {
             removeLoading();
             console.error(error);
@@ -510,14 +513,13 @@ function createNewSim(wrt, targets, jd_delta=default_granularity, unix_epoch_sta
 */
 function runApp(){
 
-
 	/////////////////////////////////
 	///// Default Visualization /////
 	/////////////////////////////////
 
 	// Main visualization object
 	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', default_granularity, Date.now());
-    //viz.createLight();
+
     // Create the HTML div container for the simulation(s) time and rate-of-time
     var time_div = document.createElement("div");
     time_div.setAttribute("class","sim-time");
