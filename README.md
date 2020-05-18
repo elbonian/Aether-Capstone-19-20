@@ -1,6 +1,8 @@
 # Aether-Capstone-19-20
 This repository is for the 2019-2020 CU Boulder Computer Science Capstone project sponsored by NASA/JPL.
 
+![Aether Solar System](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/screenshots/solar_system.png)
+
 ## About Aether
 Aether is an interactive 3D rendition of the solar system which runs inside your web browser. 
 Aether is built using the SPICE system from JPL/NAIF, allowing it to visualize object trajectories 
@@ -28,7 +30,7 @@ To install Aether on your computer, first clone the repository or obtain an arch
 code.
 
 ### Backend Dependencies
-Installation of the backend requires the docker commandline interface. Installing docker depends on 
+Installation of the backend requires the docker command-line interface. Installing docker depends on 
 your OS. 
 
 _Note that docker requires virtualization is enabled within the BIOS._
@@ -155,6 +157,8 @@ but is not currently loaded into the simulation. Click the '+' on the object you
 The name should change to black text once the data has been retrieved. At this point you can view and 
 interact with the object.
 
+![Add Obj to Sim](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/doc_assets/add-to-sim.png)
+
 ### Changing the rate of time and tail length
 The simulation's rate of time is displayed at the top-center of the screen underneath the current date. 
 The rate of time is 0 when the simulation is paused. Within the "Time Controls" menu on the left, either 
@@ -169,6 +173,8 @@ Within the "Visible Bodies" menu, you may right click on any object that is load
 simulation (i.e. if the name's text is black, see the tutorial on adding new objects above). Here 
 you should see options to zoom to the object, or view its info.
 
+![Object Zoom/Info](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/doc_assets/body-info.png)
+
 ### Uploading new binary SPK SPICE kernels
 Within the "Visible Bodies" menu on the left, there is a button titled "Upload New SPK Kernel." 
 Clicking this button will open a prompt. Selecting "Browse" will open a file explorer where you can 
@@ -181,22 +187,139 @@ is a moon of Jupiter, it will appear in the Jupiter drop-down.
 A large repository of publicly-available SPK kernels can be found on the 
 [NAIF website](https://naif.jpl.nasa.gov/naif/data.html).
 
+![Upload SPK Kernel](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/doc_assets/upload-kernel.png)
+
 ### Creating a new simulation
 Under the simulation/time controls menu on the lower left, towards the bottom of the menu there is a 
 "Reset" button. This button allows you to create a new simulation at any starting date/time, with any 
 object as the origin. Default bodies to load must be specified, but more can always be added via the 
 "Visible Bodies" menu. See the screenshot below for an example.
 
+![Create Sim Form](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/doc_assets/create-new-sim.png)
+
 ### Comparing two simulations
-**TODO**
-- Creating a compare sim
-	- bspidmod info
+Comparing two simulations is quite useful for seeing the differences in object trajectories. For 
+instance, comparing two different proposed trajectories for a new mission. In Aether, one may 
+compare two simulations by clicking the "Compare" button towards the bottom of the simulation/time 
+controls menu. A form will then pop up (see screenshot below), allowing users to customize the origin, 
+included objects and start date of each simulation. The specified granularity will be applied to both 
+simulations, and changing the rate of time or tail length affects both as well.
+
+The result is two side-by-side simulations which are synced with respect to camera orientation, rate 
+of time and trajectory tail length. See the 
+[comparison](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/screenshots/clipper_eveega_vs_jup_direct.png)
+of two proposed Europa-Clipper trajectories in the screenshots directory for an example.
+
+![Compare Sim Form](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/doc_assets/compare-sim.png)
+
+#### Comparing two different trajectories with the same SPICE ID
+The example linked above compares the trajectories contained in two different SPK kernels for Europa-Clipper. 
+The issue that arises in these situations is that both objects contain data for the same SPICE ID, which Aether 
+cannot differentiate between. To accomplish this task, one must first modify the SPICE ID for the conflicting 
+object in one of the two kernels before uploading them.
+
+Fortunately, modifying the SPICE ID for an object contained in a binary SPK kernel is easy and can be 
+accomplished using a command-line utility from JPL/NAIF. Download the `bspidmod` program for your OS 
+from NAIF's utilities repository [here](https://naif.jpl.nasa.gov/naif/utilities.html). Afterwards, 
+make the program executable using `chmod` and follow the instructions below...
+
+    ./bspidmod -spki <path-to-SPK>.bsp -idi <object ID to change> -ido <new object ID> -mod target
+
+This will change the object ID specified by _-idi_ within the given SPK kernel to the ID specified by 
+_-ido_. By default, this will not overwrite the given SPK kernel, but instead create a new one with 
+a suffix of "_out".
+
+Here is an example of the same command for a Europa-Clipper kernel. Note that the spacecraft's 
+initial ID was -159 and it was converted to -169. This also changes the name of the object to the 
+specified output ID. After running the command, the file `15F09_EVEE_L220602_A300115_V1_scpse_out.bsp` 
+is generated.
+
+    ./bspidmod -spki 15F09_EVEE_L220602_A300115_V1_scpse.bsp -idi -159 -ido -169 -mod target
 
 ## Uninstall
-**TODO**
+**LINUX AND MAC USERS, READ THIS:**
+
+Uninstalling the application has been automated. Run `uninstall.sh` in your terminal to delete the 
+backend docker container and image.
+
+**WINDOWS USERS:** 
+
+The application must be uninstalled manually, please continue reading this section.
+
+### Delete the docker container
+First, ensure the docker container exists and is stopped. To do this run `sudo docker ps` and make 
+sure that the Aether-Backend container does not appear as running. Then run `sudo docker ps -a` to 
+make sure the container does indeed exist. After verifying these two things, run the following 
+command to delete the container...
+
+    sudo docker rm Aether-Backend
+
+### Delete the docker image
+Next, delete the docker image...
+
+    sudo docker rmi aether-backend:v1
+    
+After both the container and image have been removed, you may delete your local copy of the 
+repository.
+
 
 ## Code Walkthrough
+
+### Backend
+
+The primary component of the backend is a REST API which serves trajectory data (position 
+coordinates and their corresponding times) and meta-data for available bodies (radii, mass, rotation 
+equations, valid time ranges) to the frontend. It also handles uploading new SPK kernels. Below is a 
+brief description of each endpoint within `aether-rest-server.py` and other files which aid in 
+its execution.
+
+#### API Endpoints
+This is a brief description of each API endpoint, see the docstrings and comments within 
+`aether-rest-server.py` for further details.
+
+##### Positions
+
+<u>URL Format:</u> 
+
+>/api/positions/\<string:ref_frame>/\<string:targets>/\<string:curVizJd>/\<string:curVizJdDelta>/\<string:tailLenJd>/\<int:validSeconds>
+
+<u>Methods:</u>
+
+>GET
+
+<u>Description:</u>
+
+This endpoint is used by the frontend for obtaining the positions of each target at a 
+specified time, with a specified range both prior to, and after that time. Multiple targets may be 
+passed in the "targets" field by separating their names or IDs with a '+'.
+
+<u>Example Calls:</u>
+
+This call is an example of an initial positions request that the frontend performs on initialization. 
+Here, curVizJdDelta represents the current time. The reference frame is "solar system barycenter," 
+the granularity is 0.08333 days and the tail length is 200 days.
+
+    http://0.0.0.0:5000/api/positions/solar system barycenter/sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon/2458988.40703/0.08333333333/200/20
+    
+This call is an example of an update request for a single object. Here, the tail length is 0 days 
+because only future data is needed.
+
+    http://0.0.0.0:5000/api/positions/solar system barycenter/earth/2458989.40703/0.08333333333/0/5
+    
+##### Available Bodies
 **TODO**
 
-- backend
-- frontend
+##### SPK Upload
+**TODO**
+
+##### SPK Clear
+**TODO**
+
+#### Other files
+**TODO**
+
+- AetherBodies
+- SPKParser
+- MetakernelWriter
+
+### Frontend
