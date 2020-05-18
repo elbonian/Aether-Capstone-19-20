@@ -563,4 +563,5 @@ function ZoomToBody(body){
     viz.getViewer().followObject(visualizer_list[body] , [0, 0, 0]);
     viz.getViewer().get3jsCamera().position.set(0,0,(unitsPerAu / 150));//visualizer_list[body]._obj.position.x, visualizer_list[body]._obj.position.y, visualizer_list[body]._obj.position.z);
     viz.getViewer().get3jsCameraControls().update();
+    viz.tuneCameraControls(0.75, 1, 2, 14);
 }
