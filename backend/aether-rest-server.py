@@ -7,7 +7,6 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from signal import signal, SIGINT
-from argparse import ArgumentParser
 #import re
 import jsonpickle
 import numpy as np
@@ -255,19 +254,6 @@ def returnResponse(response, status):
     response_pickled = jsonpickle.encode(response)
 
     return Response(response=response_pickled, status=status, mimetype="application/json")
-
-
-def parse_args():
-
-    parser = ArgumentParser(description="The backend REST server for Aether, a CU - Boulder computer science senior "
-                                        "capstone project sponsored by NASA/JPL.")
-
-    parser.add_argument('--debug', help="If specified, run the server using the built in Flask WSGI server.",
-                        action="store_true", default=False)
-
-    parsed_args = parser.parse_args()
-
-    return parsed_args
 
 
 @app.route('/api/positions/<string:ref_frame>/<string:targets>/<string:curVizJd>/<string:curVizJdDelta>/<string:tailLenJd>/<int:validSeconds>', methods=['GET'])
@@ -704,8 +690,5 @@ spice.furnsh("./SPICE/kernels/cumulative_metakernel.tm")
 
 signal(SIGINT, exitNicely)
 
-# args = parse_args()
-#
-# if args.debug:
-#     # start the server
-#     app.run(host="0.0.0.0", port=5000, threaded=False)
+
+# app.run(host="0.0.0.0", port=5000, threaded=False)

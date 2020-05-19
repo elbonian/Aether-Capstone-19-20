@@ -78,19 +78,21 @@ below.
 We're sorry but you'll have to do this manually. Please follow the instructions in 
 the next two sections.
 
+_Note: docker commands may require super-user/administrator privileges_
+
 #### Building the Docker Image and Container
 Once docker has been installed on your machine, open a terminal and navigate to the 
 `Aether-Capstone-19-20` directory. Run the following commands to build the backend docker image...
 
     cd backend/
-    sudo docker build -t aether-backend:v1 .
+    docker build -t aether-backend:v1 .
 
 _Note: Building the docker image may take ~15 minutes depending on your internet speed. This is 
 because the docker must download approximately 3 GB of SPICE kernels from JPL/NAIF._
 
 After the image is finished being built, run the following command to create the container...
 
-    sudo docker create -it --name="Aether-Backend" -p 5000:5000 aether-backend:v1
+    docker create -it --name="Aether-Backend" -p 5000:5000 aether-backend:v1
 
 #### Installing Frontend Node Packages
 Once Node.js and npm are installed on your computer, once again open a terminal and navigate to 
@@ -115,7 +117,7 @@ The application must be run manually, please continue reading this section.
 To run the backend, use the following command to star the docker container you built 
 previously...
 
-    sudo docker start Aether-Backend
+    docker start Aether-Backend
 
 ### Start the frontend
 From the `Aether-Capstone-19-20` directory, run the following command to start the frontend...
@@ -128,7 +130,7 @@ browser.
 ### Stopping the application
 To stop the backend docker container, run the following command...
 
-    sudo docker stop Aether-Backend
+    docker stop Aether-Backend
     
 To stop the Node.js web server, simply use `Ctrl+C` from the terminal where the Node server is 
 running.
@@ -141,7 +143,7 @@ may break the application. A familiarity with docker is strongly recommended for
 To view the current log of API requests within the backend, run the following command from a 
 separate terminal...
 
-    sudo docker attach Aether-Backend
+    docker attach Aether-Backend
 
 To modify files on the backend, you must rebuild the image and container after modifying the files 
 locally. See installation instructions above for the corresponding commands.
@@ -212,7 +214,7 @@ of two proposed Europa-Clipper trajectories in the screenshots directory for an 
 
 ![Compare Sim Form](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/doc_assets/compare-sim.png)
 
-#### Comparing two different trajectories with the same SPICE ID
+### Comparing two different trajectories with the same SPICE ID
 The example linked above compares the trajectories contained in two different SPK kernels for Europa-Clipper. 
 The issue that arises in these situations is that both objects contain data for the same SPICE ID, which Aether 
 cannot differentiate between. To accomplish this task, one must first modify the SPICE ID for the conflicting 
@@ -247,17 +249,17 @@ backend docker container and image.
 The application must be uninstalled manually, please continue reading this section.
 
 ### Delete the docker container
-First, ensure the docker container exists and is stopped. To do this run `sudo docker ps` and make 
-sure that the Aether-Backend container does not appear as running. Then run `sudo docker ps -a` to 
+First, ensure the docker container exists and is stopped. To do this run `docker ps` and make 
+sure that the Aether-Backend container does not appear as running. Then run `docker ps -a` to 
 make sure the container does indeed exist. After verifying these two things, run the following 
 command to delete the container...
 
-    sudo docker rm Aether-Backend
+    docker rm Aether-Backend
 
 ### Delete the docker image
 Next, delete the docker image...
 
-    sudo docker rmi aether-backend:v1
+    docker rmi aether-backend:v1
     
 After both the container and image have been removed, you may delete your local copy of the 
 repository.
@@ -273,27 +275,31 @@ equations, valid time ranges) to the frontend. It also handles uploading new SPK
 brief description of each endpoint within `aether-rest-server.py` and other files which aid in 
 its execution.
 
+---
+
 #### API Endpoints
 This is a brief description of each API endpoint, see the docstrings and comments within 
 `aether-rest-server.py` for further details.
 
-##### Positions
+#### Positions
 
-<u>URL Format:</u> 
+URL Format: 
 
 >/api/positions/\<string:ref_frame>/\<string:targets>/\<string:curVizJd>/\<string:curVizJdDelta>/\<string:tailLenJd>/\<int:validSeconds>
 
-<u>Methods:</u>
+Methods:
 
 >GET
 
-<u>Description:</u>
+Description:
 
-This endpoint is used by the frontend for obtaining the positions of each target at a 
-specified time, with a specified range both prior to, and after that time. Multiple targets may be 
-passed in the "targets" field by separating their names or IDs with a '+'.
+This endpoint serves position and time data to the frontend for visualization. It is called when the frontend
+makes a GET request to the above URL using the specified params. This function can return data for either a single
+body/target or multiple. In the case of multiple targets, they should be passed as either names or NAIF IDs
+separated by a '+' (e.g. "sun+earth+499+jupiter+europa+pluto+904"). Case does not matter since each target is
+converted to lower case by the script. See the source code for more info on what each parameter means.
 
-<u>Example Calls:</u>
+Example Calls:
 
 This call is an example of an initial positions request that the frontend performs on initialization. 
 Here, curVizJdDelta represents the current time. The reference frame is "solar system barycenter," 
@@ -306,20 +312,134 @@ because only future data is needed.
 
     http://0.0.0.0:5000/api/positions/solar system barycenter/earth/2458989.40703/0.08333333333/0/5
     
-##### Available Bodies
-**TODO**
+Example Return:
 
-##### SPK Upload
-**TODO**
+Positions are in km from ref_frame, times are in JD.
 
-##### SPK Clear
-**TODO**
+>{"earth": {"cur_time_idx": 0, "info": "Positions (x,y,z) and times (JD) of '
+ 'Earth w.r.t. Solar system barycenter", "positions": 
+ [[-78523771.55936542, -118193740.2804119, -51227083.643394925],
+ [-78343246.468999, -118295574.65418445, -51271230.094331175],
+ [-78162566.13038987, -118397171.82165949, -51315273.85150755],
+ [-77981730.92179076, -118498531.57159914, -51359214.822105244],
+ [-77800741.22212164, -118599653.6933881, -51403052.91353538]], 
+ "times": [2458989.40703, 2458989.4903633, 2458989.5736967,
+ 2458989.65703, 2458989.7403633]}}
 
-#### Other files
-**TODO**
+#### Available Bodies
+URL Format: 
 
-- AetherBodies
-- SPKParser
-- MetakernelWriter
+>/api/available-bodies/\<string:ref_frame>
+
+Methods:
+
+>GET
+
+Description:
+
+This endpoint serves metadata about the bodies that the backend has loaded. It is called when the frontend makes
+a GET request to the above URL with the specified param. This endpoint is called by the frontend whenever a new
+simulation is created. It returns a list of dictionaries (one for each body). Each dictionary specifies the body
+name, NAIF ID, valid time ranges, whether or not it is default or uploaded by the user and the body's approx
+minimum and maximum speeds (w.r.t ref_frame). Along with that data it also specifies whether or not the body has mass, 
+rotation and radius data. If any of these are true for a body, the dictionary contains keys for each.
+
+Example Calls:
+
+This call returns body metadata for each of the bodies loaded from the backend's SPICE kernels. Min-max speeds are 
+calculated with respect to the Solar System barycenter.
+
+    http://0.0.0.0:5000/api/available-bodies/solar system barycenter
+
+Example Return:
+
+Radii are in km, mass is kg, speeds are km/sec. Note that this is just one dictionary from the list.
+
+>{
+'body name': 'mars',
+'category': 'mars',
+'has mass data': True,
+'has radius data': True,
+'has rotation data': True,
+'is uploaded': False,
+'mass': 6.416908682663215e+23,
+'max speed': 26.409686994581353,
+'min speed': 21.974733146673085,
+'radius': [3396.19, 3396.19, 3376.2],
+'rotation data': {'dec': 52.8865,
+                  'dec_delta': -0.0609,
+                  'pm': 176.63,
+                  'pm_delta': 350.89198226,
+                  'ra': 317.68143,
+                  'ra_delta': -0.1061},
+'spice id': 499,
+'valid times': [['1900-01-04 00:00:41.184000',
+                 '2100-01-01 00:01:07.183000']]
+}
+
+#### SPK Upload
+URL Format: 
+
+>/api/spk-upload/\<string:ref_frame>
+
+Methods:
+
+>POST
+
+Description:
+
+This endpoint allows users to upload new SPICE SPK kernels to the backend. It is called when the frontend makes
+a POST request to the above URL with the specified param. This function simply obtains the uploaded file, makes
+sure it's valid, and then registers it with the SPICE subsystem and AetherBodies.
+
+Note that there is only one URL param (ref_frame), although this endpoint also requires that the request has a 
+file part. The ref_frame arg is used for returning min-max speeds for the new bodies so that the frontend does 
+not have to call available-bodies again.
+
+The endpoint is called similar to available-bodies above. The return format is the same as available bodies, but 
+the returned list only has dictionaries for the new bodies added from the uploaded SPK kernel.
+
+#### SPK Clear
+URL Format: 
+
+>/api/spk-clear/
+
+Methods:
+
+>GET
+
+Description:
+
+This endpoint clears all uploaded SPK kernels from the backend. It takes no parameters and returns a list of 
+strings. Each string is the name of a body which was removed (the bodies that were uploaded, and not present 
+in the default kernel set).
+
+---
+
+#### Other backend files
+
+##### AetherBodies.py
+
+This file holds the AetherBodies class which acts as a store of all the known objects in the backend of Aether. 
+A dictionary holds metadata of each body that trajectory data can be obtained for. A single global instance of this 
+class is instantiated by the REST server. It is used for checking the validity of targets passed to the REST server 
+from the frontend, keeping track of valid time ranges for ephemeris, and providing data to the available-bodies endpoint 
+which is used to populate the bodies drop-down on the frontend. Each object in the dictionary represents a valid body 
+stored in one or more of the SPICE kernels. These kernels are located in the `backend/SPICE/kernels` directory and data
+about each body and it's valid time ranges is obtained by using the command-line utility brief. Output from
+brief is parsed using the SPKParser class.
+
+##### SPKParser.py
+
+This file contains the SPKParser class. It is responsible for getting the body names, IDs and valid time ranges for 
+each body contained in a binary SPK kernel. It has one method, parse, which takes a path to a binary SPK and returns 
+a list of dictionaries. It uses the JPL/NAIF command-line utility `brief` to obtain metadata from the SPK kernel.
+
+##### MetakernelWriter.py
+
+This file contains the MetakernelWriter class which handles creation of a metakernel file. It is called by the REST 
+server on initialization to create the metakernel file based on all of the SPICE kernels (both default and uploaded).
+It has one method, write, which simply traverses the default and user_uploaded directories of SPICE kernels and adds 
+each path to the metakernel file. This class is created and run once when the REST server starts.
 
 ### Frontend
