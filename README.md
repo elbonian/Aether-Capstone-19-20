@@ -3,6 +3,24 @@ This repository is for the 2019-2020 CU Boulder Computer Science Capstone projec
 
 ![Aether Solar System](https://github.com/MattM-CU/Aether-Capstone-19-20/blob/master/screenshots/solar_system.png)
 
+## Table of Contents
+
+[About](#about-aether)
+
+[System Requirements](#recommended-system-requirements) 
+
+[Installation](#installation)
+
+[Running the Application](#running-the-application)
+
+[Tutorials](#tutorials)
+
+[Uninstall](#uninstall)
+
+[Code Walkthrough](code-walkthrough)
+
+[Attribution](#attribution)
+
 ## About Aether
 Aether is an interactive 3D rendition of the solar system which runs inside your web browser. 
 Aether is built using the SPICE system from JPL/NAIF, allowing it to visualize object trajectories 
