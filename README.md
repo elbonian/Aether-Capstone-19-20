@@ -70,7 +70,7 @@ For Linux, install Node.js and npm via snap or a package manager. Instructions c
 
 The rest of the installation has been automated. Run `install.sh` in your 
 terminal to automatically build the backend docker image, create the docker container and 
-install required Node.js packages. After running this script, skip to "Running the Application" 
+install required Node.js packages. After running this script, skip to [Running the Application](#running-the-application) 
 below.
 
 **WINDOWS USERS**
