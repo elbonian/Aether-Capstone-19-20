@@ -523,8 +523,8 @@ This amazing library aided us in creating our 3D space environment by abstractin
 
 ### THREE.js - https://threejs.org/
 
-This 3D graphics library provided us finer control over our 3D environment, and allowed us to extend the Spacekit.js for our specific purposes.
+This 3D graphics library provided us finer control over our 3D environment, and allowed us to extend Spacekit.js for our specific purposes.
 
 ### WebGL - https://get.webgl.org/
 
-This is the low-level framework and specification that allows for 3D graphics to be rendered in a browser. 
+This framework/specification allows for 3D graphics to be rendered inside a browser, which made it possible for us to create Aether as a webapp. 

@@ -1,0 +1,70 @@
+CU Boulder CS Capstone - NASA/JPL Group (Aether)
+Spring 2020
+Maintainer: Aether
+
+
+This file contains a list of issues and bugs that we were unable to fix before delivering the application.
+
+The issues section contains problems that arise from poor design.
+
+The bugs section contains problems that are due to code mistakes. The root causes of these are mostly unknown.
+
+
+
+//////////////////////////////////////////////////
+///////////////////// Issues /////////////////////
+//////////////////////////////////////////////////
+
+
+FRONTEND
+
+* Large memory consumption:
+    * AetherObjects are not bounded in how much data they get from the backend. If a simulation has many objects and it has been progressing for a long time, your browser may run out of memory.
+    * There are several pieces of data that is replicated unecessarily
+    * JavaScript does not provide mechanisms for manually freeing memory; this application relies on the JavaScript garbage collector to free memory.
+
+* Possibility for objects to get out of sync if the backend doesn't return position requests promptly
+    * An AetherObject can get out of sync with its fellow AetherObjects if it is waiting for data while its companions have their data.
+    * This breaks the simulation, and it should be reloaded
+    * To avoid this in practice, keep the rate-of-time from being too high if there are many objects in the simulation.
+
+* Some errors are not reported to the user - silent failure
+    * When the backend returns a 500 error, the frontend does not alert the user
+
+* The HTML is not robust to different screen sizes/ratios
+    * The application is likely unusable by mobile devices
+    * The UI will likey look weird on 4k screens
+    * The UI may be unusable on short screens
+
+* The camera sync in the compare simulation functionality can be restrictive
+    * It's impossible to get a close up view of two objects unless they are at or near the same (x,y,z) coordinate in the scene.
+
+
+BACKEND
+
+* Only the eight planets and Pluto use nutation and precession in their rotation
+    * Most natural objects have nut_prec_ra, nut_prec_dec, and nut_prce_pm, but not nutation_prec_angles, so these quantities are not used in the rotation.
+    * The nut_prec_angles from bodies' associated primary barycenter need to be used
+
+* The backend worker process can timeout when the user uploads a large SPK kernel
+    * This causes the frontend to hang because the backend doesn't return anything when timing out
+
+
+
+//////////////////////////////////////////////////
+////////////////////// Bugs //////////////////////
+//////////////////////////////////////////////////
+
+
+FRONTEND
+
+* Neptune's rotation is broken
+
+* Spacecraft with NAIF id's starting with "-" can interfere with the dropdown functionality
+
+
+BACKEND
+
+* Starting simulations with a WRT set to certain bodies causes the available-bodies request to fail
+    * Mars, Jupiter, Jupiter's moons, Saturn, Saturn's moons, Uranus, Uranus's moons, Neptune, Neptune's moons, Pluto, and Pluto's moons all suffer from this
+    * Sun, Mercury, Venus, Earth, moon, and all barycenters do not suffer from this bug

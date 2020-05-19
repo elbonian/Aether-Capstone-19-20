@@ -519,7 +519,7 @@ function runApp(){
 	/////////////////////////////////
 
 	// Main visualization object
-	viz = createNewSim('solar system barycenter', 'sun', default_granularity, Date.now());
+	viz = createNewSim('solar system barycenter', 'sun+mercury+venus+earth+mars+jupiter+saturn+uranus+neptune+pluto+moon', default_granularity, Date.now());
 
     // Create the HTML div container for the simulation(s) time and rate-of-time
     var time_div = document.createElement("div");

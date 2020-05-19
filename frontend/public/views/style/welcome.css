@@ -54,15 +54,14 @@ body {
 }
 
 .aether{
-  font-family: "Nasalization";
-  font-size: 80px;
   position: relative;
   color: red;
   opacity: 1;
-  top: 28%;
-  /*left: 36%;*/
-  text-align: center;
   transition: all 1s ease 2s;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
 }
 
 .welcome-section.content-hidden .content-wrap .fly-in-text li { opacity: 0; }
