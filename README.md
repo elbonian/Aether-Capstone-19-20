@@ -504,11 +504,11 @@ This directory houses the Spacekit.js library that our application uses to aid i
     3) An `"api/positions"` request is made to the backend. The backend returns a list of `(x,y,z)` coordinates for the Sun, eight planets, Pluto, and the moon.
     4) For each body in the returned data, an *AetherObject* is created and added to the *AetherSimulation* object.
     5) Finally, an HTML object is created to display the simulation’s time and rate-of-time properties to the user.
-* The user can then use the application however they’d like.
-* The user clicks anything inside the two menus.
+* The user can then use the simulation however they’d like:
+* The user clicks anything inside the two menus:
     1) `eventHandlers.js` handles the user’s input and invokes necessary functions contained in `solarSystem.js` and `dropdownFunctions.js`.
-* The *AetherObjects* update their position lists
+* The *AetherObjects* update their position lists:
     1) When there is 10 real seconds of time left before the object reaches the end or beginning of its position list, it uses the `"api/positions"` endpoint.
     2) Once data is returned, the object updates its members.
     3) __WARNING__: The threshold of 10 seconds was selected to give the backend enough time to respond. If there are too many objects in the simulation, or if time in the simulation is passing too quickly, there is a chance objects can get out of sync.
-* The user exits the application.
+* The user exits the application
