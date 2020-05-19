@@ -22,7 +22,6 @@ class AetherObject extends Spacekit.SphereObject {
         this.isUpdating = false;
         this.name = "newBody";
         this.update_threshold = 5;
-        this.update_threshold2 = 0;
         this.wrt = null;
         this.ra = 0;
         this.dec = 0;
@@ -215,9 +214,6 @@ class AetherObject extends Spacekit.SphereObject {
         this.jdTimeData = this._options.jdTimeData;
         this.name = this._options.name;
         this.ephemUpdate = this._options.ephemUpdate;
-
-        // this.update_threshold = Math.ceil(this.positionVectors.length * (1/2));
-        // this.update_threshold2 = this.positionVectors.length - this.update_threshold;
 
         this.update_threshold = 10; // give body 10 seconds to update its ephemeris
 

@@ -443,3 +443,69 @@ It has one method, write, which simply traverses the default and user_uploaded d
 each path to the metakernel file. This class is created and run once when the REST server starts.
 
 ### Frontend
+The frontend component of this application consists of a Node webserver and several HTML and Javascript files that are rendered by a browser. The Node server is started and handled by the `/run.sh` script, so this section will focus on the various Javascript and HTML files that facilitate the 3D simulation.
+
+---
+
+#### Main Frontend Files
+
+##### server.js
+
+This is the main script that starts the Node.js webserver.
+
+##### public/js/solarSystem.js
+
+This is the main JavaScript file that initiates the default simulation. It also provides function definitions that are used to create new simulations, fetch data from the backend, and add objects to the simulation. These functions are used by `eventHandlers.js`, `dropdownFunctions.js` and `AetherObject.js`. In addition, this file defines global constants and variables that are used throughout the program.
+
+##### public/js/dropdownFunctions.js
+
+This file contains definitions of functions that operate on the dynamic dropdown checklist in the "Available Bodies" menu. These operations include populating the dropdown, updating it, adding bodies dynamically, zooming the camera to bodies, and pulling up information panels. These functions are used by `eventHandlers.js`.
+
+##### public/js/eventHandlers.js
+
+This file contains event listeners that handler user input on both UI menus. These event handlers are responsible for executing the necessary functions when a use clicks a button, moves a slider, or submits a form. This file uses functions in `solarSystem.js` and `dropdownFunctions.js`.
+
+##### public/js/AetherObject.js
+
+This file contains the class definition for an *AetherObject*, which extends the Spacekit.js class *SphereObject*. These objects represent the individual bodies inside of the simulation.
+
+##### public/js/AetherSimulation.js
+
+This file contains the class definition for an *AetherSimulation*, which extends the Spacekit.js class *Simulation*. This object represents an individual simulation, and is responsible for creating the 3D scene, keeping track of the passage of time, and managing each of its *AetherObject(s)*.
+
+##### public/views/welcome.html
+
+This file contains the HTML for the splash screen that the user sees upon loading the application. It is responsible for the welcome animation and for allowing the user to launch the simulation.
+
+##### public/views/index.html
+
+This file contains the HTML for the main UI and simulation(s). It sources all of the necessary JavaScript files and ultimately kicks off the loading of the simulation(s).
+
+##### public/js/three.min.js
+
+This file contains a minimum build of the THREE.js graphics library that is used by both Spackekit.js and our application to facilitate 3D animation. This library is a JavaScript wrapper for WebGL.
+
+##### spacekit/
+
+This directory houses the Spacekit.js library that our application uses to aid in space scene and simulation creation. It uses THREE.js to create 3D space environments.
+
+#### Control Flow
+
+* Application start:
+    1) The application begins by serving `welcome.html`, which displays a splash screen and welcomes the user to the application.
+    2) After clicking the “Launch” button, the browser loads `index.html`, which is responsible for creating the basic user interface and sourcing all of the necessary Javascript files.
+    3) `solarSystem.js` is then sourced, kicking off the creation of the default simulation. It first establishes global constants and variables that are used throughout the program, and then gives some function definitions before making API requests.
+* Simulation creation:
+    1) At the end of `solarSystem.js` an *AetherSimulation* object is initialized.
+    2) Once initialized, the `“api/available-bodies”` endpoint is used to get details about what objects are available from the backend, what data is available for that object, and what time range that data is valid for.
+    3) An `"api/positions"` request is made to the backend. The backend returns a list of `(x,y,z)` coordinates for the Sun, eight planets, Pluto, and the moon.
+    4) For each body in the returned data, an *AetherObject* is created and added to the *AetherSimulation* object.
+    5) Finally, an HTML object is created to display the simulation’s time and rate-of-time properties to the user.
+* The user can then use the application however they’d like.
+* The user clicks anything inside the two menus.
+    1) `eventHandlers.js` handles the user’s input and invokes necessary functions contained in `solarSystem.js` and `dropdownFunctions.js`.
+* The *AetherObjects* update their position lists
+    1) When there is 10 real seconds of time left before the object reaches the end or beginning of its position list, it uses the `"api/positions"` endpoint.
+    2) Once data is returned, the object updates its members.
+    3) __WARNING__: The threshold of 10 seconds was selected to give the backend enough time to respond. If there are too many objects in the simulation, or if time in the simulation is passing too quickly, there is a chance objects can get out of sync.
+* The user exits the application.
