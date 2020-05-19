@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-# this function is called when Ctrl-C is sent
+# this function is called when Ctrl-C (SIGINT -- 2)
 function trap_ctrlc ()
 {
 
@@ -11,6 +11,7 @@ function trap_ctrlc ()
     sudo docker stop Aether-Backend > /dev/null
     echo "Backend docker container stopped."
     
+    # logic from: https://stackoverflow.com/questions/3043978/
     if ps -p "$NODE_PID" > /dev/null; then
    		kill -INT "$NODE_PID"
    		echo "Node server stopped"
@@ -22,8 +23,9 @@ function trap_ctrlc ()
 
 }
 
-# initialise trap to call trap_ctrlc function
-# when signal 2 (SIGINT) is received
+# logic from: https://stackpointer.io/script/how-to-catch-ctrl-c-in-shell-script/248/
+
+# initialise trap to call trap_ctrlc function when signal 2 (SIGINT) is received
 trap "trap_ctrlc" 2
 
 echo "Starting backend..."

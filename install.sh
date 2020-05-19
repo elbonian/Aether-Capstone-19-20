@@ -24,15 +24,22 @@ else
   exit 3
 fi
 
-# TODO: Notify user of install time and get confirmation here
+echo "Installing Aether will download ~3 GB of data."
+echo "This may take 10-15 mins depending on your internet speed..."
 
-sudo docker build -t aether-backend:v1 ./backend
 
-sudo docker create -it --name="Aether-Backend" -p 5000:5000 aether-backend:v1
-
-npm --prefix ./frontend install
-
-echo "Successfully installed Aether..."
+# logic from https://stackoverflow.com/questions/1885525
+read -p "Are you sure? (y/n)" -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  sudo docker build -t aether-backend:v1 ./backend
+  
+  sudo docker create -it --name="Aether-Backend" -p 5000:5000 aether-backend:v1
+  
+  npm --prefix ./frontend install
+  
+  echo "Successfully installed Aether..."
+fi
 
 exit 0
 

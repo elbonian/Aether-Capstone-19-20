@@ -272,9 +272,7 @@ def get_object_positions(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd,
             represents the initial time, curVizJdDelta specifies the granularity in JD between each position coordinate,
             tailLenJd specifies the amount of data to gather before curVizJd (also in JD), validSeconds specifies the
             amount of data to gather past curVizJd. validSeconds assumes a framerate of 60 fps, and uses that, along
-            with curVizJdDelta to determine how many positions past curVizJd to obtain. Note, however, that the frontend
-            always passes 1/12 as curVizJdDelta, so validSeconds is slightly misleading. Still, the functionality to
-            support any rate of time/position granularity from the frontend exists.
+            with curVizJdDelta to determine how many positions past curVizJd to obtain.
 
     Params: ref_frame <str> -- the name or NAIF ID of the observing body for which target positions reference. This
                 basically represents the origin of the coordinate system on the frontend (e.g. solar system barycenter,
@@ -288,8 +286,7 @@ def get_object_positions(ref_frame, targets, curVizJd, curVizJdDelta, tailLenJd,
                 position coordinate. Initially this was meant to be the rate of time on the frontend (the time between
                 ticks, which usually occur 60 times per second, or whatever the fps of the viz is). However, to avoid
                 making a new API call every time a user changes the rate of time, the frontend simply changes the rate
-                at which the positions list is traversed. Currently, the frontend always uses 1/12 (2 hours) as this
-                value, though any granularity is supported by this endpoint.
+                at which the positions list is traversed.
             tailLenJd <str> -- the length of the trajectory tail (amount of JD prior to curVizJd). This determines the
                 beginning positions/times in the returned data. See Main idea above for more info.
             validSeconds <int> -- the amount of position data to gather past curVizJd. Higher values provide more future
