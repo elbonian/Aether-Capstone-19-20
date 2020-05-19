@@ -512,3 +512,19 @@ This directory houses the Spacekit.js library that our application uses to aid i
     2) Once data is returned, the object updates its members.
     3) __WARNING__: The threshold of 10 seconds was selected to give the backend enough time to respond. If there are too many objects in the simulation, or if time in the simulation is passing too quickly, there is a chance objects can get out of sync.
 * The user exits the application
+
+## Attribution
+
+The completion of this application would have been impossible without several amazing free and open-source libraries/frameworks. Thank you to the developers and communities who create and continue to maintain these invaluable tools.
+
+### Spacekit.js - https://typpo.github.io/spacekit/
+
+This amazing library aided us in creating our 3D space environment by abstracting much of the THREE.js functionality into a high-level and easy-to-use API.
+
+### THREE.js - https://threejs.org/
+
+This 3D graphics library provided us finer control over our 3D environment, and allowed us to extend the Spacekit.js for our specific purposes.
+
+### WebGL - https://get.webgl.org/
+
+This is the low-level framework and specification that allows for 3D graphics to be rendered in a browser. 
