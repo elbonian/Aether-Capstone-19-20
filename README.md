@@ -527,4 +527,8 @@ This 3D graphics library provided us finer control over our 3D environment, and 
 
 ### WebGL - https://get.webgl.org/
 
-This framework/specification allows for 3D graphics to be rendered inside a browser, which made it possible for us to create Aether as a webapp. 
+This framework/specification allows for 3D graphics to be rendered inside a browser, which made it possible for us to create Aether as a webapp.
+
+### SPICE - https://naif.jpl.nasa.gov/naif/toolkit.html
+
+This toolkit provides all of the highly accurate data that is visualized by Aether. This includes ephemerides, rotation angles, radii, and mass.
