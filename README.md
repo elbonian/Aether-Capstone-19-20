@@ -442,6 +442,7 @@ server on initialization to create the metakernel file based on all of the SPICE
 It has one method, write, which simply traverses the default and user_uploaded directories of SPICE kernels and adds 
 each path to the metakernel file. This class is created and run once when the REST server starts.
 
+
 ### Frontend
 The frontend component of this application consists of a Node webserver and several HTML and Javascript files that are rendered by a browser. The Node server is started and handled by the `/run.sh` script, so this section will focus on the various Javascript and HTML files that facilitate the 3D simulation.
 
