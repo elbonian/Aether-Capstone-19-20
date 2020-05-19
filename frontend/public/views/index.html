@@ -94,22 +94,12 @@
               if(clear){
                 showLoading();
                 clearKernels().then(response => {
-                  //console.log(parsedJson);
-                  // if(response.status != 200){
-                  //   alert(response.error);
-                  //   displayError(response.error);
-                  //   removeLoading();
-                  // }
-                  // else{
-                    
-                    //updateBodyChecklist(parsedJson);
                     getAvailableBodies(viz.wrt).then(data => {
                       alert("Kernel(s) successfully removed!");
                       updateBodyChecklist(data);
                       initCheckboxes();
                       removeLoading();
                     });
-                  // }
                 })
               .catch(error => {
                   console.error(error);
