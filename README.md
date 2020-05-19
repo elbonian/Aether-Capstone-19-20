@@ -489,6 +489,8 @@ This file contains a minimum build of the THREE.js graphics library that is used
 
 This directory houses the Spacekit.js library that our application uses to aid in space scene and simulation creation. It uses THREE.js to create 3D space environments.
 
+---
+
 #### Control Flow
 
 * Application start:
