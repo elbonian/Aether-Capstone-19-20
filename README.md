@@ -17,7 +17,7 @@ This repository is for the 2019-2020 CU Boulder Computer Science Capstone projec
 
 [Uninstall](#uninstall)
 
-[Code Walkthrough](code-walkthrough)
+[Code Walkthrough](#code-walkthrough)
 
 [Attribution](#attribution)
 
